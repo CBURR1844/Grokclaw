@@ -110,7 +110,7 @@ suite.define(() => {
       await installMockGateway(page, sessionsMock());
       await page.goto(controlUiSessionUrl(suite.server.baseUrl, RESEARCH_KEY));
       const sidebar = page.locator("openclaw-app-sidebar");
-      const composer = page.getByPlaceholder("Message BotClaw");
+      const composer = page.getByPlaceholder("Message OpenClaw");
       await sidebar.waitFor({ state: "visible", timeout: 10_000 });
       await composer.waitFor({ state: "visible", timeout: 10_000 });
       await expect.poll(() => sidebar.isVisible()).toBe(true);
