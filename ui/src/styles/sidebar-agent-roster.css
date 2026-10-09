@@ -70,17 +70,6 @@ openclaw-sidebar-agent-roster {
   white-space: nowrap;
 }
 
-.sidebar-agent-roster__status {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
-.sidebar-agent-roster__status--working {
-  color: var(--ok);
-}
-
 .sidebar-agent-roster__unread {
   color: var(--muted);
   font-size: 11px;

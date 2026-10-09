@@ -370,4 +370,15 @@ describe("gateway settings and layout persistence", () => {
     writeStored({ sidebarAgentsMode: "invalid" });
     expect(loadSettings().sidebarAgentsMode).toBe("roster");
   });
+
+  it("lets a host pin the agent chip as the default without overriding a stored roster", () => {
+    vi.stubGlobal("openclawDefaultSidebarAgentsMode", "chip");
+    try {
+      expect(loadSettings().sidebarAgentsMode).toBe("chip");
+      writeStored({ sidebarAgentsMode: "roster" });
+      expect(loadSettings().sidebarAgentsMode).toBe("roster");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

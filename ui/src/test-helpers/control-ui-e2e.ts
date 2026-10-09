@@ -1110,6 +1110,10 @@ function installControlUiMockGateway(
   };
 
   const scenario = input.scenario;
+  // BotClaw opens the bot roster by default. These scenarios were written for
+  // OpenClaw's agent chip; roster scenarios opt in through stored settings.
+  (globalThis as { openclawDefaultSidebarAgentsMode?: string }).openclawDefaultSidebarAgentsMode =
+    "chip";
   if (scenario.communityInviteDismissed) {
     try {
       // Same persisted preference as community-invite-state.ts, before the first sidebar render.

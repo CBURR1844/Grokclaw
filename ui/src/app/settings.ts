@@ -303,6 +303,19 @@ type PersistedSettingsSource = {
   parsed: PersistedUiSettings;
 };
 
+/**
+ * BotClaw opens the bot roster. OpenClaw's browser suites were written for the
+ * agent chip; their mock Gateway pins it through this page global.
+ */
+function resolveSidebarAgentsMode(stored?: unknown): "chip" | "roster" {
+  if (stored === "chip" || stored === "roster") {
+    return stored;
+  }
+  const pinned = (globalThis as { openclawDefaultSidebarAgentsMode?: unknown })
+    .openclawDefaultSidebarAgentsMode;
+  return pinned === "chip" ? "chip" : "roster";
+}
+
 function readSettingsForGateway(
   storage: Storage | null,
   targetUrl: string,
@@ -460,7 +473,7 @@ export function loadUiPreferences(
     catalogOpenTarget: UI_APPEARANCE_DEFAULTS.catalogOpenTarget,
     navCollapsed: false,
     navWidth: NAV_WIDTH_DEFAULT,
-    sidebarAgentsMode: "roster",
+    sidebarAgentsMode: resolveSidebarAgentsMode(),
     sidebarEntries: [...DEFAULT_SIDEBAR_ENTRIES],
     sidebarLiveActivity: UI_APPEARANCE_DEFAULTS.sidebarLiveActivity,
     showAdvancedSettings: false,
@@ -552,7 +565,7 @@ export function loadUiPreferences(
         parsed.navWidth <= NAV_WIDTH_MAX
           ? parsed.navWidth
           : defaults.navWidth,
-      sidebarAgentsMode: parsed.sidebarAgentsMode === "chip" ? "chip" : "roster",
+      sidebarAgentsMode: resolveSidebarAgentsMode(parsed.sidebarAgentsMode),
       sidebarPreTeamScope: normalizeSidebarPreTeamScope(parsed.sidebarPreTeamScope),
       sidebarCollapsedAgentIds: normalizeUniqueTrimmedStringList(parsed.sidebarCollapsedAgentIds),
       sidebarEntries:
@@ -695,7 +708,7 @@ export function saveSettings(next: UiSettings, options: { selectGateway?: boolea
         ? normalizeSidebarSessionActivePanels(next.sidebarSessionActivePanels)
         : undefined,
     navWidth: next.navWidth, // Persist size, not visibility: shared localStorage leaks across tabs.
-    sidebarAgentsMode: next.sidebarAgentsMode === "chip" ? "chip" : "roster",
+    sidebarAgentsMode: resolveSidebarAgentsMode(next.sidebarAgentsMode),
     sidebarPreTeamScope: normalizeSidebarPreTeamScope(next.sidebarPreTeamScope),
     sidebarCollapsedAgentIds: next.sidebarCollapsedAgentIds?.length
       ? normalizeUniqueTrimmedStringList(next.sidebarCollapsedAgentIds)
