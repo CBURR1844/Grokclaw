@@ -331,6 +331,12 @@ wa-dropdown-item .agent-details__claw-avatar {
   white-space: nowrap;
 }
 
+.agent-details__menu-icon,
+.agent-details__menu-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 .agent-details__menu-separator {
   height: 1px;
   margin: 4px 0;

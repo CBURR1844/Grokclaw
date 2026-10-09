@@ -217,7 +217,8 @@ class AgentDetailsClaws extends AgentRosterElement {
       ${CLAW_LINKS.map(
         ([panel, label, icon]) =>
           html`<wa-dropdown-item value=${panel}
-            ><span slot="icon" aria-hidden="true">${icon}</span>${t(label)}</wa-dropdown-item
+            ><span slot="icon" class="agent-details__menu-icon" aria-hidden="true">${icon}</span
+            >${t(label)}</wa-dropdown-item
           >`,
       )}
       ${
@@ -227,10 +228,9 @@ class AgentDetailsClaws extends AgentRosterElement {
                 value="remove"
                 ?disabled=${blocked || this.pending !== null}
                 title=${blocked ? t("agentDetails.claws.removeBlocked") : nothing}
-                ><span slot="icon" aria-hidden="true">${icons.x}</span>${t(
-                  "agentDetails.claws.remove",
-                  { bot: botName },
-                )}</wa-dropdown-item
+                ><span slot="icon" class="agent-details__menu-icon" aria-hidden="true"
+                  >${icons.x}</span
+                >${t("agentDetails.claws.remove", { bot: botName })}</wa-dropdown-item
               >`
           : nothing
       }
