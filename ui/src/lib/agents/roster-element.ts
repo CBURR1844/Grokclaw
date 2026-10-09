@@ -5,6 +5,7 @@ import { IdentityAvatarController } from "../../lib/identity-avatar-loader.ts";
 import { sessionNavigationTarget } from "../../lib/sessions/route-navigation.ts";
 import { OpenClawLightDomElement } from "../../lit/openclaw-element.ts";
 import { SubscriptionsController } from "../../lit/subscriptions-controller.ts";
+import { listChatAgents } from "./display.ts";
 import { rosterActivityStore } from "./roster-activity-store.ts";
 
 export abstract class AgentRosterElement extends OpenClawLightDomElement {
@@ -44,5 +45,10 @@ export abstract class AgentRosterElement extends OpenClawLightDomElement {
         }),
       }),
     );
+  }
+
+  /** Chat partners only; Claws stay reachable by id through cards(). */
+  protected chatCards() {
+    return listChatAgents(this.cards());
   }
 }

@@ -5,7 +5,7 @@ import type { GatewayControlUiPluginTab } from "../api/gateway.ts";
 import type { GatewaySessionRow, SessionsListResult } from "../api/types.ts";
 import { SIDEBAR_NAV_ROUTES } from "../app-navigation.ts";
 import type { ApplicationContext } from "../app/context.ts";
-import { listSelectableAgents } from "../lib/agents/display.ts";
+import { listChatAgents } from "../lib/agents/display.ts";
 import { resolveSessionChannelPresentation } from "../lib/session-channel.ts";
 import {
   resolveChannelSessionInfo,
@@ -382,7 +382,7 @@ export function resolveActiveSidebarAgent(input: {
   return {
     activeId: input.activeId,
     agent: input.roster.find((entry) => normalizeAgentId(entry.id) === input.activeId),
-    agents: listSelectableAgents(input.roster),
+    agents: listChatAgents(input.roster),
     identity: identities.get(input.activeId) ?? null,
     identities,
   };

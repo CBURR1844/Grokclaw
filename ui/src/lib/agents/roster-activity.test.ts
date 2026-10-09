@@ -19,6 +19,7 @@ describe("agent roster activity", () => {
       { key: "agent:alpha:main", kind: "direct", updatedAt: 1, lastMessagePreview: "Canonical" },
       { key: "unscoped", kind: "direct", updatedAt: 10, hasActiveRun: true },
       { key: "agent:system:main", kind: "direct", updatedAt: 99, hasActiveRun: true },
+      { key: "agent:sorter:main", kind: "direct", updatedAt: 5, lastMessagePreview: "Sorted" },
     ];
     const before = structuredClone(rows);
     const cards = agentRosterCards(
@@ -29,6 +30,7 @@ describe("agent roster activity", () => {
         agents: [
           { id: "beta" },
           { id: "system", kind: "system" },
+          { id: "sorter", claw: { requesterAgentIds: ["beta"] } },
           { id: "alpha" },
           { id: "empty" },
         ],
@@ -40,12 +42,14 @@ describe("agent roster activity", () => {
       },
     );
 
+    // Claws keep their cards for lookups by id; chat surfaces filter them out.
     expect(cards).toMatchObject([
       { id: "beta", lastActiveAt: 7, preview: "First beta", activeNow: false, unreadCount: 0 },
+      { id: "sorter", lastActiveAt: 5, preview: "Sorted", claw: { requesterAgentIds: ["beta"] } },
       { id: "alpha", lastActiveAt: 10, preview: "Canonical", activeNow: true, unreadCount: 1 },
       { id: "empty", lastActiveAt: 0, preview: undefined, activeNow: false, unreadCount: 0 },
     ]);
-    expect(identities).toEqual(["beta", "alpha", "empty"]);
+    expect(identities).toEqual(["beta", "sorter", "alpha", "empty"]);
     expect(rows).toEqual(before);
   });
 

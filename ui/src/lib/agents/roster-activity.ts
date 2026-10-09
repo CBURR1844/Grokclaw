@@ -7,7 +7,7 @@ import {
 } from "../sessions/session-key.ts";
 import { normalizeAgentLabel, resolveAgentTextAvatar, selectableAgentsList } from "./display.ts";
 
-/** Shared identity and activity in configured roster order. */
+/** Shared identity and activity in configured roster order, Claws included. */
 export function agentRosterCards(
   roster: AgentsListResult | undefined,
   rows: readonly GatewaySessionRow[],
@@ -56,6 +56,7 @@ export function agentRosterCards(
       unreadCount: sessions.filter((row) => row.unread && !row.archived).length,
       lastActiveAt: recent?.updatedAt ?? 0,
       preview: (main ?? recent)?.lastMessagePreview,
+      claw: agent.claw,
     };
   });
 }
