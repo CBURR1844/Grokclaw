@@ -364,8 +364,9 @@ export class ChatPane extends ChatPaneLayoutRender {
       disabledBanner:
         sessionDisabledBanner ?? placementComposer.disabledBanner ?? modelUnavailableBanner,
     };
+    // Where your role, sharing or session policy denies sending, commands are hidden, not greyed.
     const commands =
-      catalogKey || suggestionViewer || !composerAccess || sessionClosed
+      catalogKey || suggestionViewer || !composerAccess || sessionClosed || disabledReason
         ? undefined
         : createChatCommandControls(state, this.context.gateway, composerAvailability, this);
     const progressCardRefresh =
