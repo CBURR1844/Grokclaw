@@ -670,6 +670,9 @@ async function runSetupWizardOnce(
     nextConfig = enableDefaultOnboardingInternalHooks(nextConfig);
   }
 
+  const { applyOnboardingSandboxDefault } = await import("./setup.sandbox-default.js");
+  nextConfig = await applyOnboardingSandboxDefault({ config: nextConfig, prompter });
+
   nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });
   const committed = await commitSetupConfigFile(nextConfig, {
     allowConfigSizeDrop: false,

@@ -16,6 +16,8 @@ Three independent settings control sandbox behavior:
 | Scope   | `agents.defaults.sandbox.scope`   | `agent`, `session`, `shared`                      | `agent`  |
 | Backend | `agents.defaults.sandbox.backend` | `docker`, `podman`, `ssh`, `openshell`, `crabbox` | `docker` |
 
+Onboarding writes `mode: "non-main"` when Docker answers and no mode is set yet; otherwise the runtime default stays `off`.
+
 **Mode** controls when sandboxing applies:
 
 - `off`: no agent-wide sandboxing; sessions whose creator role requires a sandbox still run sandboxed.

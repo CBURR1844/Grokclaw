@@ -15,6 +15,7 @@ import {
   SANDBOX_CONTAINERS_DIR,
   SANDBOX_REGISTRY_PATH,
 } from "../agents/sandbox/constants.js";
+import { isContainerEngineAvailable } from "../agents/sandbox/container-engine.js";
 import {
   DOCKER_SANDBOX_ENGINE,
   PODMAN_SANDBOX_ENGINE,
@@ -77,21 +78,6 @@ async function runSandboxScript(scriptRel: string, runtime: RuntimeEnv): Promise
   }
 
   runtime.log(`Completed ${scriptRel}.`);
-}
-
-async function isContainerEngineAvailable(command: "docker" | "podman"): Promise<boolean> {
-  try {
-    await runExec(
-      command,
-      command === "docker" ? ["version", "--format", "{{.Server.Version}}"] : ["info"],
-      {
-        timeoutMs: 5_000,
-      },
-    );
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 type CodexBwrapNamespaceProbe =

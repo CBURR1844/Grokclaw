@@ -492,6 +492,13 @@ export const en = {
       workspaceSymlinkNotDirectory:
         '"{path}" is a symbolic link that does not resolve to an existing directory. Choose a workspace inside a directory.',
     },
+    sandbox: {
+      enabled:
+        "Docker is available, so group and channel chats will run their tools in a sandbox. Your main chat stays on this machine.",
+      title: "Sandbox",
+      unavailable:
+        "Docker was not found, so tools will run directly on this machine. Install Docker, then turn on the sandbox with:",
+    },
     security: {
       askForHelp:
         "Ask someone experienced to help before enabling tools or exposing it to the internet.",

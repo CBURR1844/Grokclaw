@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../config/config.js";
 import { createCanonicalAgentConfigFixture } from "../test-utils/config-roster.js";
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./defaults.js";
 import {
   acquireSimpleCompletionModelForAgent,
   resolveSimpleCompletionSelectionForAgent as resolveSimpleCompletionSelectionForAgentBase,
@@ -260,8 +261,8 @@ describe("resolveSimpleCompletionSelectionForAgent", () => {
     const selection = requireSelection(
       resolveSimpleCompletionSelectionForAgent({ cfg, agentId: "main" }),
     );
-    expect(selection.provider).toBe("openai");
-    expect(selection.modelId).toBe("gpt-6-astra");
+    expect(selection.provider).toBe(DEFAULT_PROVIDER);
+    expect(selection.modelId).toBe(DEFAULT_MODEL);
   });
 
   it("uses the configured provider model when the runtime default is unavailable", () => {

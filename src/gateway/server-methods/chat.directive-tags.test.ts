@@ -16,6 +16,7 @@ import {
   runWithCronCreatorAuthorityCapabilityResolver,
   type CronCreatorAuthorityCapability,
 } from "../../agents/cron-creator-authority-context.js";
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../agents/defaults.js";
 import type { ModelCatalogEntry } from "../../agents/model-catalog.types.js";
 import { onTrustedMessageAuditEvent } from "../../audit/message-audit-events.js";
 import type { ReplyDispatchRun } from "../../auto-reply/get-reply-options.types.js";
@@ -78,6 +79,7 @@ import {
 import { handleChatSend } from "./chat-send-handler.js";
 import { readChatSendDedupeResponse } from "./chat-send-reservation.js";
 import {
+  bindTestToolAuthority,
   ChatDirectiveDedupe,
   createChatDirectiveReplyBackend,
   createGlobalChatDirectiveConfig,
@@ -105,9 +107,6 @@ type RespondMock = ReturnType<typeof vi.fn<RespondFn>>;
 type TranscriptUpdate = Parameters<
   typeof import("../../sessions/transcript-events.js").emitSessionTranscriptUpdate
 >[0];
-
-const TEST_TOOL_AUTHORITY_FINGERPRINT = "test-tool-authority";
-const TEST_TOOL_AUTHORITY_ROUTE = { provider: "openai", model: "gpt-6-astra" } as const;
 
 const mockState = vi.hoisted(() => {
   const createTestState = () => ({
@@ -832,9 +831,9 @@ function createChatContext() {
         // Keep the default model image-capable here; otherwise attachment tests
         // exercise the unsupported-model fallback instead of Pi persistence.
         {
-          provider: "openai",
-          id: "gpt-6-astra",
-          name: "GPT-6 Astra",
+          provider: DEFAULT_PROVIDER,
+          id: DEFAULT_MODEL,
+          name: "Default model",
           input: ["text", "image"],
         },
         {
@@ -957,14 +956,6 @@ function createSlashCommandMediaReply(
 
 function managedAudioBlocks(content: Array<Record<string, unknown>>) {
   return content.filter((block) => block.type === "audio");
-}
-
-function bindTestToolAuthority(operation: ReplyOperation) {
-  operation.bindToolAuthoritySnapshot({
-    fingerprint: () => TEST_TOOL_AUTHORITY_FINGERPRINT,
-    project: () => TEST_TOOL_AUTHORITY_FINGERPRINT,
-  });
-  operation.bindToolAuthorityRoute(TEST_TOOL_AUTHORITY_ROUTE);
 }
 
 function beginActiveReplyOperation(params: {

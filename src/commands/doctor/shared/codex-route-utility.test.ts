@@ -3,6 +3,10 @@ import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../../agents/defaults.js";
 import { makeProviderModelFixture } from "../../../agents/test-helpers/provider-model-fixture.js";
 import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import { collectCodexRuntimeRouteHits } from "./codex-route-config-scan.js";
+import {
+  modelRefUsesCodexRuntime,
+  resolveImplicitDefaultAgentModelRef,
+} from "./codex-route-model-ref.js";
 
 describe("Doctor implicit routes with agent utility settings", () => {
   it.each([false, true])(
@@ -37,16 +41,24 @@ describe("Doctor implicit routes with agent utility settings", () => {
         },
       };
       const original = structuredClone(cfg);
+      const defaultRef = `${DEFAULT_PROVIDER}/${DEFAULT_MODEL}`;
+      // Separation keeps the utility route out of implicit primary selection.
+      expect(resolveImplicitDefaultAgentModelRef(cfg, "worker")).toBe(
+        separated ? defaultRef : "local-utility/small",
+      );
+      // The inherited implicit default is reported only when it actually selects Codex,
+      // which depends on the build's default provider.
+      const defaultUsesCodex = modelRefUsesCodexRuntime({
+        cfg,
+        modelRef: defaultRef,
+        agentId: "worker",
+        env: {},
+      });
       expect(
         collectCodexRuntimeRouteHits(cfg, {}).filter((hit) => hit.path === "agents.defaults.model"),
       ).toEqual(
-        separated
-          ? [
-              expect.objectContaining({
-                agentId: "worker",
-                modelRef: `${DEFAULT_PROVIDER}/${DEFAULT_MODEL}`,
-              }),
-            ]
+        separated && defaultUsesCodex
+          ? [expect.objectContaining({ agentId: "worker", modelRef: defaultRef })]
           : [],
       );
       expect(cfg).toEqual(original);

@@ -6,7 +6,10 @@ import { CURRENT_SESSION_VERSION } from "openclaw/plugin-sdk/agent-sessions";
 import { expect, vi } from "vitest";
 import { createFixtureLifetime } from "../../../test/helpers/fixture-lifetime.js";
 import { createDeferred, withinTest } from "../../../test/helpers/promise.js";
-import type { ReplyBackendHandle } from "../../auto-reply/reply/reply-run-registry.contracts.js";
+import type {
+  ReplyBackendHandle,
+  ReplyOperation,
+} from "../../auto-reply/reply/reply-run-registry.contracts.js";
 import { inheritLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
 import {
   loadExactSessionEntryCandidates,
@@ -391,6 +394,17 @@ export function createChatDirectiveReplyBackend(params: {
           },
         }),
   };
+}
+
+const TEST_TOOL_AUTHORITY_FINGERPRINT = "test-tool-authority";
+const TEST_TOOL_AUTHORITY_ROUTE = { provider: "openai", model: "gpt-6-astra" } as const;
+
+export function bindTestToolAuthority(operation: ReplyOperation) {
+  operation.bindToolAuthoritySnapshot({
+    fingerprint: () => TEST_TOOL_AUTHORITY_FINGERPRINT,
+    project: () => TEST_TOOL_AUTHORITY_FINGERPRINT,
+  });
+  operation.bindToolAuthorityRoute(TEST_TOOL_AUTHORITY_ROUTE);
 }
 
 export function createUnconfirmedTranscriptDelivery() {

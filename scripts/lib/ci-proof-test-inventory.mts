@@ -1970,6 +1970,7 @@ export const PR_PROTECTED_RUNTIME_TEST_FILES: readonly string[] = [
   "src/commands/doctor-host-desktop.test.ts",
   "src/commands/doctor-hosted-gateway.test.ts",
   "src/commands/doctor-legacy-config.migrations.test.ts",
+  "src/commands/doctor-legacy-config.stale-model-refs.test.ts",
   "src/commands/doctor-lint.crabbox.test.ts",
   "src/commands/doctor-lint.oauth.test.ts",
   "src/commands/doctor-lint.plugin-availability.test.ts",

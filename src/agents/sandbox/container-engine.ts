@@ -3,7 +3,7 @@
  */
 import { createAbortError } from "../../infra/abort-signal.js";
 import { toErrorObject } from "../../infra/errors.js";
-import { isPlainCommandExitFailure, spawnCommand } from "../../process/exec.js";
+import { isPlainCommandExitFailure, runExec, spawnCommand } from "../../process/exec.js";
 import type { SandboxBackendCommandResult } from "./backend-handle.types.js";
 import { SANDBOX_COMMAND_MAX_BUFFER_BYTES } from "./constants.js";
 
@@ -120,4 +120,20 @@ export async function execContainer(
     stderr: result.stderr.toString("utf8"),
     code: result.code,
   };
+}
+
+/** Probes whether the engine's daemon answers, so callers can tell "installed and running" from absent. */
+export async function isContainerEngineAvailable(command: "docker" | "podman"): Promise<boolean> {
+  try {
+    await runExec(
+      command,
+      command === "docker" ? ["version", "--format", "{{.Server.Version}}"] : ["info"],
+      {
+        timeoutMs: 5_000,
+      },
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }

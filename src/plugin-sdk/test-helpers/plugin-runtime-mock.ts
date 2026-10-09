@@ -54,8 +54,8 @@ export const createTestInboundDebounceFlush: InboundDebounceFlushFactory = (para
   return { admission: completion, completion };
 };
 
-const DEFAULT_PROVIDER = "openai";
-const DEFAULT_MODEL = "gpt-6-astra";
+const DEFAULT_PROVIDER = "anthropic";
+const DEFAULT_MODEL = "claude-opus-5-5";
 
 type BuildContextParams = Parameters<PluginRuntime["channel"]["inbound"]["buildContext"]>[0];
 type BuildContextResult = ReturnType<PluginRuntime["channel"]["inbound"]["buildContext"]>;

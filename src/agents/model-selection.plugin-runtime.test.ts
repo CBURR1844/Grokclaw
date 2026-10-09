@@ -2,6 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../config/types.js";
 import { createPluginMetadataSnapshotFixture } from "../plugins/plugin-metadata.test-support.js";
+import { DEFAULT_PROVIDER } from "./defaults.js";
 
 const normalizeProviderModelIdWithPluginMock = vi.fn();
 
@@ -103,7 +104,7 @@ describe("model-selection plugin runtime normalization", () => {
 
   it("resolves bare reply defaults from the captured manifest once", async () => {
     const cfg = { agents: { defaults: { model: "entry" } } };
-    const snapshot = aliasSnapshot("openai", { entry: "middle", middle: "final" });
+    const snapshot = aliasSnapshot(DEFAULT_PROVIDER, { entry: "middle", middle: "final" });
     getCurrentPluginMetadataSnapshotMock.mockImplementation((params) =>
       params?.config === cfg ? snapshot : undefined,
     );
@@ -112,7 +113,7 @@ describe("model-selection plugin runtime normalization", () => {
     const { defaultProvider, defaultModel } = resolveDefaultModel({ cfg });
     expect(defaultModel).toBe("middle");
     const selection = await selectModel(cfg, defaultProvider, defaultModel);
-    expect(selection).toMatchObject({ provider: "openai", model: "middle" });
+    expect(selection).toMatchObject({ provider: DEFAULT_PROVIDER, model: "middle" });
   });
 
   it.each(["session", "parent"])(

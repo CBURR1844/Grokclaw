@@ -165,6 +165,7 @@ describe("agents_list tool", () => {
   it("returns requester as the only target when no subagent allowlist is configured", async () => {
     loadConfigMock.mockReturnValue({
       agents: {
+        defaults: { model: "openai/gpt-6-astra" },
         entries: { main: {}, codex: {} },
       },
     } satisfies OpenClawConfig);
