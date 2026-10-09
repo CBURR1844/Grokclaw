@@ -60,15 +60,15 @@ export const agentListHandler: GatewayRequestHandler = async ({
       ? result.agents
           .filter((agent) => allowedAgents.includes(agent.id))
           .map((agent) =>
+            // Rows are built fresh per call, so narrowing in place leaks nothing.
             agent.claw
-              ? {
-                  ...agent,
+              ? Object.assign(agent, {
                   claw: {
                     requesterAgentIds: agent.claw.requesterAgentIds.filter((id) =>
                       allowedAgents.includes(id),
                     ),
                   },
-                }
+                })
               : agent,
           )
       : result.agents;

@@ -112,12 +112,10 @@ describe("listAgentsForGateway Claw rows", () => {
     const after = await listAgentsForGateway(cfg("claw"));
 
     expect(before.agents.some((row) => "claw" in row)).toBe(false);
-    expect(JSON.stringify(after.agents)).toBe(
-      JSON.stringify(
-        before.agents.map((row) =>
-          row.id === "inbox" ? { ...row, claw: { requesterAgentIds: ["main"] } } : row,
-        ),
-      ),
-    );
+    const expected = structuredClone(before.agents);
+    Object.assign(expected.find((row) => row.id === "inbox") ?? {}, {
+      claw: { requesterAgentIds: ["main"] },
+    });
+    expect(JSON.stringify(after.agents)).toBe(JSON.stringify(expected));
   });
 });

@@ -222,6 +222,34 @@ describe("agent routines", () => {
     expect(listCalls(f.request)).toHaveLength(reads + 1);
   });
 
+  it("keeps a switch where it was put until the Gateway's list catches up", async () => {
+    const update = createDeferred<unknown>();
+    const reread = createDeferred<unknown>();
+    let updated = false;
+    const f = fixture((method) => {
+      if (method === "cron.update") {
+        return update.promise;
+      }
+      return updated ? reread.promise : page([job("triage", "sorter")]);
+    });
+    f.routines.sync({ agentId: "sorter", presented: true });
+    await f.until(() => f.routines.jobs.length === 1 && !f.routines.loading);
+    const triage = () => f.routines.jobs[0]!;
+    expect(f.routines.isEnabled(triage())).toBe(true);
+
+    const switching = f.routines.setEnabled("triage", false);
+    expect(f.routines.isEnabled(triage())).toBe(false);
+    updated = true;
+    update.resolve({ id: "triage" });
+    await switching;
+    expect(f.routines.toggling.size).toBe(0);
+    expect(f.routines.isEnabled(triage())).toBe(false);
+
+    reread.resolve(page([job("triage", "sorter", { enabled: true })]));
+    await f.until(() => !f.routines.loading);
+    expect(f.routines.isEnabled(triage())).toBe(true);
+  });
+
   it("reads the newest run's summary once per finished run", async () => {
     let lastRunAtMs = 1_000;
     const f = fixture(

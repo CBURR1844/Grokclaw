@@ -161,8 +161,10 @@ Use **+** > **New agent** to add a bot.
 A Claw is an agent that does one repeating job for a bot, such as sorting new
 email every 15 minutes. An agent is a Claw when its entry has `kind: "claw"`;
 the bots whose `subagents.allowAgents` can start it are the bots it works for.
-Claws stay out of the sidebar, the **+** new-chat menu, and the bots page, but
-remain in Settings and agent pickers. A bot's **Details** lists its Claws: each
+Claws stay out of the sidebar, the **+** new-chat menu, the New chat page and
+command-palette agent pickers (`/new?agent=<claw>` opens a chat with a bot
+instead), the Advanced agent switcher, and the bots page. They remain in
+Settings, the Agents settings page, and the Automations agent picker. A bot's **Details** lists its Claws: each
 card shows when the Claw last ran and what it reported, one switch and
 **Run now** for each schedule, and a menu with its skills, tools, and
 instructions. **Add a Claw** links an existing agent in one config change, and

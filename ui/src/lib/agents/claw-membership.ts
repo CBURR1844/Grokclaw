@@ -2,6 +2,7 @@ import { normalizeAgentId } from "@openclaw/normalization-core/agent-id";
 import { asOptionalRecord } from "@openclaw/normalization-core/record-coerce";
 import type { AgentsListResult } from "../../api/types.ts";
 import { t } from "../../i18n/index.ts";
+import { registerAgentDetailsClawsEnglish } from "../../i18n/locales/en-agent-details-claws.ts";
 import {
   resolveAgentConfigEntryTarget,
   resolveEditableSnapshotConfig,
@@ -9,6 +10,8 @@ import {
 import type { RuntimeConfigCapability } from "../config/runtime-config-capability.ts";
 import { formatUiError } from "../format-error.ts";
 import { clawsOf, isClawAgent } from "./display.ts";
+
+registerAgentDetailsClawsEnglish();
 
 type AgentRow = AgentsListResult["agents"][number];
 type ConfigObject = Readonly<Record<string, unknown>>;

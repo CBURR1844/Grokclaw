@@ -52,7 +52,12 @@ const sorterJobs = [
   }),
   job("sort-weekdays", "sorter", {
     enabled: false,
-    schedule: { kind: "cron", expr: "0 8 * * 1-5" },
+    // A zone of its own: without one the job runs on the Gateway host's clock.
+    schedule: {
+      kind: "cron",
+      expr: "0 8 * * 1-5",
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
   }),
 ];
 

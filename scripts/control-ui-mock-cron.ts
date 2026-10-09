@@ -238,7 +238,8 @@ export function buildCronMocks(
     enabled: lastRunAgoMs !== undefined,
     createdAtMs: baseTime - 14 * day,
     updatedAtMs: baseTime - day,
-    schedule: { kind: "cron", expr },
+    // The mock serves the browser's own machine, so its clock is the viewer's.
+    schedule: { kind: "cron", expr, tz: Intl.DateTimeFormat().resolvedOptions().timeZone },
     sessionTarget: "isolated",
     wakeMode: "now",
     payload: { kind: "agentTurn", message: name },

@@ -7,6 +7,7 @@ import type { AgentsListResult, CronCompactJob } from "../api/types.ts";
 import { pathForAgentPanel, pathForRoute } from "../app-route-paths.ts";
 import type { ApplicationContext } from "../app/context.ts";
 import { t } from "../i18n/index.ts";
+import { registerAgentDetailsClawsEnglish } from "../i18n/locales/en-agent-details-claws.ts";
 import { AgentRoutines } from "../lib/agents/agent-routines.ts";
 import {
   attachClaw,
@@ -19,13 +20,15 @@ import { clawsOf } from "../lib/agents/display.ts";
 import type { AgentsPanel } from "../lib/agents/panels.ts";
 import { AgentRosterElement } from "../lib/agents/roster-element.ts";
 import { resolveEditableSnapshotConfig } from "../lib/config/config-state-model.ts";
+import { describeCronSchedule } from "../lib/cron/schedule-phrase.ts";
 import { formatRelativeTimestamp, formatTimeMs } from "../lib/format.ts";
 import { shouldHandleNavigationClick } from "../lib/navigation-click.ts";
-import { describeCronSchedule } from "../lib/presenter.ts";
 import { SubscriptionsController } from "../lit/subscriptions-controller.ts";
 import { icons } from "./icons.ts";
 import { renderAgentIdentityAvatar } from "./identity-avatar-view.ts";
 import { renderSettingsToggle } from "./settings-ui.ts";
+
+registerAgentDetailsClawsEnglish();
 
 /** Each shown Claw reads its own schedules, so the section stays bounded. */
 const MAX_CLAWS = 12;
@@ -138,7 +141,8 @@ class AgentDetailsClaws extends AgentRosterElement {
     }
     const latest = routines.latestRun;
     if (!latest) {
-      return routines.loading ? nothing : t("agentDetails.claws.neverRun");
+      // A failed read says nothing about the history; the error callout explains it.
+      return routines.loading || routines.error ? nothing : t("agentDetails.claws.neverRun");
     }
     const time = isToday(latest.atMs)
       ? formatTimeMs(latest.atMs)
@@ -151,10 +155,10 @@ class AgentDetailsClaws extends AgentRosterElement {
 
   private renderSchedule(job: CronCompactJob, routines: AgentRoutines) {
     const name = job.displayName ?? job.name;
-    const schedule = job.schedule ? describeCronSchedule(job.schedule) : name;
+    const schedule = job.schedule ? describeCronSchedule(job.schedule, job.nextRunAtMs) : name;
     const running = routines.isRunning(job);
     return html`<li
-      class="agent-details__schedule ${job.enabled ? "" : "agent-details__schedule--off"}"
+      class="agent-details__schedule ${routines.isEnabled(job) ? "" : "agent-details__schedule--off"}"
       data-routine-id=${job.id}
       title=${name}
     >
@@ -162,7 +166,7 @@ class AgentDetailsClaws extends AgentRosterElement {
       ${
         routines.canToggle
           ? renderSettingsToggle({
-              checked: job.enabled,
+              checked: routines.isEnabled(job),
               disabled: routines.toggling.has(job.id),
               ariaLabel: t("agentDetails.claws.scheduleSwitch", { name, schedule }),
               onChange: (enabled) => void routines.setEnabled(job.id, enabled),

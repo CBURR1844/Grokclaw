@@ -5,6 +5,7 @@ import type { CronCompactJob } from "../api/types.ts";
 import { pathForAgentPanel, pathForRoute } from "../app-route-paths.ts";
 import type { ApplicationContext } from "../app/context.ts";
 import { t } from "../i18n/index.ts";
+import { registerAgentDetailsClawsEnglish } from "../i18n/locales/en-agent-details-claws.ts";
 import { registerAgentsHomeEnglish } from "../i18n/locales/en-agents-home.ts";
 import { AgentRoutines } from "../lib/agents/agent-routines.ts";
 import type { AgentsPanel } from "../lib/agents/panels.ts";
@@ -18,6 +19,7 @@ import "./agent-details-claws.ts";
 import "../styles/agent-details-panel.css";
 
 registerAgentsHomeEnglish();
+registerAgentDetailsClawsEnglish();
 
 const AGENT_LINKS = [
   ["skills", "agentDetails.skills", icons.zap],

@@ -33,8 +33,8 @@ export class AgentRoutines {
   /** Why the last Run now or switch did not take effect, until the next one. */
   feedback: string | null = null;
   readonly starting = new Set<string>();
-  /** Routines whose switch waits for the Gateway. */
-  readonly toggling = new Set<string>();
+  /** Routines whose switch waits for the Gateway, with the position asked for. */
+  readonly toggling = new Map<string, boolean>();
   /** Read only for owners constructed with `latestRun: true`. */
   latestRun: AgentLatestRun | null = null;
   private latestRunKey: string | null = null;
@@ -73,6 +73,11 @@ export class AgentRoutines {
   /** A routine runs now, or a Run now from this view still waits to start. */
   isRunning(job: CronCompactJob): boolean {
     return job.runningAtMs !== undefined || this.starting.has(job.id);
+  }
+
+  /** A routine's switch position: the one asked for until the Gateway settles it. */
+  isEnabled(job: CronCompactJob): boolean {
+    return this.toggling.get(job.id) ?? job.enabled;
   }
 
   sync(input: AgentRoutinesInput): void {
@@ -166,12 +171,18 @@ export class AgentRoutines {
     if (!scope || !this.current(generation) || !this.canToggle || this.toggling.has(jobId)) {
       return;
     }
-    this.toggling.add(jobId);
+    this.toggling.set(jobId, enabled);
     this.feedback = null;
     this.changed();
     try {
       // One field, last write wins: no configuration revision, so no extra cron.get.
       await scope.client.request("cron.update", { id: jobId, patch: { enabled } });
+      if (this.current(generation)) {
+        // The switch stays where it was put while the read below catches up.
+        this.jobs = this.jobs.map((job) =>
+          job.id === jobId ? Object.assign({}, job, { enabled }) : job,
+        );
+      }
     } catch (error) {
       if (this.current(generation)) {
         this.feedback = formatUiError(error);
