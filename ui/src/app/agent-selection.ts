@@ -2,7 +2,8 @@ import { registerListener } from "../../../src/shared/listeners.js";
 import type { AgentsListResult } from "../api/types.ts";
 import { listChatAgents } from "../lib/agents/display.ts";
 import { normalizeAgentId, parseAgentSessionKey } from "../lib/sessions/session-key.ts";
-import { resolveUiPreset, type UiPreferences } from "./settings.ts";
+import type { UiPreferences } from "./settings.ts";
+import { resolveUiPreset } from "./ui-preset.ts";
 
 type AgentSelectionGateway = {
   readonly connection: {

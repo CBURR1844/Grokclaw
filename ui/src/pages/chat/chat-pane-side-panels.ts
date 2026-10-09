@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult } from "lit";
 import type { SessionsCompanionStateResult } from "../../../../packages/gateway-protocol/src/schema/sessions.js";
 import { SESSION_COMPANION_SELECTION_CONTEXT_MAX_CHARS } from "../../../../packages/gateway-protocol/src/session-companion-contract.js";
-import { resolveUiPreset } from "../../app/settings.ts";
+import { resolveUiPreset } from "../../app/ui-preset.ts";
 import { icons } from "../../components/icons.ts";
 import { t } from "../../i18n/index.ts";
 import type { ChatAttachment } from "../../lib/chat/chat-types.ts";

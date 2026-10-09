@@ -5,6 +5,7 @@ import type { ApplicationNavigationOptions } from "../app/context.ts";
 import { nativeGatewaysCapability } from "../app/native-gateways.runtime.ts";
 import type { ThemeMode } from "../app/theme.ts";
 import { t } from "../i18n/index.ts";
+import { registerAdvancedSwitchEnglish } from "../i18n/locales/en-advanced-switch.ts";
 import { KEYBOARD_SHORTCUT_COMBOS } from "../lib/keyboard-shortcut-contract.ts";
 import type { PresenceViewer } from "../lib/presence-users.ts";
 import { requestDebugOverlayToggle } from "../pages/debug/debug-overlay-contract.ts";
@@ -21,6 +22,8 @@ import { renderKbd, renderKeyboardShortcut } from "./kbd.ts";
 import "./sidebar-build-chip.ts";
 import "./viewer-facepile.ts";
 import { syncDropdownItemRadio, trackDropdownKeyboardDismissal } from "./web-awesome.ts";
+
+registerAdvancedSwitchEnglish();
 
 type SidebarIdentityMenuParams = {
   position: { x: number; bottom: number; width: number };

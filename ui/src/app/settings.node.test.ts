@@ -14,10 +14,10 @@ import {
   patchSettings,
   persistSessionToken,
   resolvePageGatewaySettings,
-  resolveUiPreset,
   saveSettings,
 } from "./settings.ts";
 import { resolveApplicationStartupSettings } from "./startup-settings.ts";
+import { resolveUiPreset } from "./ui-preset.ts";
 
 function readStored(gatewayUrl = expectedGatewayUrl("")): Record<string, unknown> {
   return JSON.parse(localStorage.getItem(`openclaw.control.settings.v1:${gatewayUrl}`) ?? "{}");

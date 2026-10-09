@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { buildBaseHints } from "../../src/config/schema.hints.js";
 import { configHintTranslationKey } from "../../ui/src/i18n/lib/config-hint-translation.ts";
 import { registerActivityEnglish } from "../../ui/src/i18n/locales/en-activity.ts";
+import { registerAdvancedSwitchEnglish } from "../../ui/src/i18n/locales/en-advanced-switch.ts";
 import { registerAgentDetailsClawsEnglish } from "../../ui/src/i18n/locales/en-agent-details-claws.ts";
 import { registerAgentsHomeEnglish } from "../../ui/src/i18n/locales/en-agents-home.ts";
 import { registerAppsEnglish } from "../../ui/src/i18n/locales/en-apps.ts";
@@ -72,6 +73,7 @@ const sourceFiles = [
   "en-agent-details-claws.ts",
   "en-agents-home.ts",
   "en-apps.ts",
+  "en-advanced-switch.ts",
   "en-board-website.ts",
   "en-browser.ts",
   "en-chat-camera.ts",
@@ -150,6 +152,13 @@ export function loadControlUiSourceCatalog(): TranslationMap {
       Object.assign(boardWidget, registerBoardWebsiteEnglish.catalog.board.widget);
     }
   }
+  const nav: TranslationMap = {};
+  for (const [key, value] of Object.entries(en.nav)) {
+    nav[key] = value;
+    if (key === "customizeReset") {
+      Object.assign(nav, registerAdvancedSwitchEnglish.catalog.nav);
+    }
+  }
   // Read fragment data without registering it into the shared runtime catalog.
   // en.ts's empty anchors retain source order for extracted whole subtrees.
   return mergeControlUiTranslationMaps(
@@ -170,6 +179,7 @@ export function loadControlUiSourceCatalog(): TranslationMap {
         ...registerToolDiagnosticsEnglish.catalog.agentTools,
       },
       board: { ...en.board, widget: boardWidget },
+      nav,
       newSession,
       sessionsView,
       shortcutsOverlay: registerCommandPaletteEnglish.catalog.shortcutsOverlay,

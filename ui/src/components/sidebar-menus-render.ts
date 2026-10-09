@@ -7,6 +7,7 @@ import { isMobileNavLayout } from "../app/mobile-nav-layout.ts";
 import { patchSettings } from "../app/settings.ts";
 import { isUpdateActionable } from "../app/update-schedule-projection.ts";
 import { t } from "../i18n/index.ts";
+import { registerAdvancedSwitchEnglish } from "../i18n/locales/en-advanced-switch.ts";
 import { normalizeAgentLabel } from "../lib/agents/display.ts";
 import { openEditor } from "../lib/editor-links.ts";
 import { isGatewayMethodAdvertised } from "../lib/gateway-methods.ts";
@@ -43,6 +44,8 @@ import {
   resolveUpdateAttentionDismissal,
 } from "./sidebar-attention-dismissals.ts";
 import type { SidebarMenusController } from "./sidebar-menus-controller.ts";
+
+registerAdvancedSwitchEnglish();
 
 export { focusActiveAgentMenuItem } from "./app-sidebar-agent-menu.ts";
 export {
