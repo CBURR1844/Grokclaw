@@ -41,7 +41,12 @@ export function clawCandidates(list: AgentsListResult, botId: string): AgentRow[
 
 const isWildcard = (value: unknown) => typeof value === "string" && value.trim() === "*";
 
-/** The list spawn admission reads for a Bot: its own `subagents.allowAgents`, else the defaults'. */
+/**
+ * Which list a patch must edit: the Bot's own `subagents.allowAgents`, else the defaults'.
+ * Mirrors `resolveRequesterAllowAgents` (src/agents/subagents/spawn/subagent-target-policy.ts),
+ * whose module graph needs Node; who may start whom is still read from the Gateway's
+ * `claw.requesterAgentIds`, and spawn admission stays the authority.
+ */
 function requesterAllowAgents(
   config: ConfigObject,
   entry: unknown,
