@@ -50,14 +50,10 @@ import {
 } from "./navigation-surface.ts";
 import { readGatewayOperatorAccess } from "./operator-access.ts";
 import { isDesktopPanelAvailable, isHomePanelAvailable } from "./panel-availability.ts";
-import {
-  NAV_WIDTH_MAX,
-  NAV_WIDTH_MIN,
-  normalizeCatalogOpenTarget,
-  resolveUiPreset,
-} from "./settings.ts";
+import { NAV_WIDTH_MAX, NAV_WIDTH_MIN, normalizeCatalogOpenTarget } from "./settings.ts";
 import { renderCollapsedHomeToggle } from "./shell-assistant-toggles.ts";
 import type { ShellLayoutController } from "./shell-layout-traits.ts";
+import { resolveUiPreset } from "./ui-preset.ts";
 
 export interface ShellViewHost extends ShellLazyOverlayHost {
   readonly devicePairSetup: Parameters<typeof renderLazyDevicePairSetup>[0];
