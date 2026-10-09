@@ -363,10 +363,11 @@ describe("gateway settings and layout persistence", () => {
     expect(loadSettings()).toEqual(settings);
   });
 
-  it("persists roster mode and defaults invalid stored modes to chip", () => {
-    saveSettings({ ...loadSettings(), sidebarAgentsMode: "roster" });
+  it("defaults to the roster, persists chip mode and defaults invalid stored modes to the roster", () => {
     expect(loadSettings().sidebarAgentsMode).toBe("roster");
-    writeStored({ sidebarAgentsMode: "invalid" });
+    saveSettings({ ...loadSettings(), sidebarAgentsMode: "chip" });
     expect(loadSettings().sidebarAgentsMode).toBe("chip");
+    writeStored({ sidebarAgentsMode: "invalid" });
+    expect(loadSettings().sidebarAgentsMode).toBe("roster");
   });
 });

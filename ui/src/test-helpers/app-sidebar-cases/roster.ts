@@ -246,9 +246,13 @@ describe("AppSidebar agent roster", () => {
         `/chat/${id}`,
       );
     }
-    expect(sidebar.querySelector('[data-agent-id="working"]')?.textContent?.trim()).toBe("Forge");
-    expect(sidebar.querySelector(".sidebar-agent-roster__status")).toBeNull();
-    expect(sidebar.querySelector('[data-agent-id="recent"]')?.textContent?.trim()).toBe("Scout");
+    const rowName = (id: string) =>
+      sidebar.querySelector(`[data-agent-id="${id}"] .sidebar-agent-roster__copy > span`);
+    const rowStatus = (id: string) =>
+      sidebar.querySelector(`[data-agent-id="${id}"] .sidebar-agent-roster__status`);
+    expect(rowName("working")?.textContent?.trim()).toBe("Forge");
+    expect(rowStatus("working")?.textContent?.trim()).toBe("Working now");
+    expect(rowName("recent")?.textContent?.trim()).toBe("Scout");
     expect(
       sidebar.querySelector(
         '[data-session-key="agent:working:pinned"] .sidebar-session-team-state .session-glyph__ring',

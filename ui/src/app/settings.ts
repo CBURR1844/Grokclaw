@@ -460,7 +460,7 @@ export function loadUiPreferences(
     catalogOpenTarget: UI_APPEARANCE_DEFAULTS.catalogOpenTarget,
     navCollapsed: false,
     navWidth: NAV_WIDTH_DEFAULT,
-    sidebarAgentsMode: "chip",
+    sidebarAgentsMode: "roster",
     sidebarEntries: [...DEFAULT_SIDEBAR_ENTRIES],
     sidebarLiveActivity: UI_APPEARANCE_DEFAULTS.sidebarLiveActivity,
     showAdvancedSettings: false,
@@ -552,7 +552,7 @@ export function loadUiPreferences(
         parsed.navWidth <= NAV_WIDTH_MAX
           ? parsed.navWidth
           : defaults.navWidth,
-      sidebarAgentsMode: parsed.sidebarAgentsMode === "roster" ? "roster" : "chip",
+      sidebarAgentsMode: parsed.sidebarAgentsMode === "chip" ? "chip" : "roster",
       sidebarPreTeamScope: normalizeSidebarPreTeamScope(parsed.sidebarPreTeamScope),
       sidebarCollapsedAgentIds: normalizeUniqueTrimmedStringList(parsed.sidebarCollapsedAgentIds),
       sidebarEntries:
@@ -695,7 +695,7 @@ export function saveSettings(next: UiSettings, options: { selectGateway?: boolea
         ? normalizeSidebarSessionActivePanels(next.sidebarSessionActivePanels)
         : undefined,
     navWidth: next.navWidth, // Persist size, not visibility: shared localStorage leaks across tabs.
-    sidebarAgentsMode: next.sidebarAgentsMode === "roster" ? "roster" : "chip",
+    sidebarAgentsMode: next.sidebarAgentsMode === "chip" ? "chip" : "roster",
     sidebarPreTeamScope: normalizeSidebarPreTeamScope(next.sidebarPreTeamScope),
     sidebarCollapsedAgentIds: next.sidebarCollapsedAgentIds?.length
       ? normalizeUniqueTrimmedStringList(next.sidebarCollapsedAgentIds)

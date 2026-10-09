@@ -19,7 +19,12 @@ export function createSidebarContextLifecycle(
     });
   synchronizeBootstrap(gateway.snapshot);
   const stopBootstrap = gateway.subscribe(synchronizeBootstrap);
-  const theme = createApplicationTheme(loadSettings(gateway.connection.gatewayUrl), gateway);
+  // Cases pick a sidebar mode on the element; agent selection starts outside team mode,
+  // as upstream's default did, whatever the product default is.
+  const theme = createApplicationTheme(
+    { ...loadSettings(gateway.connection.gatewayUrl), sidebarAgentsMode: "chip" },
+    gateway,
+  );
   const agentSelection = createAgentSelectionCapability(
     gateway,
     agents,

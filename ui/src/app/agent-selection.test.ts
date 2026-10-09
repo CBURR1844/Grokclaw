@@ -116,6 +116,10 @@ describe("agent selection", () => {
   installSettingsStorageLifecycle();
   beforeEach(() => {
     setTestLocation({ protocol: "http:", host: "gateway-a.test", pathname: "/" });
+    // These cases cover leaving and re-entering team mode, so each gateway starts in chip mode.
+    for (const gatewayUrl of ["ws://gateway-b.test", "ws://gateway-a.test"]) {
+      saveSettings({ ...loadSettings(gatewayUrl), sidebarAgentsMode: "chip" });
+    }
   });
 
   it.each(["research", null])(

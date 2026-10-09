@@ -7,6 +7,7 @@ import { t } from "../i18n/index.ts";
 import { registerAgentsHomeEnglish } from "../i18n/locales/en-agents-home.ts";
 import { rosterActivityStore } from "../lib/agents/roster-activity-store.ts";
 import { AgentRosterElement } from "../lib/agents/roster-element.ts";
+import { formatRelativeTimestamp } from "../lib/format.ts";
 import { shouldHandleNavigationClick } from "../lib/navigation-click.ts";
 import { areUiSessionKeysEquivalent } from "../lib/sessions/session-key.ts";
 import { newSessionSearch } from "../pages/new-session/location.ts";
@@ -175,7 +176,22 @@ class SidebarAgentRoster extends AgentRosterElement {
                     <span class="sidebar-agent-roster__avatar" aria-hidden="true">
                       ${renderAgentIdentityAvatar(card)}
                     </span>
-                    <span class="sidebar-agent-roster__copy"><span>${card.name}</span></span>
+                    <span class="sidebar-agent-roster__copy"
+                      ><span>${card.name}</span>${
+                        card.activeNow
+                          ? html`<span
+                              class="sidebar-agent-roster__status sidebar-agent-roster__status--working"
+                              >${t("agentsHome.working")}</span
+                            >`
+                          : card.lastActiveAt
+                            ? html`<span class="sidebar-agent-roster__status"
+                                >${t("agentsHome.lastActive", {
+                                  time: formatRelativeTimestamp(card.lastActiveAt),
+                                })}</span
+                              >`
+                            : nothing
+                      }</span
+                    >
                   </a>
                   <span class="sidebar-agent-roster__signals">
                     ${

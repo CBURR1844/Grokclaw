@@ -115,7 +115,8 @@ function createPairingShell(params: {
     agents: { state: { agentsList: null } },
     agentSelection: { state: { selectedId: "main", scopeId: "main" } },
     sessions: { state: { result: null } },
-    theme: { mode: "system", settings: loadSettings() },
+    // The Home row these cases inspect belongs to the agent-chip sidebar.
+    theme: { mode: "system", settings: { ...loadSettings(), sidebarAgentsMode: "chip" } },
   } as unknown as ApplicationContext;
   const shell = document.createElement("openclaw-app-shell") as PairingShell;
   const router = createApplicationRouter();
