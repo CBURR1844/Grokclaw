@@ -113,6 +113,30 @@ describe("explicit ambient agent targets", () => {
   });
 });
 
+describe("agent kind marker", () => {
+  it("accepts a Claw marker and treats an absent kind as a Bot", () => {
+    const result = AgentsSchema.safeParse({
+      ownership: "explicit",
+      entries: { inbox: { kind: "claw" }, main: {} },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data?.entries?.inbox?.kind).toBe("claw");
+      expect(result.data?.entries?.main).not.toHaveProperty("kind");
+    }
+  });
+
+  it.each(["bot", "Claw", "", null, true])("rejects kind=%j", (kind) => {
+    const result = AgentsSchema.safeParse({ entries: { inbox: { kind } } });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual([
+        expect.objectContaining({ path: ["entries", "inbox", "kind"] }),
+      ]);
+    }
+  });
+});
+
 describe("agent GitHub sandbox identity", () => {
   const profileId = "ghp_0123456789abcdef0123456789abcdef";
 
