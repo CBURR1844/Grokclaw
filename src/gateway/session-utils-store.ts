@@ -505,7 +505,7 @@ export async function listAgentsForGateway(
           createdAt: provenance.createdAtMs,
         })
       : agent;
-    // Appended last so rows without a Claw stay byte-identical to the established projection.
+    // Appended last so Claw rows keep the established serialized field order.
     const requesterAgentIds = clawRequesterIds.get(id);
     return requesterAgentIds ? Object.assign(row, { claw: { requesterAgentIds } }) : row;
   });

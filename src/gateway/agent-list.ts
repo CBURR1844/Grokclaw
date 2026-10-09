@@ -72,8 +72,8 @@ export function resolveGatewayAgentSelectionState(cfg: OpenClawConfig): GatewayA
 
 /**
  * Maps each Claw (`kind: "claw"`) to the configured agents whose sessions_spawn target policy
- * admits it. Requesters are configured non-Claw entries; system rows are never configured, and
- * nobody is its own requester. A Claw that no agent admits maps to `[]`.
+ * admits it. Requesters are configured non-Claw entries, so no Claw requests itself or another
+ * Claw, and system rows are never configured. A Claw that no agent admits maps to `[]`.
  */
 export function listClawRequesterIds(cfg: OpenClawConfig): Map<string, string[]> {
   const entries = listAgentEntries(cfg).filter((entry) => entry?.id);
@@ -98,9 +98,7 @@ export function listClawRequesterIds(cfg: OpenClawConfig): Map<string, string[]>
       configuredAgentIds,
     });
     for (const targetId of allowedIds) {
-      if (targetId !== requesterAgentId) {
-        requestersByClaw.get(targetId)?.push(requesterAgentId);
-      }
+      requestersByClaw.get(targetId)?.push(requesterAgentId);
     }
   }
   return requestersByClaw;
