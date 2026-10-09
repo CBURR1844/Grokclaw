@@ -198,6 +198,28 @@ describe("AgentsListResultSchema", () => {
       agents: [{ id: "custodian", kind: "worker" }],
     });
   });
+
+  it("accepts Claw requester lists, including unused Claws, inside a closed shape", () => {
+    const result = {
+      defaultId: "main",
+      mainKey: "main",
+      scope: "per-sender",
+      agents: [
+        { id: "main" },
+        { id: "inbox", claw: { requesterAgentIds: ["main"] } },
+        { id: "report", claw: { requesterAgentIds: [] } },
+      ],
+    };
+    const withClaw = (claw: unknown) => ({ ...result, agents: [{ id: "inbox", claw }] });
+
+    expectAccepted(AgentsListResultSchema, result);
+    expectRejected(
+      AgentsListResultSchema,
+      withClaw({}),
+      withClaw({ requesterAgentIds: [""] }),
+      withClaw({ requesterAgentIds: ["main"], botIds: ["main"] }),
+    );
+  });
 });
 
 describe("AgentsUpdateParamsSchema", () => {
