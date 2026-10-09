@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
 import { CONTROL_UI_BOOTSTRAP_CONFIG_PATH } from "../../../src/gateway/control-ui-bootstrap-contract.js";
+import { pinUpstreamUiDefaults } from "../test-helpers/control-ui-e2e-ui-defaults.ts";
 import {
   createControlUiMockBootstrapConfig,
   createControlUiMockGatewayInitScript,
   type MockGatewayRequest,
-  pinUpstreamUiDefaults,
 } from "../test-helpers/control-ui-e2e.ts";
 import { createControlUiSessionRow as sessionRow } from "../test-helpers/control-ui-session-fixtures.ts";
 import {

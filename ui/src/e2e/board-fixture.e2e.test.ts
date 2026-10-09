@@ -13,10 +13,10 @@ import { runQaGatewayFixture } from "../../../test/helpers/qa-gateway-cleanup.ts
 import { stopChildProcess } from "../../../test/helpers/stop-child-process.ts";
 import type { ApplicationRuntime } from "../app/bootstrap.ts";
 import { createControlUiE2eArtifactDir } from "../test-helpers/control-ui-e2e-artifacts.ts";
+import { pinUpstreamUiDefaults } from "../test-helpers/control-ui-e2e-ui-defaults.ts";
 import {
   canRunPlaywrightChromium,
   controlUiSessionUrl,
-  pinUpstreamUiDefaults,
   resolvePlaywrightChromiumExecutablePath,
   type ControlUiMockGateway,
 } from "../test-helpers/control-ui-e2e.ts";
