@@ -7,6 +7,7 @@ export const en: TranslationMap & {
   mcpApp: TranslationMap;
   linkReader: TranslationMap;
   agentTools: TranslationMap;
+  agentDetails: TranslationMap & { claws: TranslationMap; schedule: TranslationMap };
   board: TranslationMap & { widget: TranslationMap };
   browser: TranslationMap & { errors: TranslationMap; annotatePrompt: TranslationMap };
   shortcutsOverlay: TranslationMap & { title: string };
