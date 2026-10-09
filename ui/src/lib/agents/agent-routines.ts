@@ -187,17 +187,22 @@ export class AgentRoutines {
     this.unsubscribeEvents();
   }
 
-  /** Events about another agent's routines are not this view's; a job-less event may be. */
+  /**
+   * Events about another agent's routines are not this view's. A job-less event may be,
+   * and so may a job without its own agent: the Gateway files it under its session's
+   * agent or the default agent.
+   */
   private concerns(payload: unknown): boolean {
     const job = isRecord(payload) && isRecord(payload.job) ? payload.job : null;
+    const jobAgentId = job?.agentId;
+    const owner = typeof jobAgentId === "string" ? jobAgentId.trim() : "";
     const agentId = this.input?.agentId;
-    if (!job || !agentId) {
+    if (!owner || !agentId) {
       return true;
     }
     const jobId = isRecord(payload) ? payload.jobId : undefined;
     return (
-      (typeof job.agentId === "string" &&
-        normalizeAgentId(job.agentId) === normalizeAgentId(agentId)) ||
+      normalizeAgentId(owner) === normalizeAgentId(agentId) ||
       this.jobs.some((held) => held.id === jobId)
     );
   }

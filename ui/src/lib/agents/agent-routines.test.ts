@@ -188,6 +188,15 @@ describe("agent routines", () => {
 
     f.connection.publishEvent("cron", { jobId: "gone", action: "removed" });
     expect(listCalls(f.request)).toHaveLength(reads + 3);
+    await f.until(() => !f.routines.loading);
+
+    // Without its own agent, the Gateway files a job under its session's agent or the default.
+    f.connection.publishEvent("cron", {
+      jobId: "added",
+      action: "added",
+      job: { id: "added", sessionKey: "agent:sorter:main" },
+    });
+    expect(listCalls(f.request)).toHaveLength(reads + 4);
   });
 
   it("switches one routine without a revision and locks it until the Gateway answers", async () => {
