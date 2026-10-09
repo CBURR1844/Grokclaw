@@ -1,7 +1,7 @@
 // Subagent target policy tests cover requester defaults, explicit allowlists,
 // wildcard target sets, and stale configured-agent filtering.
 import { describe, expect, it } from "vitest";
-import type { OpenClawConfig } from "../../../config/types.js";
+import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import {
   resolveRequesterAllowAgents,
   resolveSubagentAllowedTargetIds,

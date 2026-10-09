@@ -2,7 +2,7 @@
  * Subagent spawn target policy. Requesters can self-spawn by default, or opt
  * into a configured allowlist that is still intersected with known agents.
  */
-import type { OpenClawConfig } from "../../../config/types.js";
+import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import { normalizeAgentId } from "../../../routing/session-key.js";
 import { resolveAgentConfig } from "../../agent-scope-config.js";
 
