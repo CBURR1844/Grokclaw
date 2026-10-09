@@ -48,6 +48,7 @@ const offeredSlotLabels = [
   "Subagents",
   "Processes",
   "Review",
+  "Details",
   "Terminal",
   "Browser",
   "Files",
