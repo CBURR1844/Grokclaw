@@ -80,7 +80,7 @@ class AgentDetailsPanel extends AgentRosterElement {
   }
 
   private renderRoutine(job: CronCompactJob, routines: AgentRoutines) {
-    const running = job.runningAtMs !== undefined || routines.starting.has(job.id);
+    const running = routines.isRunning(job);
     const when = running
       ? t("agentDetails.routineRunning")
       : !job.enabled

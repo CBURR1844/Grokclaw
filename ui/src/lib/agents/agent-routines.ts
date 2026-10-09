@@ -70,6 +70,11 @@ export class AgentRoutines {
     return canCallGatewayMethod(this.context.gateway.snapshot, "cron.update", "operator.admin");
   }
 
+  /** A routine runs now, or a Run now from this view still waits to start. */
+  isRunning(job: CronCompactJob): boolean {
+    return job.runningAtMs !== undefined || this.starting.has(job.id);
+  }
+
   sync(input: AgentRoutinesInput): void {
     if (input.agentId !== this.input?.agentId) {
       this.retire();

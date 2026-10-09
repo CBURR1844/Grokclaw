@@ -133,8 +133,8 @@ class AgentDetailsClaws extends AgentRosterElement {
     if (!routines) {
       return nothing;
     }
-    if (routines.starting.size > 0 || routines.jobs.some((job) => job.runningAtMs !== undefined)) {
-      return t("agentDetails.claws.running");
+    if (routines.jobs.some((job) => routines.isRunning(job))) {
+      return t("agentDetails.routineRunning");
     }
     const latest = routines.latestRun;
     if (!latest) {
@@ -152,7 +152,7 @@ class AgentDetailsClaws extends AgentRosterElement {
   private renderSchedule(job: CronCompactJob, routines: AgentRoutines) {
     const name = job.displayName ?? job.name;
     const schedule = job.schedule ? describeCronSchedule(job.schedule) : name;
-    const running = job.runningAtMs !== undefined || routines.starting.has(job.id);
+    const running = routines.isRunning(job);
     return html`<li
       class="agent-details__schedule ${job.enabled ? "" : "agent-details__schedule--off"}"
       data-routine-id=${job.id}

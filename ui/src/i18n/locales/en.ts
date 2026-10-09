@@ -173,7 +173,6 @@ export const en: TranslationMap & {
         skipped: "Skipped",
       },
       neverRun: "Hasn't run yet",
-      running: "Running now",
       noSchedule: "No schedule yet",
       scheduleSwitch: "{name}: {schedule}",
     },
