@@ -82,6 +82,8 @@ export const AgentEntryBaseSchema = z.strictObject({
   id: z.string(),
   name: z.string().optional(),
   description: z.string().optional(),
+  // BotClaw: marks a single-job agent that Bots start. Classifies only; absent means a Bot.
+  kind: z.literal("claw").optional(),
   workspace: z.string().optional(),
   cwd: z.string().optional(),
   agentDir: z.string().optional(),
