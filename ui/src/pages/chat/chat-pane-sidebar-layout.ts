@@ -68,6 +68,7 @@ const LAZY_SIDEBAR_ELEMENTS: Partial<Record<LazyElementKey, LazyElement>> = {
   desktop: ["openclaw-desktop-panel", () => import("../../components/desktop/desktop-panel.ts")],
   portal: ["openclaw-portals-page", () => import("../portals/portals-page.ts")],
   companion: ["openclaw-chat-session-rail", () => import("./components/chat-session-rail.ts")],
+  agent: ["openclaw-agent-details-panel", () => import("../../components/agent-details-panel.ts")],
   processes: [
     "openclaw-chat-processes-panel",
     () => import("./components/chat-processes-panel.ts"),

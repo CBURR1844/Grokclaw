@@ -290,6 +290,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
           onToggle: sessionWorkspace.onToggleBrowser,
         })
       : nothing;
+    const agentDetails = this.agentDetailsControls(catalog);
     const sessionRailVisible =
       this.state !== undefined && isSidebarSlotVisible(this.state.sidebarLayout, "companion");
     const subagentsVisible =
@@ -311,6 +312,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
         sessionRailVisible,
         subagentsVisible,
         processesVisible,
+        agentDetails.visible,
         catalog,
         i18n.getLocale(),
       ],
@@ -378,6 +380,9 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
           active: sessionRailVisible,
           onActivate: callbacks.companion,
         });
+        if (agentDetails.menuAction) {
+          actions.push(agentDetails.menuAction);
+        }
         if (!catalog) {
           for (const slot of ["subagents", "processes"] as const) {
             const subagents = slot === "subagents";
@@ -577,7 +582,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
       copiedAction: this.headerCopiedAction,
       renameDisabledReason,
       actionsDisabled: this.state?.connected !== true,
-      panelActions: browserPanelAction,
+      panelActions: html`${agentDetails.toggle}${browserPanelAction}`,
       runAction: subagentStop,
       panelLayoutActions: html`${renderChatPanePanelLayoutActions(
         currentLayout,

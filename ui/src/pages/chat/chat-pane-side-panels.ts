@@ -1,5 +1,7 @@
+import { nothing } from "lit";
 import type { SessionsCompanionStateResult } from "../../../../packages/gateway-protocol/src/schema/sessions.js";
 import { SESSION_COMPANION_SELECTION_CONTEXT_MAX_CHARS } from "../../../../packages/gateway-protocol/src/session-companion-contract.js";
+import { icons } from "../../components/icons.ts";
 import { t } from "../../i18n/index.ts";
 import type { ChatAttachment } from "../../lib/chat/chat-types.ts";
 import { buildCompanionQuestionPrefill } from "../../lib/chat/companion-question.ts";
@@ -16,6 +18,8 @@ import {
 import type { ChatPageHost } from "./chat-state-host.ts";
 import { resolveChatAgentId } from "./chat-state-route.ts";
 import { getChatComposerState } from "./components/chat-composer-state.ts";
+import type { HeaderMenuQuickAction } from "./components/chat-header-session-menu.ts";
+import { renderChatPanePanelToggle } from "./components/chat-pane-header.ts";
 import { formatChatSelectionAnnotation } from "./components/chat-selection-attachment.ts";
 import type { SidebarLayout, SidebarSlotId } from "./sidebar-layout-types.ts";
 import {
@@ -124,8 +128,34 @@ export abstract class ChatPaneSidePanels extends ChatPaneBase {
     return isSidebarSlotVisible(this.presentSidebarLayout(layout), slot);
   }
 
+  /** The header's toolbar toggle and menu entry for this conversation's agent details. */
+  protected agentDetailsControls(catalog: boolean) {
+    const visible =
+      this.state !== undefined && isSidebarSlotVisible(this.state.sidebarLayout, "agent");
+    if (catalog) {
+      return { visible, toggle: nothing, menuAction: null };
+    }
+    const label = t(visible ? "agentDetails.hide" : "agentDetails.toggle");
+    const onActivate = () => this.requestBackgroundPanel("agent", "toggle");
+    const menuAction: HeaderMenuQuickAction = {
+      id: "session-agent",
+      label,
+      icon: icons.bot,
+      active: visible,
+      onActivate,
+    };
+    const toggle = renderChatPanePanelToggle({
+      label,
+      icon: icons.bot,
+      className: "chat-agent-details-toggle",
+      expanded: visible,
+      onToggle: onActivate,
+    });
+    return { visible, toggle, menuAction };
+  }
+
   protected requestBackgroundPanel(
-    slot: "subagents" | "processes",
+    slot: "subagents" | "processes" | "agent",
     intent: "open" | "toggle",
   ): void {
     const state = this.state;

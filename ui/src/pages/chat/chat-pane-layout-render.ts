@@ -249,6 +249,7 @@ export abstract class ChatPaneLayoutRender extends ChatPaneBrowserAnnotationRend
       subagentsInputRegion: this.inputRegion,
       subagentsPresented: slotPresentation("subagents"),
       processesPresented: slotPresentation("processes"),
+      agentPresented: slotPresentation("agent"),
       onRefreshProcesses: this.refreshProcesses,
       subagentsAvailable: !catalog,
       subagentsShowRequest: this.subagentsShowRequest,

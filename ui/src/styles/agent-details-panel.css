@@ -1,0 +1,231 @@
+openclaw-agent-details-panel {
+  display: block;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.agent-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 12px 20px;
+}
+
+.agent-details__profile {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.agent-details__avatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg-accent);
+  font-size: 30px;
+  overflow: hidden;
+}
+
+.agent-details__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.agent-details__identity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-details__name {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-details__role,
+.agent-details__status {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.agent-details__working {
+  color: var(--ok);
+}
+
+.agent-details__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.agent-details__edit svg,
+.agent-details__run svg,
+.agent-details__model svg,
+.agent-details__link svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.agent-details__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 4px 4px;
+}
+
+.agent-details__section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agent-details__section-head h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--control-ui-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.agent-details__section-link {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.agent-details__section-link:hover {
+  color: var(--text);
+}
+
+.agent-details__model {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.agent-details__routines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-details__routine {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+
+.agent-details__routine--paused {
+  opacity: 0.7;
+}
+
+.agent-details__routine-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.agent-details__routine-dot--ok {
+  background: var(--ok);
+}
+
+.agent-details__routine-dot--error {
+  background: var(--danger);
+}
+
+.agent-details__routine-dot--skipped {
+  background: var(--warn);
+}
+
+.agent-details__routine-dot--running {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.agent-details__routine-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.agent-details__routine-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-details__run {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.agent-details__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.agent-details__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agent-details__links {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.agent-details__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.agent-details__link:hover {
+  background: var(--bg-hover);
+}

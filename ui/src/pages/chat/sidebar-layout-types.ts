@@ -1,4 +1,5 @@
 export type SidebarSlotId =
+  | "agent"
   | "browser"
   | "link-reader"
   | "companion"
