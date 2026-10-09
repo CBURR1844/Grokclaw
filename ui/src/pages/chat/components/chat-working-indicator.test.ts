@@ -105,7 +105,7 @@ describe("renderChatWorkingIndicator", () => {
     render(
       renderChatWorkingIndicator(
         { kind: "reading-indicator", key, startedAt: 1 },
-        { mascot: "claw", waitingApproval },
+        { waitingApproval },
       ),
       container,
     );

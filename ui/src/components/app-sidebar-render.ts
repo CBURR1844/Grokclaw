@@ -144,17 +144,7 @@ function renderSidebarWorkspaceHeader(host: AppSidebarRenderHost) {
           }
         }}
       >
-        ${
-          host.sessionDataContext?.theme.branding.mascot === "none"
-            ? html`<span
-                class="sidebar-workspace-header__mark sidebar-workspace-header__mark--neutral"
-                aria-hidden="true"
-                >${icons.mark}</span
-              >`
-            : html`<span class="sidebar-workspace-header__mark" aria-hidden="true"
-                >${icons.lobster}</span
-              >`
-        }
+        <span class="sidebar-workspace-header__mark" aria-hidden="true">${icons.mark}</span>
         <span class="sidebar-agent-card__text">
           <span class="sidebar-agent-card__name">
             ${renderHoverMarquee(name, "sidebar-agent-card__name-text", { loop: true, delay: 300, speed: 35 })}

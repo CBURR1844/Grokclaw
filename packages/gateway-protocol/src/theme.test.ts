@@ -247,9 +247,9 @@ describe("portable theme definition", () => {
   });
 });
 
-it("resolves omitted branding to no mascot, critters or hat and retains authored branding", () => {
+it("resolves omitted branding to the claw without critters or a hat and retains authored branding", () => {
   const defaults = {
-    mascot: "none",
+    mascot: "claw",
     workingPhrases: undefined,
     critters: [],
     avatarHat: undefined,
@@ -262,13 +262,13 @@ it("resolves omitted branding to no mascot, critters or hat and retains authored
   });
   expect(
     resolveThemeBranding({
-      mascot: "claw",
+      mascot: "none",
       workingPhrases: ["Building"],
       critters: ["penguin", "fedora"],
       avatarHat: "fedora",
     }),
   ).toEqual({
-    mascot: "claw",
+    mascot: "none",
     workingPhrases: ["Building"],
     critters: ["penguin", "fedora"],
     avatarHat: "fedora",

@@ -1,9 +1,6 @@
-import {
-  resolveThemeBranding,
-  type ThemeBranding,
-} from "../../../packages/gateway-protocol/src/theme.ts";
+import type { ThemeBranding } from "../../../packages/gateway-protocol/src/theme.ts";
 
-let branding: ThemeBranding = resolveThemeBranding(undefined);
+let branding: ThemeBranding = { mascot: "claw", critters: [] };
 
 export function setCurrentThemeBranding(value: ThemeBranding): void {
   branding = value;

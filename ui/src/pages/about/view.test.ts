@@ -1,9 +1,7 @@
 /* @vitest-environment jsdom */
 
 import { render } from "lit";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveThemeBranding } from "../../../../packages/gateway-protocol/src/theme.ts";
-import { setCurrentThemeBranding } from "../../app/theme-branding.ts";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../../i18n/index.ts";
 import { renderAbout } from "./view.ts";
 
@@ -37,12 +35,8 @@ function createProps(overrides: Partial<AboutProps> = {}): AboutProps {
 describe("renderAbout", () => {
   beforeEach(async () => {
     document.body.innerHTML = "";
-    // Clawd only appears for themes that opt into the lobster mascot.
-    setCurrentThemeBranding({ mascot: "claw", critters: [] });
     await i18n.setLocale("en");
   });
-
-  afterEach(() => setCurrentThemeBranding(resolveThemeBranding(undefined)));
 
   it("renders the hero with Clawd, identity, community links, and license", () => {
     const onPokeClawd = vi.fn();

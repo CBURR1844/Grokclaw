@@ -19,7 +19,11 @@ import { currentThemeBranding, setCurrentThemeBranding } from "./theme-branding.
 let faviconSvg: string;
 beforeAll(async () => {
   // Vitest serves its own /favicon.svg; load the shipped asset from the UI root.
-  faviconSvg = await commands.readFile("public/favicon.svg", "utf8");
+  // The shipped mark is static, so add SMIL to prove composition keeps artwork animation.
+  faviconSvg = (await commands.readFile("public/favicon.svg", "utf8")).replace(
+    "</svg>",
+    '<animate attributeName="opacity" values="1;0.6;1" dur="2s" repeatCount="indefinite"/></svg>',
+  );
 });
 
 describe("favicon presentation ownership", () => {

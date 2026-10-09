@@ -1,12 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  BUILTIN_THEMES,
-  type ThemeDescriptor,
-} from "../../../../packages/gateway-protocol/src/theme.ts";
-import { createThemeDefinitionFixture } from "../../../../test/helpers/theme-fixture.ts";
 import type { AgentsListResult } from "../../api/types.ts";
 import { loadSettings, patchSettings } from "../../app/settings.ts";
 import { SIDEBAR_SESSION_PAGE_SIZE } from "../../components/app-sidebar-session-types.ts";
+import { NEUTRAL_MARK } from "../../components/neutral-mark-geometry.ts";
 import { rosterActivityStore } from "../../lib/agents/roster-activity-store.ts";
 import {
   agentIds,
@@ -19,41 +15,13 @@ import {
 } from "./roster.test-support.ts";
 
 describe("AppSidebar agent roster", () => {
-  it("updates the workspace mark when switching to and from a theme with the lobster mascot", async () => {
-    const { sidebar, context, request } = await mountRoster();
+  it("shows the BotClaw mark in the workspace header under the default lobster theme", async () => {
+    const { sidebar } = await mountRoster();
     await toggleRoster(sidebar);
     const header = sidebar.querySelector(".sidebar-workspace-header");
-    expect(header?.querySelector(".sidebar-workspace-header__mark--neutral svg")).not.toBeNull();
     expect(header?.textContent).toContain("BotClaw");
-    const theme: ThemeDescriptor = {
-      id: "example/lobster",
-      name: "Lobster",
-      description: "Lobster workspace",
-      source: "plugin",
-      modes: ["dark"],
-      mascot: "claw",
-    };
-    const original = request.getMockImplementation();
-    request.mockImplementation((...args) =>
-      args[0] === "themes.list"
-        ? {
-            themes: [...BUILTIN_THEMES, theme],
-            theme,
-            definition: { ...createThemeDefinitionFixture(), mascot: "claw" },
-            current: { id: theme.id, mode: "dark", scope: "profile", overrides: {} },
-          }
-        : original?.(...args),
-    );
-    patchSettings({ theme: theme.id });
-    context.theme.refresh();
-    await vi.waitFor(() =>
-      expect(header?.querySelector(".sidebar-workspace-header__mark--neutral")).toBeNull(),
-    );
-    expect(header?.querySelector(".sidebar-workspace-header__mark svg")).not.toBeNull();
-    patchSettings({ theme: "claw" });
-    context.theme.refresh();
-    await vi.waitFor(() =>
-      expect(header?.querySelector(".sidebar-workspace-header__mark--neutral svg")).not.toBeNull(),
+    expect(header?.querySelector(".sidebar-workspace-header__mark path")?.getAttribute("d")).toBe(
+      NEUTRAL_MARK.glyph,
     );
   });
 
