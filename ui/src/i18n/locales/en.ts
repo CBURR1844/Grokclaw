@@ -82,6 +82,7 @@ export const en: TranslationMap & {
   mcpServers: TranslationMap;
   mcpPage: TranslationMap;
   modelSetup: TranslationMap;
+  nav: TranslationMap;
   newSession: TranslationMap &
     Record<"title" | "hint" | "placementReloadBlocked" | "discardUnsavedAndReload", string>;
   commandPalette: TranslationMap;
@@ -1677,11 +1678,6 @@ export const en: TranslationMap & {
     pages: "Pages",
     customize: "Edit pinned items",
     customizeReset: "Reset pinned items",
-    advanced: "Advanced",
-    advancedDetails: "Show all pages and controls",
-    advancedOn:
-      "Advanced is on. All pages are in the sidebar and more controls are by the message box.",
-    advancedOff: "Advanced is off. Back to the simple screen.",
     workboardGroup: "WorkBoard",
   },
   terminal: {
