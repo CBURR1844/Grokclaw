@@ -1,7 +1,9 @@
 // Subagent target policy tests cover requester defaults, explicit allowlists,
 // wildcard target sets, and stale configured-agent filtering.
 import { describe, expect, it } from "vitest";
+import type { OpenClawConfig } from "../../../config/types.js";
 import {
+  resolveRequesterAllowAgents,
   resolveSubagentAllowedTargetIds,
   resolveSubagentTargetPolicy,
 } from "./subagent-target-policy.js";
@@ -94,6 +96,27 @@ describe("subagent target policy", () => {
     }
     expect(result.error).toBe(
       'agentId "beta" is not in the configured agent registry (allowed: main, planner)',
+    );
+  });
+
+  it("reads a requester's own allowlist before the defaults' allowlist", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        ownership: "explicit",
+        defaults: { subagents: { allowAgents: ["*"] } },
+        entries: {
+          main: { subagents: { allowAgents: ["planner"] } },
+          locked: { subagents: { allowAgents: [] } },
+          planner: {},
+        },
+      },
+    };
+
+    expect(resolveRequesterAllowAgents(cfg, "main")).toEqual(["planner"]);
+    expect(resolveRequesterAllowAgents(cfg, "locked")).toEqual([]);
+    expect(resolveRequesterAllowAgents(cfg, "planner")).toEqual(["*"]);
+    expect(resolveRequesterAllowAgents({ agents: { entries: { main: {} } } }, "main")).toBe(
+      undefined,
     );
   });
 });
