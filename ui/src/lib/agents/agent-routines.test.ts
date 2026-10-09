@@ -4,7 +4,11 @@ import { createDeferred } from "../../../../test/helpers/promise.ts";
 import type { CronCompactJob, CronJobsListResult } from "../../api/types.ts";
 import { disposeSidebarContextLifecycles } from "../../test-helpers/app-sidebar-context-lifecycle.ts";
 import { createContext, createGatewayHarness } from "../../test-helpers/app-sidebar.ts";
-import { createTestGatewayClient } from "../../test-helpers/gateway-client.ts";
+import {
+  createGatewayRequestMock,
+  type GatewayRequestMock,
+  createTestGatewayClient,
+} from "../../test-helpers/gateway-client.ts";
 import { gatewayHelloForMethods } from "../../test-helpers/gateway-methods.ts";
 import { createTestSessionCapability } from "../sessions/session-capability.test-support.ts";
 import { AgentRoutines } from "./agent-routines.ts";
@@ -42,12 +46,14 @@ function fixture(
   read: (method: string, params: Record<string, unknown>) => unknown,
   scopes: string[] = ["operator.admin"],
 ) {
-  const request = vi.fn(read);
+  const request = createGatewayRequestMock((method, params) =>
+    read(method, (params ?? {}) as Record<string, unknown>),
+  );
   const client = createTestGatewayClient(request);
   const connection = createGatewayHarness(client);
   // The sidebar harness answers cron.list for its attention store; these cases own it.
   client.request = async <T>(...args: Parameters<typeof client.request>) =>
-    (await request(...(args as [string, Record<string, unknown>]))) as T;
+    (await request(...args)) as T;
   connection.publish({ hello: gatewayHelloForMethods(["cron.list", "cron.run"], scopes) });
   const sessions = createTestSessionCapability(connection.gateway);
   const changed = vi.fn();
@@ -60,7 +66,7 @@ function fixture(
   return { routines, request, connection, changed };
 }
 
-const listCalls = (request: ReturnType<typeof vi.fn>) =>
+const listCalls = (request: GatewayRequestMock) =>
   request.mock.calls.filter(([method]) => method === "cron.list");
 
 describe("agent routines", () => {
