@@ -66,6 +66,14 @@ openclaw-agent-details-panel {
   color: var(--ok);
 }
 
+.agent-details__works-for {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .agent-details__edit {
   display: inline-flex;
   align-items: center;
@@ -75,6 +83,8 @@ openclaw-agent-details-panel {
 
 .agent-details__edit svg,
 .agent-details__run svg,
+.agent-details__add svg,
+.agent-details__claw-more svg,
 .agent-details__model svg,
 .agent-details__link svg {
   width: 14px;
@@ -208,6 +218,123 @@ openclaw-agent-details-panel {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+/* A Bot's Claws: one card per Claw, one row per schedule inside it. */
+.agent-details__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.agent-details__claws,
+.agent-details__schedules {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-details__claws {
+  gap: 8px;
+}
+
+.agent-details__claw {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+
+.agent-details__claw-head {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-details__claw-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-accent);
+  font-size: 17px;
+  overflow: hidden;
+}
+
+.agent-details__claw-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+wa-dropdown-item .agent-details__claw-avatar {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+
+.agent-details__claw-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-details__claw-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-details__claw-last,
+.agent-details__claw-none {
+  overflow: hidden;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-details__schedules {
+  gap: 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.agent-details__schedule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.agent-details__schedule--off .agent-details__schedule-text {
+  color: var(--muted);
+}
+
+.agent-details__schedule-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-details__menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
 }
 
 .agent-details__links {
