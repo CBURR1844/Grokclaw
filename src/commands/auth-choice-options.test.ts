@@ -218,22 +218,22 @@ describe("buildAuthChoiceOptions", () => {
     });
 
     expect(groups.map((group) => group.label)).toEqual([
+      "Anthropic",
       "OpenAI",
       "OpenRouter",
       "xAI (Grok)",
       "Google",
-      "Anthropic",
       "BytePlus",
       "Custom Provider",
       "LiteLLM",
       "Meta",
     ]);
     expect(groups.filter(isFeaturedAuthChoiceGroup).map((group) => group.label)).toEqual([
+      "Anthropic",
       "OpenAI",
       "OpenRouter",
       "xAI (Grok)",
       "Google",
-      "Anthropic",
     ]);
   });
 
