@@ -30,11 +30,32 @@ type AgentRosterEntry = {
   kind?: "agent" | "system";
   name?: string;
   identity?: { name?: string };
+  claw?: { requesterAgentIds: readonly string[] };
 };
 
 /** Ordinary agent targets; system rows remain available to diagnostic surfaces. */
 export function listSelectableAgents<T extends AgentRosterEntry>(agents: readonly T[]): T[] {
   return agents.filter((agent) => agent.kind !== "system");
+}
+
+/** A Claw is a single-job agent its Bots start; the Gateway marks its row with `claw`. */
+export function isClawAgent(agent: Pick<AgentRosterEntry, "claw">): boolean {
+  return agent.claw !== undefined;
+}
+
+/** Chat partners: neither system rows nor Claws. Settings and pickers keep Claws. */
+export function listChatAgents<T extends AgentRosterEntry>(agents: readonly T[]): T[] {
+  return agents.filter((agent) => agent.kind !== "system" && !isClawAgent(agent));
+}
+
+/** A Bot's Claws in roster order, from the Gateway's requester projection only. */
+export function clawsOf<T extends AgentRosterEntry>(agents: readonly T[], botId: string): T[] {
+  const bot = normalizeAgentId(botId);
+  return agents.filter(
+    (agent) =>
+      agent.kind !== "system" &&
+      agent.claw?.requesterAgentIds.some((id) => normalizeAgentId(id) === bot) === true,
+  );
 }
 
 /** Pinned agents first, each group in its given order. Pins order every agent list the same way. */

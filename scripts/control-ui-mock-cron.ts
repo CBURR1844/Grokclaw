@@ -49,7 +49,12 @@ function singleJobListCases(jobs: CronJob[], match: Record<string, unknown>) {
 
 export function buildCronMocks(
   baseTime: number,
-  options: { richAttention?: boolean; secondAgentId?: string } = {},
+  options: {
+    richAttention?: boolean;
+    secondAgentId?: string;
+    /** Claws whose details-panel cards read these routines and their latest runs. */
+    clawAgentIds?: readonly [sorter: string, brief: string];
+  } = {},
 ) {
   const richAttention = options.richAttention === true;
   const minute = 60_000;
@@ -220,7 +225,55 @@ export function buildCronMocks(
       lastDeliveryStatus: "delivered",
     },
   };
-  const jobs = [overdueJob, ...extraOverdueJobs, healthyJob, failedJob, ...extraFailedJobs];
+  const clawJob = (
+    id: string,
+    agentId: string,
+    name: string,
+    expr: string,
+    lastRunAgoMs?: number,
+  ): CronJob => ({
+    id,
+    agentId,
+    name,
+    enabled: lastRunAgoMs !== undefined,
+    createdAtMs: baseTime - 14 * day,
+    updatedAtMs: baseTime - day,
+    schedule: { kind: "cron", expr },
+    sessionTarget: "isolated",
+    wakeMode: "now",
+    payload: { kind: "agentTurn", message: name },
+    state:
+      lastRunAgoMs === undefined
+        ? {}
+        : {
+            nextRunAtMs: baseTime + 15 * minute,
+            lastRunAtMs: baseTime - lastRunAgoMs,
+            lastRunStatus: "ok",
+            lastDurationMs: 12_000,
+          },
+  });
+  const [sorterId, briefId] = options.clawAgentIds ?? [];
+  // One Claw with a schedule switched off beside a live one, and one with a single schedule.
+  const clawJobs: CronJob[] =
+    sorterId && briefId
+      ? [
+          clawJob("mock-cron-sort-inbox", sorterId, "Sort new email", "*/15 * * * *", 4 * minute),
+          clawJob("mock-cron-clear-newsletters", sorterId, "Clear old newsletters", "0 18 * * 1-5"),
+          clawJob("mock-cron-morning-brief", briefId, "Write the morning brief", "0 7 * * *", hour),
+        ]
+      : [];
+  const clawSummaries: Record<string, string> = {
+    "mock-cron-sort-inbox": "46 emails sorted",
+    "mock-cron-morning-brief": "Wrote today's brief: 3 meetings and 2 deadlines.",
+  };
+  const jobs = [
+    overdueJob,
+    ...extraOverdueJobs,
+    healthyJob,
+    failedJob,
+    ...extraFailedJobs,
+    ...clawJobs,
+  ];
   const failedJobs = [failedJob, ...extraFailedJobs];
   const failedRuns: CronRunLogEntry[] = failedJobs.map((job, index) => ({
     ts: baseTime - (5 + index * 4) * minute,
@@ -265,6 +318,23 @@ export function buildCronMocks(
       model: "gpt-5",
       provider: "openai",
     },
+    ...clawJobs.flatMap((job): CronRunLogEntry[] =>
+      job.state?.lastRunAtMs === undefined
+        ? []
+        : [
+            {
+              ts: job.state.lastRunAtMs,
+              runAtMs: job.state.lastRunAtMs,
+              jobId: job.id,
+              jobName: job.name,
+              action: "finished",
+              status: "ok",
+              durationMs: job.state.lastDurationMs,
+              summary: clawSummaries[job.id],
+              deliveryStatus: "not-requested",
+            },
+          ],
+    ),
   ];
   const queuedRuns: Array<{ runId: string; entry: CronRunLogEntry }> = jobs.map((job, index) => ({
     runId: `mock-cron-manual-${job.id}`,
@@ -357,6 +427,11 @@ export function buildCronMocks(
         ...jobs.flatMap((job) => {
           const jobRun = runByJobId.get(job.id);
           return [
+            // The latest run behind a Claw card's result line.
+            {
+              match: { id: job.id, limit: 1, sortDir: "desc" },
+              response: runsResult(jobRun ? [jobRun] : []),
+            },
             {
               match: { scope: "job", id: job.id, statuses: ["error"] },
               response: runsResult(jobRun?.status === "error" ? [jobRun] : []),
