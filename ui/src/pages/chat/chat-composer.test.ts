@@ -103,16 +103,25 @@ describe("composer with typed commands off", () => {
     textarea.value = "a";
     expect(typeSlash(textarea).defaultPrevented).toBe(false);
 
-    const withoutMenu = renderComposer({
-      slashCommands: false,
-      uploadConfig: { current: { uploadsEnabled: false } } as Parameters<
-        typeof renderChatComposer
-      >[0]["uploadConfig"],
-    });
+    const uploadConfig = { current: { uploadsEnabled: false } } as Parameters<
+      typeof renderChatComposer
+    >[0]["uploadConfig"];
+    const withoutMenu = renderComposer({ slashCommands: false, uploadConfig });
     expect(
       typeSlash(withoutMenu.container.querySelector<HTMLTextAreaElement>("textarea")!)
         .defaultPrevented,
     ).toBe(false);
+
+    // Command rows alone still make a + menu, so "/" opens it like the button does.
+    const commandsOnly = renderComposer({
+      slashCommands: false,
+      uploadConfig,
+      commands: { read: () => ({ disabledReason: null }), run: vi.fn() },
+    });
+    expect(
+      typeSlash(commandsOnly.container.querySelector<HTMLTextAreaElement>("textarea")!)
+        .defaultPrevented,
+    ).toBe(true);
   });
 });
 

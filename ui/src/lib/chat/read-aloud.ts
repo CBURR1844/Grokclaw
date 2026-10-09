@@ -31,8 +31,10 @@ async function speak(client: GatewayBrowserClient, text: string) {
     return;
   }
   stopPlayback();
-  // Created inside the click so Safari still allows play() after the request resolves.
   const current: Playback = { text, audio: new Audio() };
+  // WebKit lifts its autoplay block for an element that load()s or play()s inside a user
+  // gesture; this runs in the click, so play() is allowed after tts.speak resolves.
+  current.audio.load();
   playback = current;
   try {
     // The Gateway strips markdown and enforces tts.maxTextLength.

@@ -13,6 +13,7 @@ class FakeAudio extends EventTarget {
   src = "";
   play = vi.fn(async () => undefined);
   pause = vi.fn();
+  load = vi.fn();
   constructor() {
     super();
     FakeAudio.created.push(this);
@@ -53,6 +54,8 @@ describe("read aloud", () => {
     expect(isReadingAloud("Hello there")).toBe(true);
     expect(request).toHaveBeenCalledWith("tts.speak", { text: "Hello there" });
     const audio = FakeAudio.created[0]!;
+    // Loaded within the click itself, before the Gateway replies (Safari autoplay).
+    expect(audio.load).toHaveBeenCalledOnce();
     await vi.waitFor(() => expect(audio.play).toHaveBeenCalledOnce());
     expect(audio.src).toBe("blob:audio");
 

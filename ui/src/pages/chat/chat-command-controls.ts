@@ -1,6 +1,7 @@
 import type { ApplicationContext } from "../../app/context.ts";
 import { t } from "../../i18n/index.ts";
 import { extractText } from "../../lib/chat/message-extract.ts";
+import { formatUiError } from "../../lib/format-error.ts";
 import { readSessionMethodAccess } from "../../lib/session-method-access.ts";
 import { showToast } from "../../lib/toast.ts";
 import { dispatchChatSlashCommand } from "./chat-commands.ts";
@@ -100,8 +101,23 @@ export function createChatCommandControls(
     }
     return { disabledReason: disabledReason(command) };
   };
-  const send = (text: string) =>
-    void state.handleSendChat(text, { replyTargetOverride: null, followUpMode: "queue" });
+  // Toasts the reason when a command can no longer run, so no click ends silently.
+  const blocked = (command: ChatControlCommand) => {
+    const current = read(command);
+    if (current && !current.disabledReason) {
+      return false;
+    }
+    showToast({ message: current?.disabledReason ?? t("chat.commandControls.unavailable") });
+    return true;
+  };
+  // A dialog can outlive the state it opened in: re-check before sending what it returns.
+  const sendIfStillAvailable = (command: ChatControlCommand, sessionKey: string, text: string) => {
+    if (state.sessionKey !== sessionKey) {
+      showToast({ message: t("chat.commandControls.unavailable") });
+    } else if (!blocked(command)) {
+      void state.handleSendChat(text, { replyTargetOverride: null, followUpMode: "queue" });
+    }
+  };
   const focusComposer = () =>
     void pane.updateComplete.then(() =>
       pane
@@ -119,6 +135,7 @@ export function createChatCommandControls(
     });
   };
   const runNow = async (command: ChatControlCommand, message?: string) => {
+    const sessionKey = state.sessionKey;
     switch (command) {
       case "export":
         await dispatchChatSlashCommand(state, "export-session", "");
@@ -149,7 +166,7 @@ export function createChatCommandControls(
           : await ask("teachSkill");
         // An empty request lets the Gateway learn from the conversation so far.
         if (request !== null) {
-          send(`/learn ${request.trim()}`.trim());
+          sendIfStillAvailable(command, sessionKey, `/learn ${request.trim()}`.trim());
         }
         break;
       }
@@ -157,7 +174,7 @@ export function createChatCommandControls(
         const task = lastUserTask(state);
         const schedule = await ask("repeat", task ? `30m ${task}` : "30m ");
         if (schedule) {
-          send(`/loop ${schedule}`);
+          sendIfStillAvailable(command, sessionKey, `/loop ${schedule}`);
         }
         break;
       }
@@ -167,12 +184,12 @@ export function createChatCommandControls(
     read,
     run(command, options) {
       // Menus can outlive the render that built them; check again at click time.
-      const current = read(command);
-      if (!current || current.disabledReason) {
-        showToast({ message: current?.disabledReason ?? t("chat.commandControls.unavailable") });
+      if (blocked(command)) {
         return;
       }
-      void runNow(command, options?.message);
+      runNow(command, options?.message).catch((error: unknown) =>
+        showToast({ message: t("chat.commandControls.failed", { error: formatUiError(error) }) }),
+      );
     },
   };
 }

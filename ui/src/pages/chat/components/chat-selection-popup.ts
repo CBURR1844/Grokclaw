@@ -65,7 +65,18 @@ function selectionWithinChatBubble(
   if (!bubble || !threadRoot.contains(bubble)) {
     return null;
   }
-  const text = selection.toString();
+  return chatBubbleRangeSource(bubble, range, selection.toString());
+}
+
+/**
+ * The source for a range inside one chat bubble. Offsets count the bubble's DOM text nodes,
+ * which is what comment pins resolve; `text` is the rendered text, with its line breaks.
+ */
+export function chatBubbleRangeSource(
+  bubble: HTMLElement,
+  range: Range,
+  text: string,
+): ChatSelectionSource | null {
   if (!text.trim()) {
     return null;
   }

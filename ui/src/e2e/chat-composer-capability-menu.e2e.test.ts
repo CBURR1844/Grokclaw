@@ -1,7 +1,11 @@
 // Control UI E2E coverage proves the composer capability menu against a mocked Gateway.
 import type { Page } from "playwright";
 import { expect, it } from "vitest";
-import { installMockGateway, type MockGatewayControls } from "../test-helpers/control-ui-e2e.ts";
+import {
+  defaultControlUiFeatureMethods,
+  installMockGateway,
+  type MockGatewayControls,
+} from "../test-helpers/control-ui-e2e.ts";
 import { createControlUiE2eSuite, tooltipTitleText } from "./control-ui-e2e-suite.test-support.ts";
 
 const suite = createControlUiE2eSuite({
@@ -204,6 +208,8 @@ suite.define(() => {
   it("renders the root stack, proxies attachments, patches sparse overrides, and clears the pill", async () => {
     await suite.withPage({ viewport: { width: 1280, height: 900 } }, async ({ page }) => {
       const gateway = await installMockGateway(page, {
+        // Repeat on a schedule needs chat.send with admin scope, like typing /loop.
+        featureMethods: [...defaultControlUiFeatureMethods, "chat.send"],
         methodResponses: {
           "config.get": configResponse({
             github: { url: "https://mcp.example.test", enabled: true },

@@ -3,15 +3,26 @@ import { registerChatMessageMetadataEnglish } from "../../../i18n/locales/en-cha
 import type { ChatSelectionSource } from "../../../lib/chat/chat-types.ts";
 import { isReadingAloud } from "../../../lib/chat/read-aloud.ts";
 import type { ChatCommandControls } from "../chat-command-controls.ts";
+import { chatBubbleRangeSource } from "./chat-selection-popup.ts";
 
 registerChatMessageMetadataEnglish();
 
 type MessageMenuAction = { label: string; disabled: boolean; tooltip: string; run: () => void };
 
+// The side chat pins its comment to DOM text offsets, so it asks about the rendered body.
+function renderedBodySource(bubble: HTMLElement, body: HTMLElement) {
+  const range = bubble.ownerDocument.createRange();
+  range.selectNodeContents(body);
+  // The model reads this text, so it needs the rendered line breaks a selection's text has;
+  // textContent runs paragraphs together. jsdom lacks innerText.
+  // oxlint-disable-next-line unicorn/prefer-dom-node-text-content
+  return chatBubbleRangeSource(bubble, range, body.innerText || range.toString());
+}
+
 /**
  * The message menu's actions on a whole message, in menu order: ask about it in a side
- * chat, save its workflow as a skill, and read it aloud. Each uses the message's copy
- * text, so attachment-only replies get them too.
+ * chat, save its workflow as a skill, and read it aloud. Only messages with a text body get
+ * them; tool output and attachment-only rows have nothing to ask about, learn or read.
  */
 export function wholeMessageActions(
   props: {
@@ -19,10 +30,11 @@ export function wholeMessageActions(
     commands?: ChatCommandControls;
     onReadAloud?: (text: string) => void;
   },
-  message: { text?: string; bubble?: HTMLElement | null; messageId: string; entryId: string },
+  message: { text?: string; bubble?: HTMLElement | null },
 ): MessageMenuAction[] {
   const { text, bubble } = message;
-  if (!text || !bubble) {
+  const body = bubble?.querySelector<HTMLElement>(".chat-text");
+  if (!text || !bubble || !body) {
     return [];
   }
   const actions: MessageMenuAction[] = [];
@@ -34,18 +46,10 @@ export function wholeMessageActions(
       run,
     });
   const { onCompanionSelection, onReadAloud, commands } = props;
-  if (onCompanionSelection) {
+  const selection = onCompanionSelection ? renderedBodySource(bubble, body) : null;
+  if (onCompanionSelection && selection) {
     add(t("chat.messages.askInSideChat"), () =>
-      onCompanionSelection(
-        {
-          text,
-          start: 0,
-          end: text.length,
-          messageId: message.messageId || undefined,
-          entryId: message.entryId || undefined,
-        },
-        bubble.getBoundingClientRect(),
-      ),
+      onCompanionSelection(selection, bubble.getBoundingClientRect()),
     );
   }
   const learn = commands?.read("learn");

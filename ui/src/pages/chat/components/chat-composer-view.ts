@@ -93,19 +93,20 @@ type ChatComposerViewContext = {
 
 // The + menu's commands, in menu order, each shown only where its command is offered.
 const PLUS_MENU_COMMANDS = [
-  ["goal", "chat.commandControls.setGoal", icons.target],
-  ["loop", "chat.commandControls.repeatOnSchedule", icons.repeat],
-  ["learn", "chat.commandControls.teachSkill", icons.wandSparkles],
-] as const satisfies readonly (readonly [ChatControlCommand, string, unknown])[];
+  ["goal", () => t("chat.commandControls.setGoal"), icons.target],
+  ["loop", () => t("chat.commandControls.repeatOnSchedule"), icons.repeat],
+  ["learn", () => t("chat.commandControls.teachSkill"), icons.wandSparkles],
+] as const satisfies readonly (readonly [ChatControlCommand, () => string, unknown])[];
 
-function plusMenuCommandActions(commands: ChatCommandControls | undefined) {
+/** The + menu's command rows; the composer's "/" shortcut opens the menu when any exist. */
+export function plusMenuCommandActions(commands: ChatCommandControls | undefined) {
   return PLUS_MENU_COMMANDS.flatMap(([command, label, icon]) => {
     const state = commands?.read(command);
     return state
       ? [
           {
             value: command,
-            label: t(label),
+            label: label(),
             icon,
             disabled: state.disabledReason !== null,
             title: state.disabledReason,

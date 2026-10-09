@@ -74,10 +74,20 @@ suite.define(() => {
               items.map((item) => Math.round(item.getBoundingClientRect().height)),
             ),
           )
-          .toEqual(Array.from({ length: 15 }, () => 34));
+          .toEqual(Array.from({ length: 17 }, () => 34));
+        // BotClaw adds Set a goal… and Export chat; the menu still fits the phone unscrolled.
         await expect
-          .poll(() => menu.evaluate((element) => element.getBoundingClientRect().height))
-          .toBeLessThan(550);
+          .poll(() =>
+            menu.evaluate((element) => {
+              const bounds = element.getBoundingClientRect();
+              return (
+                bounds.top >= 0 &&
+                bounds.bottom <= window.innerHeight &&
+                element.scrollHeight <= element.clientHeight
+              );
+            }),
+          )
+          .toBe(true);
         const deleteIconColor = await menuHost
           .locator('wa-dropdown-item[value="delete"] .session-menu__icon')
           .evaluate((element) => getComputedStyle(element).color);

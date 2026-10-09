@@ -49,21 +49,20 @@ describe("chat menu session actions", () => {
     ]);
   });
 
-  it("keeps the cached list but runs the latest controls", () => {
+  it("runs the latest controls from an item an earlier render built", () => {
     const sessionActions = new ChatPaneHeaderSessionActions();
     const onAction = vi.fn();
     const first = controls({ compact: { disabledReason: null } });
     const second = controls({ compact: { disabledReason: null } });
 
-    const cached = sessionActions.read(context, undefined, undefined, onAction, first);
-    const next = sessionActions.read(context, undefined, undefined, onAction, second);
-    const freeSpace = next.find((action) => action.id === "free-space");
+    const earlier = sessionActions.read(context, undefined, undefined, onAction, first);
+    sessionActions.read(context, undefined, undefined, onAction, second);
+    const freeSpace = earlier.find((action) => action.id === "free-space");
     if (!freeSpace || freeSpace.kind === "status") {
       throw new Error("expected Free up space");
     }
     freeSpace.onActivate();
 
-    expect(next).toBe(cached);
     expect(first.run).not.toHaveBeenCalled();
     expect(second.run).toHaveBeenCalledWith("compact");
   });

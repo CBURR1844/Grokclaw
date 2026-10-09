@@ -261,22 +261,57 @@ describe("chat command controls", () => {
     );
   });
 
-  it("starts a goal with the current draft and focuses the composer", async () => {
-    const { host, controls, focus } = setup({ host: { chatMessage: "Ship the release" } });
+  it("starts a goal draft, stops offering another and focuses the composer", async () => {
+    const { host, controls, focus } = setup();
 
     controls.run("goal");
 
     expect(host.chatGoalDraftMode).toEqual({ sessionId: "session-1", action: "start" });
-    expect(host.handleChatDraftChange).toHaveBeenCalledWith("Ship the release");
+    // While the goal is being drafted, the menus stop offering a second one.
+    expect(controls.read("goal")).toBeNull();
     await vi.waitFor(() => expect(focus).toHaveBeenCalledWith({ preventScroll: true }));
   });
 
-  it("exports through the typed export path", () => {
-    const { host, controls } = setup();
+  it("exports the loaded chat", async () => {
+    const actual = await vi.importActual<typeof import("./chat-commands.ts")>("./chat-commands.ts");
+    dispatch.mockImplementation(actual.dispatchChatSlashCommand);
+    const exportCurrentChat = vi.fn(async () => "exported" as const);
+    const { controls } = setup({ host: { exportCurrentChat } });
 
     controls.run("export");
 
-    expect(dispatch).toHaveBeenCalledWith(host, "export-session", "");
+    await vi.waitFor(() => expect(exportCurrentChat).toHaveBeenCalledOnce());
+  });
+
+  it("toasts when a command fails to start", async () => {
+    dispatch.mockRejectedValue(new Error("chunk failed to load"));
+    const { controls } = setup();
+
+    controls.run("export");
+
+    await vi.waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith({
+        message: "Couldn't do that: chunk failed to load",
+      }),
+    );
+  });
+
+  it("re-checks a dialog's answer before sending it", async () => {
+    const answer = createDeferred<string | null>();
+    showInputDialog.mockReturnValue(answer.promise);
+    const { host, controls } = setup();
+
+    controls.run("loop");
+    await vi.waitFor(() => expect(showInputDialog).toHaveBeenCalledOnce());
+    host.chatSending = true;
+    answer.resolve("30m check the build");
+
+    await vi.waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith({
+        message: "Available when the current reply finishes",
+      }),
+    );
+    expect(host.handleSendChat).not.toHaveBeenCalled();
   });
 
   it("explains a click that arrives after the command became unavailable", () => {

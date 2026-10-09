@@ -4890,6 +4890,12 @@ describe("right-click Reply", () => {
       },
       { messageId: "message-1", text: "deploy the site" },
     );
+    bubble.append(
+      Object.assign(document.createElement("div"), {
+        className: "chat-text",
+        textContent: "deploy the site",
+      }),
+    );
 
     dispatchContextMenu(bubble);
     expect(
@@ -4913,6 +4919,12 @@ describe("right-click Reply", () => {
         onSetReply: vi.fn(),
       },
       { messageId: "message-1", text: "deploy the site" },
+    );
+    bubble.append(
+      Object.assign(document.createElement("div"), {
+        className: "chat-text",
+        textContent: "deploy the site",
+      }),
     );
 
     dispatchContextMenu(bubble);

@@ -3519,6 +3519,7 @@ export const en: TranslationMap & {
       availableWhenIdle: "Available when the current reply finishes",
       compacting: "Already freeing up space",
       unavailable: "Not available in this chat",
+      failed: "Couldn't do that: {error}",
     },
     runControls: {
       newSession: "New session",

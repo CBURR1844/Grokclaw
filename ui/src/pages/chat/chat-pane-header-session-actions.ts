@@ -13,11 +13,12 @@ import type {
 } from "./components/chat-header-session-menu.ts";
 
 // Ids are menu values: no ":" and none of the compact layout's `compact:*` values.
+// Labels are thunks so the locale applies at render time and i18n verify sees literal keys.
 const COMMAND_ITEMS = [
-  ["free-space", "compact", "chat.commandControls.freeUpSpace", icons.layers],
-  ["set-goal", "goal", "chat.commandControls.setGoal", icons.target],
-  ["export-chat", "export", "chat.runControls.exportChat", icons.download],
-] as const satisfies readonly (readonly [string, ChatControlCommand, string, unknown])[];
+  ["free-space", "compact", () => t("chat.commandControls.freeUpSpace"), icons.layers],
+  ["set-goal", "goal", () => t("chat.commandControls.setGoal"), icons.target],
+  ["export-chat", "export", () => t("chat.runControls.exportChat"), icons.download],
+] as const satisfies readonly (readonly [string, ChatControlCommand, () => string, unknown])[];
 
 /** The chat menu's session group: typed-command replacements, plugin actions, then stop. */
 export class ChatPaneHeaderSessionActions {
@@ -56,7 +57,7 @@ export class ChatPaneHeaderSessionActions {
       () => [
         ...commandItems.map(({ id, command, label, icon, disabledReason }) => ({
           id,
-          label: t(label),
+          label: label(),
           icon,
           disabled: disabledReason !== null,
           description:

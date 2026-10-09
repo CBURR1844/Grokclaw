@@ -675,12 +675,7 @@ export function handleTranscriptContextMenu(event: MouseEvent, props: Transcript
       },
     });
   }
-  for (const action of wholeMessageActions(props, {
-    text: copyMarkdown,
-    bubble,
-    messageId,
-    entryId,
-  })) {
+  for (const action of wholeMessageActions(props, { text: copyMarkdown, bubble })) {
     appendAction({
       ...action,
       onClick: () => {
