@@ -1,3 +1,4 @@
+import { isRecord } from "@openclaw/normalization-core/record-coerce";
 import type { ApplicationContext } from "../../app/context.ts";
 import { t } from "../../i18n/index.ts";
 import { extractText } from "../../lib/chat/message-extract.ts";
@@ -44,8 +45,8 @@ function excerpt(text: string, limit: number): string {
 
 function lastUserTask(state: ChatPageHost): string {
   for (const message of state.chatMessages.toReversed()) {
-    const record = message as { role?: unknown };
-    const text = record.role === "user" ? extractText(message)?.trim() : undefined;
+    const text =
+      isRecord(message) && message.role === "user" ? extractText(message)?.trim() : undefined;
     if (text && !text.startsWith("/")) {
       return excerpt(text, LOOP_TASK_CHARS);
     }

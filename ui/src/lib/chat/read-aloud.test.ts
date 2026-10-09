@@ -6,7 +6,10 @@ import { gatewayHelloForMethods } from "../../test-helpers/gateway-methods.ts";
 import { isReadingAloud, readAloudAction } from "./read-aloud.ts";
 
 const showToast = vi.hoisted(() => vi.fn());
-vi.mock("../toast.ts", () => ({ showToast }));
+vi.mock("../toast.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../toast.ts")>()),
+  showToast,
+}));
 
 class FakeAudio extends EventTarget {
   static created: FakeAudio[] = [];
