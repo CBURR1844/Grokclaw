@@ -51,7 +51,7 @@ export function renderProfileHero(props: ProfileHeroProps) {
       <div class="profile-hero__name">${name}</div>
       <div class="profile-hero__handle">
         ${handle ? html`<span class="profile-hero__email">${handle}</span>` : nothing}
-        <span class="profile-hero__badge">OpenClaw</span>
+        <span class="profile-hero__badge">${t("common.productName")}</span>
       </div>
     </section>
   `);

@@ -150,7 +150,7 @@ suite.define(() => {
         const chip = sidebar.locator(".sidebar-agent-card__main");
         const workspace = sidebar.locator(".sidebar-workspace-header__main");
         const expectWorkspace = async () => {
-          await expect.poll(() => workspace.textContent()).toMatch(/^\s*OpenClaw\s*$/);
+          await expect.poll(() => workspace.textContent()).toMatch(/^\s*BotClaw\s*$/);
           expect(await sidebar.locator("openclaw-sidebar-agent-card").count()).toBe(0);
           expect(await sidebar.locator(".sidebar-agent-card__avatar").count()).toBe(0);
         };

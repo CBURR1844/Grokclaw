@@ -63,7 +63,7 @@ suite.define(() => {
         const names = split ? [name, sibling.label] : [name];
         await expect.poll(() => heading.textContent()).toBe(name);
         await expect.poll(() => headings.allTextContents()).toEqual(names);
-        await expect.poll(() => page.title()).toBe(`${name} — OpenClaw`);
+        await expect.poll(() => page.title()).toBe(`${name} — BotClaw`);
         await page.getByText(transcript, { exact: true }).first().waitFor({ state: "visible" });
         const route = new URL(page.url()).pathname;
         await page.screenshot({ path: `${suite.artifactDir}/connected.png` });
@@ -79,13 +79,13 @@ suite.define(() => {
         expect(await page.getByText(transcript, { exact: true }).first().isVisible()).toBe(true);
 
         await gateway.setOnline(true);
-        await expect.poll(() => page.title()).toBe(`${name} — OpenClaw`);
+        await expect.poll(() => page.title()).toBe(`${name} — BotClaw`);
         await expect.poll(() => heading.textContent()).toBe(name);
         expect(new URL(page.url()).pathname).toBe(route);
         expect(await page.getByText(transcript, { exact: true }).first().isVisible()).toBe(true);
         await expect.poll(() => headings.allTextContents()).toEqual(names);
         await page.screenshot({ path: `${suite.artifactDir}/reconnected.png` });
-        expect.soft(offlineTitle).toBe(`(Disconnected) ${name} — OpenClaw`);
+        expect.soft(offlineTitle).toBe(`(Disconnected) ${name} — BotClaw`);
         expect.soft(offlineHeadings).toEqual(names);
       });
     },

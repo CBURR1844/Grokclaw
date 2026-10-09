@@ -102,7 +102,8 @@ export function resolveThemeBranding(
     | undefined,
 ): ThemeBranding {
   return {
-    mascot: source?.mascot ?? "claw",
+    // BotClaw ships without the lobster mascot; a theme opts back in with mascot "claw".
+    mascot: source?.mascot ?? "none",
     workingPhrases: source?.workingPhrases,
     critters: source?.critters ?? DEFAULT_THEME_CRITTERS,
     avatarHat: source?.avatarHat,

@@ -64,7 +64,7 @@ it.each([
   { installed: false, canInstall: true, busy: false, primary: "Install" },
   { installed: false, canInstall: false, busy: false, primary: "Install" },
   { installed: false, canInstall: true, busy: true, primary: "Installing" },
-  { installed: true, canInstall: false, busy: false, primary: "Ask OpenClaw" },
+  { installed: true, canInstall: false, busy: false, primary: "Ask BotClaw" },
 ])(
   "prioritizes $primary with installed=$installed, canInstall=$canInstall, busy=$busy",
   async ({ installed, canInstall, busy, primary }) => {
@@ -86,7 +86,7 @@ it.each([
     expect(primaryButton.querySelector(".btn__spinner") !== null).toBe(busy);
     expect(primaryButton.getAttribute("aria-busy")).toBe(busy ? "true" : null);
     const ask = [...actions.querySelectorAll<HTMLButtonElement>("button")].find(
-      (button) => button.textContent?.trim() === "Ask OpenClaw",
+      (button) => button.textContent?.trim() === "Ask BotClaw",
     )!;
     ask.click();
     expect(onAskPlugin).toHaveBeenCalledTimes(installed ? 2 : 1);

@@ -19,16 +19,19 @@ import {
 } from "./roster.test-support.ts";
 
 describe("AppSidebar agent roster", () => {
-  it("updates the workspace mark when switching to and from a theme without a mascot", async () => {
+  it("updates the workspace mark when switching to and from a theme with the lobster mascot", async () => {
     const { sidebar, context, request } = await mountRoster();
     await toggleRoster(sidebar);
+    const header = sidebar.querySelector(".sidebar-workspace-header");
+    expect(header?.querySelector(".sidebar-workspace-header__mark--neutral svg")).not.toBeNull();
+    expect(header?.textContent).toContain("BotClaw");
     const theme: ThemeDescriptor = {
-      id: "example/quiet",
-      name: "Quiet",
-      description: "Quiet workspace",
+      id: "example/lobster",
+      name: "Lobster",
+      description: "Lobster workspace",
       source: "plugin",
       modes: ["dark"],
-      mascot: "none",
+      mascot: "claw",
     };
     const original = request.getMockImplementation();
     request.mockImplementation((...args) =>
@@ -36,7 +39,7 @@ describe("AppSidebar agent roster", () => {
         ? {
             themes: [...BUILTIN_THEMES, theme],
             theme,
-            definition: { ...createThemeDefinitionFixture(), mascot: "none" },
+            definition: { ...createThemeDefinitionFixture(), mascot: "claw" },
             current: { id: theme.id, mode: "dark", scope: "profile", overrides: {} },
           }
         : original?.(...args),
@@ -44,17 +47,14 @@ describe("AppSidebar agent roster", () => {
     patchSettings({ theme: theme.id });
     context.theme.refresh();
     await vi.waitFor(() =>
-      expect(sidebar.querySelector(".sidebar-workspace-header__mark--neutral svg")).not.toBeNull(),
+      expect(header?.querySelector(".sidebar-workspace-header__mark--neutral")).toBeNull(),
     );
-    const header = sidebar.querySelector(".sidebar-workspace-header");
-    expect(header?.querySelector(".sidebar-workspace-header__mark--neutral svg")).not.toBeNull();
-    expect(header?.querySelector("img")).toBeNull();
-    expect(header?.textContent).toContain("OpenClaw");
+    expect(header?.querySelector(".sidebar-workspace-header__mark svg")).not.toBeNull();
     patchSettings({ theme: "claw" });
     context.theme.refresh();
-    await sidebar.updateComplete;
-    expect(header?.querySelector(".sidebar-workspace-header__mark--neutral")).toBeNull();
-    expect(header?.querySelector(".sidebar-workspace-header__mark svg")).not.toBeNull();
+    await vi.waitFor(() =>
+      expect(header?.querySelector(".sidebar-workspace-header__mark--neutral svg")).not.toBeNull(),
+    );
   });
 
   it.each([undefined, "Studio workspace", "   "])(
@@ -74,7 +74,7 @@ describe("AppSidebar agent roster", () => {
           expect(sidebar.querySelector(".sidebar-workspace-header__main")).not.toBeNull(),
         );
         const header = sidebar.querySelector(".sidebar-workspace-header");
-        expect(header?.textContent).toContain(name?.trim() || "OpenClaw");
+        expect(header?.textContent).toContain(name?.trim() || "BotClaw");
         expect(header?.querySelector(".sidebar-agent-card__avatar")).toBeNull();
         expect(header?.querySelector(".sidebar-workspace-header__mark svg")).not.toBeNull();
         expect(sidebar.querySelector("openclaw-sidebar-agent-card")).toBeNull();
@@ -292,7 +292,7 @@ describe("AppSidebar agent roster", () => {
       expect.objectContaining({ pathname: "/chat/working/recent" }),
     );
     expect(sidebar.querySelector(".sidebar-workspace-header__main")?.textContent).toContain(
-      "OpenClaw",
+      "BotClaw",
     );
     expect(sidebar.querySelector("openclaw-sidebar-agent-card")).toBeNull();
     sidebar

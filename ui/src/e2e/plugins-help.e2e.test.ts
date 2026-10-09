@@ -13,7 +13,7 @@ import {
   pluginResponses,
 } from "./plugins-settings-admin.test-support.ts";
 
-const suite = createControlUiE2eSuite({ name: "Plugin Ask OpenClaw integration" });
+const suite = createControlUiE2eSuite({ name: "Plugin Ask BotClaw integration" });
 const featureMethods = [
   "config.get",
   "config.schema",
@@ -67,7 +67,7 @@ suite.define(() => {
         expect(await composer.inputValue()).toBe(
           "Explain Refresh interval (minutes)\n\nCurrent value: 15",
         );
-        expect(await composer.getAttribute("placeholder")).toBe("Ask OpenClaw about Workboard");
+        expect(await composer.getAttribute("placeholder")).toBe("Ask BotClaw about Workboard");
         expect(await composer.isEnabled()).toBe(true);
         expect(await panel.locator(".custodian__plugin-reference").count()).toBe(0);
         expect(await panel.locator(".chat-send-btn").isEnabled()).toBe(false);
@@ -331,7 +331,7 @@ suite.define(() => {
       const setting = page.locator('[data-setting="refreshMinutes"]');
       expect(await setting.locator("wa-dropdown-item").allTextContents()).toEqual([
         "Reset value",
-        "Ask OpenClaw",
+        "Ask BotClaw",
       ]);
       await setting.locator('wa-dropdown-item[value="ask"]').click();
       await expect
@@ -409,7 +409,7 @@ suite.define(() => {
       await page.locator(".plugin-editor .plugins-settings-breadcrumb__parent").click();
       await page.locator(".plugin-catalog-detail .plugins-settings-breadcrumb__parent").click();
       await page.getByRole("heading", { level: 1, name: "Plugins", exact: true }).waitFor();
-      await expect.poll(() => composer.getAttribute("placeholder")).toBe("Message OpenClaw…");
+      await expect.poll(() => composer.getAttribute("placeholder")).toBe("Message BotClaw…");
       await composer.fill("What is next?");
       await composer.press("Enter");
       await expect.poll(async () => (await userRequests()).length).toBe(2);
@@ -450,7 +450,7 @@ suite.define(() => {
         );
         const ask = page
           .locator(".plugin-catalog-detail__actions")
-          .getByRole("button", { name: "Ask OpenClaw", exact: true });
+          .getByRole("button", { name: "Ask BotClaw", exact: true });
         await ask.waitFor();
         const panel = page.locator("openclaw-assistant-panel .assistant-panel");
         expect(await panel.isVisible()).toBe(false);

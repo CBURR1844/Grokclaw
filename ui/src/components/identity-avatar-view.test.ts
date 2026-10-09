@@ -2,7 +2,9 @@
 
 import { html, nothing, render } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resolveThemeBranding } from "../../../packages/gateway-protocol/src/theme.ts";
 import { createDeferred } from "../../../test/helpers/promise.js";
+import { setCurrentThemeBranding } from "../app/theme-branding.ts";
 import { setAvatarGatewayOrigin } from "../lib/identity-avatar-context.ts";
 import { resolveAvatarImageUrl } from "../lib/identity-avatar-loader.ts";
 import {
@@ -30,6 +32,7 @@ function renderAvatar(view: IdentityAvatarView, container: HTMLElement) {
 
 afterEach(() => {
   document.body.replaceChildren();
+  setCurrentThemeBranding(resolveThemeBranding(undefined));
   setAvatarGatewayOrigin(null);
   vi.restoreAllMocks();
 });
@@ -363,19 +366,18 @@ describe("shared agent avatar view", () => {
       const fetchAvatar = vi.spyOn(globalThis, "fetch");
       for (const avatar of [undefined, "/avatar/custom?v=1"]) {
         render(renderAgentIdentityAvatar({ id, avatar, textAvatar: "🔧" }), container);
-        const image = container.querySelector("img");
-        expect(image?.getAttribute("src")).toBe("/favicon.svg");
-        image?.dispatchEvent(new Event("error"));
+        expect(container.querySelector(".identity-avatar--neutral svg")).not.toBeNull();
+        expect(container.querySelector("img, [data-avatar]")).toBeNull();
         await vi.dynamicImportSettled();
-        expect(container.querySelector("svg, [data-avatar]")).toBeNull();
-        expect(image?.getAttribute("src")).toBe("/favicon.svg");
+        expect(container.querySelector(".identity-avatar--neutral svg")).not.toBeNull();
       }
       expect(fetchAvatar).not.toHaveBeenCalled();
       render(nothing, container);
     },
   );
 
-  it("uses the UI mount and build for the system mark when connected to another Gateway", () => {
+  it("uses the UI mount and build for the lobster system mark when connected to another Gateway", () => {
+    setCurrentThemeBranding({ mascot: "claw", critters: [] });
     setAvatarGatewayOrigin("https://gateway.example.test", ["avatar-token"]);
     vi.stubGlobal("__OPENCLAW_CONTROL_UI_BASE_PATH__", "/control");
     document.documentElement.setAttribute("data-openclaw-control-ui-build-id", "build-1");

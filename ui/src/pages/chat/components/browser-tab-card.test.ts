@@ -203,7 +203,7 @@ describe("browser tab card", () => {
         ]);
       }
       const internal = menu().querySelector('[value="open-within-openclaw"]')!;
-      expect(internal.textContent).toContain("Open in OpenClaw");
+      expect(internal.textContent).toContain("Open in BotClaw");
       expect(internal.hasAttribute("data-new-tab-action")).toBe(false);
       expect(menu().querySelector('[value="open-new-tab"]')).toBeNull();
       select("open-within-openclaw");

@@ -116,7 +116,7 @@ describe("settings sidebar search", () => {
     expect(active?.textContent?.trim()).toBe("Models");
   });
 
-  it("links Ask OpenClaw to the shared custodian route", () => {
+  it("links Ask BotClaw to the shared custodian route", () => {
     const onNavigate = vi.fn();
     render(
       renderSettingsSidebar({
@@ -140,7 +140,7 @@ describe("settings sidebar search", () => {
     const link = container.querySelector<HTMLAnchorElement>(
       '.settings-sidebar__item[href="/custodian"]',
     );
-    expect(link?.textContent?.trim()).toBe("Ask OpenClaw");
+    expect(link?.textContent?.trim()).toBe("Ask BotClaw");
     link?.click();
     expect(onNavigate).toHaveBeenCalledWith("custodian");
   });

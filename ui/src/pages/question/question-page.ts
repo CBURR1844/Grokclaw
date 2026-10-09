@@ -105,7 +105,7 @@ export class QuestionPage extends OpenClawLightDomElement {
     const prompt = listQuestionPrompts(this.questionState).find(
       (candidate) => candidate.id === this.questionId,
     );
-    const title = `${this.pageTitle(prompt)} — ${t("approvalPage.brandName")}`;
+    const title = `${this.pageTitle(prompt)} — ${t("common.productName")}`;
     document.title = title;
     this.activeDocumentTitle = title;
     if (this.questionPanelHadFocus && !this.querySelector("openclaw-chat-question-card")) {

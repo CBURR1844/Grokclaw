@@ -143,7 +143,7 @@ function renderHero(props: AboutProps) {
               ${renderLobsterSvg(look)}
             </button>`
       }
-      <h2 class="about-hero__name">${t("aboutPage.productName")}</h2>
+      <h2 class="about-hero__name">${t("common.productName")}</h2>
       <p class="about-hero__tagline">${t("aboutPage.tagline")}</p>
       ${
         props.buildInfo.version

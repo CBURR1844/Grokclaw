@@ -4,7 +4,7 @@ import { en } from "./en.ts";
 // Plugin management and its lazy sibling surfaces register this shared copy on use.
 const enPluginManagement = {
   custodian: {
-    pluginPlaceholder: "Ask OpenClaw about {plugin}",
+    pluginPlaceholder: "Ask BotClaw about {plugin}",
     pluginIntroTitle: "Ask about {plugin}",
     pluginStarterPurpose: "What does it do?",
     pluginStarterTools: "What tools does it have?",
@@ -13,7 +13,7 @@ const enPluginManagement = {
     pluginPromptTools: "What tools does {plugin} provide?",
     pluginPromptSetup: "How do I set up {plugin}?",
     pluginHelpQuestion: "Explain {setting}",
-    pluginHelpFailed: "Could not prepare the setting question. Try Ask OpenClaw again.",
+    pluginHelpFailed: "Could not prepare the setting question. Try Ask BotClaw again.",
     pluginHelpUnset: "Not set",
     pluginHelpValue: "Current value: {value}",
   },
@@ -84,7 +84,7 @@ const enPluginManagement = {
       permissions: "Permissions",
       actions: "Actions for {name}",
       reset: "Reset value",
-      ask: "Ask OpenClaw",
+      ask: "Ask BotClaw",
     },
     credentials: {
       stored: "••••••••",

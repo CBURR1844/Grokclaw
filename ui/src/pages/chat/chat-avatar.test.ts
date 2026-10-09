@@ -136,9 +136,9 @@ describe("renderChatAvatar", () => {
       "assistant",
       { agentId, name: "System", avatar: "blob:configured-image", textAvatar: "🦉" },
     ]);
-    expect(image?.matches("img.chat-avatar.assistant")).toBe(true);
-    expect(image?.getAttribute("src")).toBe("/favicon.svg");
-    expect(image?.getAttribute("alt")).toBe("System");
+    expect(image?.matches("span.chat-avatar.assistant.identity-avatar--neutral")).toBe(true);
+    expect(image?.querySelector("svg")).not.toBeNull();
+    expect(image?.getAttribute("aria-label")).toBe("System");
   });
 
   it("shares authenticated welcome and transcript avatars without an explicit token", async () => {

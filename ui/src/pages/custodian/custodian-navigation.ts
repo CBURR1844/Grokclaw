@@ -27,7 +27,7 @@ export function navigateFromCustodianSetup(
 /**
  * Route an `open-agent` reply to the destination agent chat. Resolves the
  * target session (refreshing the roster for an explicit agent), navigates to
- * it, focuses its composer, and closes the Ask OpenClaw dock when present.
+ * it, focuses its composer, and closes the Ask BotClaw dock when present.
  * Returns "stale" when the store's request context moved on mid-refresh.
  */
 export async function performCustodianAgentHandoff(params: {

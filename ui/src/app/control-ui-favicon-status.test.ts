@@ -15,6 +15,7 @@ vi.mock("./control-ui-environment-presentation.runtime.ts", () => ({
   applyControlUiFaviconStatus: vi.fn(),
   applyControlUiFaviconImage: vi.fn(),
   invalidateControlUiFaviconPalette: vi.fn(),
+  syncControlUiFavicon: vi.fn(),
 }));
 const cleanups: Array<() => void> = [];
 

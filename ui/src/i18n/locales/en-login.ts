@@ -4,7 +4,7 @@ import { en } from "./en.ts";
 // Recovery copy follows the lazy login and plugin views; the loader label stays eager.
 const enLogin = {
   login: {
-    heading: "Connect to OpenClaw",
+    heading: "Connect to BotClaw",
     lede: "Enter the Gateway URL and secret, or open the one-time link that openclaw dashboard prints on the Gateway host.",
     gatewayUrl: "Gateway URL",
     gatewaySettings: "Gateway settings",

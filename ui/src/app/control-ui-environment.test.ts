@@ -1,6 +1,7 @@
 /* @vitest-environment jsdom */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveThemeBranding } from "../../../packages/gateway-protocol/src/theme.ts";
 import type {
   ControlUiBootstrapConfig,
   ControlUiEnvironment,
@@ -9,6 +10,7 @@ import "../components/app-topbar.ts";
 import "../components/sidebar-agent-card.ts";
 import { setupSidebarTest } from "../test-helpers/app-sidebar-setup.ts";
 import { createApplicationConfigCapability } from "./config.ts";
+import { setCurrentThemeBranding } from "./theme-branding.ts";
 
 type EnvironmentElement = HTMLElement & {
   environment?: ControlUiEnvironment | null;
@@ -19,6 +21,7 @@ type EnvironmentElement = HTMLElement & {
 };
 
 afterEach(() => {
+  setCurrentThemeBranding(resolveThemeBranding(undefined));
   vi.unstubAllGlobals();
   document.body.replaceChildren();
   document.head.querySelectorAll('link[rel="icon"]').forEach((link) => link.remove());
@@ -32,6 +35,8 @@ afterEach(() => {
 
 describe("Control UI environment presentation", () => {
   setupSidebarTest();
+  // Environment colors tint the lobster favicon; the default product mark follows the theme color.
+  beforeEach(() => setCurrentThemeBranding({ mascot: "claw", critters: [] }));
 
   it("renders a matching stripe, favicon, avatar ring, and sidebar/topbar pills only when configured", async () => {
     const favicon = document.createElement("link");
