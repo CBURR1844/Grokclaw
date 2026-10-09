@@ -68,7 +68,8 @@ function membershipPatch(
   if (!bot || !claw) {
     return { error: t("agentDetails.claws.notConfigured") };
   }
-  const list = requesterAllowAgents(config, bot.entry) ?? [];
+  // With no list anywhere a Bot may start only itself; written lists keep that target.
+  const list = requesterAllowAgents(config, bot.entry) ?? [normalizeAgentId(change.botId)];
   if (!change.attach && list.some(isWildcard)) {
     return { error: t("agentDetails.claws.removeBlocked") };
   }

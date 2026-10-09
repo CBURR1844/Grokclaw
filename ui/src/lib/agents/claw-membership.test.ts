@@ -19,14 +19,14 @@ const config = {
   },
 };
 
-function harness() {
+function harness(snapshot: object = config) {
   const patches: Array<{ baseHash: string; raw: unknown; replacePaths?: string[] }> = [];
   const request = vi.fn(async (method: string, params?: unknown) => {
     if (method === "config.get") {
       return {
-        config,
-        sourceConfig: config,
-        raw: JSON.stringify(config),
+        config: snapshot,
+        sourceConfig: snapshot,
+        raw: JSON.stringify(snapshot),
         hash: "base",
         valid: true,
       };
@@ -38,7 +38,7 @@ function harness() {
         replacePaths?: string[];
       };
       patches.push({ baseHash, raw: JSON.parse(raw), replacePaths });
-      return { ok: true, config, hash: "next" };
+      return { ok: true, config: snapshot, hash: "next" };
     }
     throw new Error(`Unexpected request ${method}`);
   });
@@ -94,6 +94,17 @@ describe("claw membership", () => {
     expect(f.patches[0]?.baseHash).toBe("base");
     expect(entries(f.patches[0]?.raw)).toEqual(patch);
     expect(f.patches[0]?.replacePaths).toEqual(replacePaths);
+  });
+
+  it("keeps a Bot's default self-target when it lists its first Claw", async () => {
+    // With no list anywhere a Bot may start only itself; an explicit list must name it.
+    const f = harness({ agents: { entries: { forge: {}, sorter: {} } } });
+    await expect(attachClaw(f.runtimeConfig, "forge", "sorter")).resolves.toEqual({ ok: true });
+    expect(entries(f.patches[0]?.raw)).toEqual({
+      forge: { subagents: { allowAgents: ["forge", "sorter"] } },
+      sorter: { kind: "claw" },
+    });
+    expect(f.patches[0]?.replacePaths).toEqual(listPath("forge"));
   });
 
   it.each([
