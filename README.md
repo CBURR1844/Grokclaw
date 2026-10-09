@@ -1,6 +1,6 @@
-# Grokclaw
+# BotClaw
 
-Grokclaw is an open-source personal agent built on [OpenClaw](https://github.com/openclaw/openclaw). It aims to match persistent-agent products like Grok Bot (named bots, routines, approvals, a computer per bot) while staying open source and letting you choose the model provider.
+BotClaw is an open-source personal agent built on [OpenClaw](https://github.com/openclaw/openclaw). It aims to match persistent-agent products like Grok Bot (named bots, routines, approvals, a computer per bot) while staying open source and letting you choose the model provider.
 
 How it differs from upstream OpenClaw today:
 
