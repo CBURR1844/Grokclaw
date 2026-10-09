@@ -28,6 +28,7 @@ import { parseImportedCustomTheme, type ImportedCustomTheme } from "./custom-the
 import { normalizeTerminalFontFamily } from "./terminal-font.ts";
 import { parseThemeSelection, type ThemeMode, type ThemeName } from "./theme.ts";
 import { normalizeTypefaceOverride, type TypefaceId } from "./typography.ts";
+import { resolveSidebarAgentsMode } from "./ui-preset.ts";
 import { normalizeLocalUserIdentity, type LocalUserIdentity } from "./user-identity.ts";
 
 const SETTINGS_KEY_PREFIX = "openclaw.control.settings.v1:";
@@ -303,36 +304,6 @@ type PersistedSettingsSource = {
   gatewayUrl: string;
   parsed: PersistedUiSettings;
 };
-
-/**
- * BotClaw opens the simple screen with the bot roster. OpenClaw's UI suites
- * were written for the full screen and the agent chip; their setup and mock
- * Gateway restore those defaults through this global.
- */
-function upstreamUiDefaults(): boolean {
-  return Reflect.get(globalThis, "openclawUpstreamUiDefaults") === true;
-}
-
-function resolveSidebarAgentsMode(stored?: unknown): "chip" | "roster" {
-  if (stored === "chip" || stored === "roster") {
-    return stored;
-  }
-  return upstreamUiDefaults() ? "chip" : "roster";
-}
-
-/**
- * What the screen presents: the simple screen always shows the bot roster and
- * leaves the stored sidebar mode for when Advanced is turned back on.
- */
-export function resolveUiPreset(
-  settings: Pick<UiPreferences, "advancedUi" | "sidebarAgentsMode">,
-): { advanced: boolean; sidebarAgentsMode: "chip" | "roster" } {
-  const advanced = settings.advancedUi ?? upstreamUiDefaults();
-  return {
-    advanced,
-    sidebarAgentsMode: advanced ? resolveSidebarAgentsMode(settings.sidebarAgentsMode) : "roster",
-  };
-}
 
 function readSettingsForGateway(
   storage: Storage | null,

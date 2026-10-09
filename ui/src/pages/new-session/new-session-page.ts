@@ -4,7 +4,7 @@ import { property, state } from "lit/decorators.js";
 import { selectApplicationSession } from "../../app/agent-selection.ts";
 import { applicationContext, type ApplicationContext } from "../../app/context.ts";
 import { LazyCustomElementRequestController } from "../../app/lazy-custom-element.ts";
-import { resolveUiPreset } from "../../app/settings.ts";
+import { resolveUiPreset } from "../../app/ui-preset.ts";
 import type { ImageLightboxItem } from "../../components/image-lightbox.types.ts";
 import "../../styles/new-session-attachment-panel.css";
 import { renderLazyViewError } from "../../components/lazy-view-error.ts";
