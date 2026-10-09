@@ -10,6 +10,8 @@ export const TERMINAL_PANEL_DOCK_BOTTOM_EVENT = "openclaw:terminal-dock-bottom";
 export const BROWSER_PANEL_TOGGLE_EVENT = "openclaw:browser-toggle";
 export const DESKTOP_PANEL_TOGGLE_EVENT = "openclaw:desktop-toggle";
 export const PORTAL_PANEL_TOGGLE_EVENT = "openclaw:portal-toggle";
+/** Opens a session's agent details panel; detail is `{ sessionKey, open }`. */
+export const AGENT_DETAILS_PANEL_TOGGLE_EVENT = "openclaw:agent-details-toggle";
 export const HOME_PANEL_TOGGLE_EVENT = "openclaw:home-toggle";
 export const CUSTODIAN_PANEL_TOGGLE_EVENT = "openclaw:custodian-toggle";
 export const DEBUG_OVERLAY_REQUEST_EVENT = "openclaw:debug-overlay-request";

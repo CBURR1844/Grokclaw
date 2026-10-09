@@ -3,6 +3,7 @@ import type { AgentsListResult } from "../../api/types.ts";
 import { loadSettings, patchSettings } from "../../app/settings.ts";
 import { SIDEBAR_SESSION_PAGE_SIZE } from "../../components/app-sidebar-session-types.ts";
 import { NEUTRAL_MARK } from "../../components/neutral-mark-geometry.ts";
+import { AGENT_DETAILS_PANEL_TOGGLE_EVENT } from "../../components/panel-toggle-contract.ts";
 import { rosterActivityStore } from "../../lib/agents/roster-activity-store.ts";
 import {
   agentIds,
@@ -516,6 +517,80 @@ describe("AppSidebar agent roster", () => {
       1,
     );
     expect(sidebar.querySelector(".sidebar-sessions .sidebar-session-sort")).toBeNull();
+  });
+
+  it("opens a bot's menu on right-click or Shift+F10 and pins, details and settings from it", async () => {
+    const { sidebar, context } = await mountRoster();
+    sidebar.sidebarAgentsMode = "roster";
+    const onNavigate = vi.fn();
+    sidebar.onNavigate = onNavigate;
+    const update = vi.fn();
+    Object.assign(context, { navigation: { snapshot: { pinnedAgentIds: [] }, update } });
+    await vi.waitFor(() => expect(agentIds(sidebar)).toEqual(["main", "recent", "working"]));
+    const group = () => sidebar.querySelector<HTMLElement>('[data-agent-group="working"]')!;
+    const menu = () =>
+      group().querySelector<HTMLElement & { open: boolean }>(".sidebar-agent-roster__menu")!;
+    const items = () =>
+      [...menu().querySelectorAll<HTMLElement & { value: string }>("wa-dropdown-item")].map(
+        (item) => [
+          item.getAttribute("value"),
+          item.textContent?.trim(),
+          item.hasAttribute("disabled"),
+        ],
+      );
+    const select = (value: string) =>
+      menu().dispatchEvent(
+        new CustomEvent("wa-select", {
+          detail: { item: menu().querySelector(`wa-dropdown-item[value="${value}"]`) },
+          bubbles: true,
+        }),
+      );
+
+    const row = group().querySelector<HTMLElement>(".sidebar-agent-roster__row")!;
+    const rightClick = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    row.dispatchEvent(rightClick);
+    expect(rightClick.defaultPrevented).toBe(true);
+    expect(menu().open).toBe(true);
+    menu().open = false;
+    row.dispatchEvent(new KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true }));
+    expect(menu().open).toBe(true);
+    expect(items()).toEqual([
+      ["main", "Open chat", false],
+      ["new", "New chat with Forge", false],
+      ["pin", "Pin to top", false],
+      ["details", "Show details", false],
+      ["settings", "Bot settings", false],
+      ["sessions", "All chats", false],
+      ["collapse-others", "Collapse others", false],
+    ]);
+
+    select("pin");
+    expect(update).toHaveBeenCalledWith({ pinnedAgentIds: ["working"] });
+    sidebar.pinnedAgentIds = ["working"];
+    await vi.waitFor(() => expect(agentIds(sidebar)).toEqual(["working", "main", "recent"]));
+    expect(items()[2]).toEqual(["pin", "Unpin", false]);
+
+    const detailsRequests: Event[] = [];
+    const listener = (event: Event) => detailsRequests.push(event);
+    window.addEventListener(AGENT_DETAILS_PANEL_TOGGLE_EVENT, listener);
+    try {
+      select("details");
+    } finally {
+      window.removeEventListener(AGENT_DETAILS_PANEL_TOGGLE_EVENT, listener);
+    }
+    expect(detailsRequests.map((event) => (event as CustomEvent).detail)).toEqual([
+      { sessionKey: "agent:working:main", open: true },
+    ]);
+    expect(onNavigate).toHaveBeenLastCalledWith(
+      "chat",
+      expect.objectContaining({ pathname: "/chat/working" }),
+    );
+
+    select("settings");
+    expect(onNavigate).toHaveBeenLastCalledWith(
+      "agents",
+      expect.objectContaining({ pathname: "/settings/agents/working" }),
+    );
   });
 
   it("remembers collapsed agents after remount and keeps chip mode scoped to one agent", async () => {

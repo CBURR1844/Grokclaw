@@ -248,6 +248,9 @@ suite.define(() => {
             expect.stringContaining("Skills"),
             expect.stringContaining("Connectors"),
             expect.stringContaining("Manage plugins"),
+            expect.stringContaining("Set a goal…"),
+            expect.stringContaining("Repeat on a schedule…"),
+            expect.stringContaining("Teach a new skill…"),
           ]),
         );
       const clearOverrides = dropdown.getByRole("menuitem", { name: /4 overrides/ });
@@ -956,6 +959,28 @@ suite.define(() => {
           menu.getByRole("menuitemcheckbox", { name: /^global-docs.*Enabled/ }).isVisible(),
         )
         .toBe(true);
+    });
+  });
+
+  it("teaches a skill from the + menu without typing a command", async () => {
+    await suite.withPage({ viewport: { width: 1280, height: 900 } }, async ({ page }) => {
+      const gateway = await installMockGateway(page, {
+        methodResponses: { "sessions.list": sessionsList() },
+      });
+      await page.goto(`${suite.server.baseUrl}chat`);
+      await gateway.waitForRequest("chat.startup");
+
+      const composer = await openMenu(page);
+      await composer.getByRole("menuitem", { name: "Teach a new skill…" }).click();
+      const request = page.getByRole("textbox", {
+        name: "What should it learn? Leave empty to save what you just did.",
+      });
+      await request.fill("summarize open PRs every morning");
+      await page.getByRole("button", { name: "Teach", exact: true }).click();
+
+      expect((await gateway.waitForRequest("chat.send")).params).toMatchObject({
+        message: "/learn summarize open PRs every morning",
+      });
     });
   });
 });

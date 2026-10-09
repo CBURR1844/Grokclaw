@@ -539,6 +539,29 @@ function buildActivitySessionRows(baseTime: number) {
   );
 }
 
+// A tenth of a second of silent WAV, so Read aloud plays without a speech provider.
+function silentSpeech() {
+  const samples = Buffer.alloc(800, 0x80);
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + samples.length, 4);
+  header.write("WAVEfmt ", 8);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20); // PCM
+  header.writeUInt16LE(1, 22); // mono
+  header.writeUInt32LE(8000, 24); // sample rate
+  header.writeUInt32LE(8000, 28); // byte rate
+  header.writeUInt16LE(1, 32); // block align
+  header.writeUInt16LE(8, 34); // bits per sample
+  header.write("data", 36);
+  header.writeUInt32LE(samples.length, 40);
+  return {
+    audioBase64: Buffer.concat([header, samples]).toString("base64"),
+    provider: "mock",
+    mimeType: "audio/wav",
+  };
+}
+
 // Model Providers settings fixtures: auth state plus live plan/quota/billing
 // snapshots so the /settings/model-providers page renders fully in the mock.
 function buildSessionDiffMock() {
@@ -2304,8 +2327,10 @@ async function createChatPickerScenario(
       "skills.library.upload",
       "sessions.catalog.list",
       "sessions.catalog.read",
+      "sessions.compact",
       "sessions.create",
       "system.info",
+      "tts.speak",
       "desktop.observe",
       "environments.list",
       "terminal.open",
@@ -2442,6 +2467,7 @@ async function createChatPickerScenario(
     ],
     methodResponses: {
       ...cronMocks,
+      "tts.speak": silentSpeech(),
       "agents.list": {
         agents: rosterAgents.map(({ id, name, theme, emoji, avatar }) => ({
           id,

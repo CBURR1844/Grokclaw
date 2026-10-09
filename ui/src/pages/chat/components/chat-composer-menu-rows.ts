@@ -64,3 +64,24 @@ export function renderCapabilityToggleRow(options: {
     </wa-dropdown-item>
   `;
 }
+
+/** A plain command row: selecting it closes the menu and runs the command. */
+export function renderCapabilityActionRow(options: {
+  value: string;
+  label: string;
+  icon: TemplateResult;
+  disabled: boolean;
+  title?: string | null;
+}) {
+  return html`
+    <wa-dropdown-item
+      class="agent-chat__capability-menu-item"
+      value=${options.value}
+      ?disabled=${options.disabled}
+      title=${options.title ?? ""}
+    >
+      <span slot="icon" aria-hidden="true">${options.icon}</span>
+      <span>${options.label}</span>
+    </wa-dropdown-item>
+  `;
+}

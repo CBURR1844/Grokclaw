@@ -34,6 +34,7 @@ import {
 } from "./chat-composer-library-menu.ts";
 import {
   renderBackRow,
+  renderCapabilityActionRow,
   renderCapabilityMenuState,
   renderCapabilityToggleRow,
   menuDivider,
@@ -67,6 +68,17 @@ type ChatComposerRootToggle = {
   onChange: (checked: boolean) => void;
 };
 
+type ChatComposerRootAction = {
+  value: string;
+  label: string;
+  icon: TemplateResult;
+  disabled: boolean;
+  title?: string | null;
+  onSelect: () => void;
+};
+
+const ROOT_ACTION_PREFIX = "root-action:";
+
 type MenuRoute = "mcp" | "plugins" | "skills";
 
 type ChatComposerPlusMenuProps = {
@@ -77,6 +89,8 @@ type ChatComposerPlusMenuProps = {
   view: ChatComposerPlusMenuView;
   toolOverrides: SessionToolOverrides | null | undefined;
   rootToggles?: readonly ChatComposerRootToggle[];
+  /** Commands listed last in the root view; selecting one closes the menu. */
+  rootActions?: readonly ChatComposerRootAction[];
   onOpenChange: (open: boolean) => void;
   onViewChange: (view: ChatComposerPlusMenuView) => void;
 };
@@ -146,8 +160,12 @@ function renderRootView(props: ChatComposerPlusMenuContentProps) {
   const canUpload = uploadsEnabled(props.attachments.uploadConfig);
   const attachments = canUpload ? renderChatAttachmentMenuOptions() : nothing;
   const rootToggles = props.rootToggles ?? [];
+  const rootActions = (props.rootActions ?? []).map((action) =>
+    renderCapabilityActionRow({ ...action, value: `${ROOT_ACTION_PREFIX}${action.value}` }),
+  );
   if (!props.showCapabilities && rootToggles.length === 0) {
-    return attachments;
+    return html`${attachments}${canUpload && rootActions.length ? menuDivider() : nothing}
+    ${rootActions}`;
   }
   // Core gates managed and Codex-native search. Config sniffing misses env/native providers;
   // without a provider, this session override is a harmless no-op.
@@ -229,6 +247,7 @@ function renderRootView(props: ChatComposerPlusMenuContentProps) {
             }`
         : nothing
     }
+    ${rootActions.length ? html`${menuDivider()}${rootActions}` : nothing}
   `;
 }
 
@@ -421,6 +440,15 @@ function handleMenuSelection(
   if (uploadsEnabled(props.attachments.uploadConfig) && handleChatAttachmentMenuSelection(event)) {
     return;
   }
+  if (value.startsWith(ROOT_ACTION_PREFIX)) {
+    const action = props.rootActions?.find(
+      (candidate) => candidate.value === value.slice(ROOT_ACTION_PREFIX.length),
+    );
+    if (action && !action.disabled) {
+      action.onSelect();
+    }
+    return;
+  }
   const rootToggle = props.rootToggles?.find((toggle) => toggle.value === value);
   if (rootToggle) {
     event.preventDefault();
@@ -604,11 +632,15 @@ function renderChatComposerPlusMenuContent(props: ChatComposerPlusMenuContentPro
 
 /** Whether the + menu has anything to offer; it renders nothing otherwise. */
 export function hasChatComposerPlusMenu(
-  props: Pick<ChatComposerPlusMenuProps, "capabilityMenu" | "rootToggles" | "attachments">,
+  props: Pick<
+    ChatComposerPlusMenuProps,
+    "capabilityMenu" | "rootToggles" | "rootActions" | "attachments"
+  >,
 ): boolean {
   return Boolean(
     props.capabilityMenu ||
     props.rootToggles?.length ||
+    props.rootActions?.length ||
     uploadsEnabled(props.attachments.uploadConfig),
   );
 }

@@ -388,21 +388,25 @@ suite.define(() => {
         const options = actions.getByRole("button", { name: "Options for Forge" });
         await expectFocused(options);
         await page.keyboard.press("Space");
-        await actions.getByRole("menuitem", { name: "All sessions", exact: true }).waitFor();
+        await actions.getByRole("menuitem", { name: "All chats", exact: true }).waitFor();
         expect(await actions.locator("wa-dropdown-item").allTextContents()).toEqual([
-          expect.stringContaining("Open main chat"),
-          expect.stringContaining("All sessions"),
+          expect.stringContaining("Open chat"),
+          expect.stringContaining("New chat with Forge"),
+          expect.stringContaining("Pin to top"),
+          expect.stringContaining("Show details"),
+          expect.stringContaining("Bot settings"),
+          expect.stringContaining("All chats"),
           expect.stringContaining("Collapse others"),
         ]);
         const overflowItems = actions.locator("wa-dropdown-item");
-        expect(await overflowItems.locator('[slot="icon"] svg').count()).toBe(3);
+        expect(await overflowItems.locator('[slot="icon"] svg').count()).toBe(7);
         await expectFocused(overflowItems.first());
         await page.keyboard.press("ArrowDown");
         await expectFocused(overflowItems.nth(1));
         await page.keyboard.press("Escape");
         await expectFocused(options);
         await options.press("Enter");
-        await actions.getByRole("menuitem", { name: "All sessions", exact: true }).click();
+        await actions.getByRole("menuitem", { name: "All chats", exact: true }).click();
         await waitForControlUiRoute(page, { routeId: "sessions", pathname: "/sessions" });
         await expect
           .poll(async () =>
@@ -429,7 +433,7 @@ suite.define(() => {
           .poll(() => sidebar.locator('[data-agent-collapse][aria-expanded="false"]').count())
           .toBe(3);
         await options.press("Enter");
-        await actions.getByRole("menuitem", { name: "Open main chat", exact: true }).click();
+        await actions.getByRole("menuitem", { name: "Open chat", exact: true }).click();
         await waitForControlUiRoute(page, { routeId: "chat", pathname: "/chat/forge" });
         await actions.locator("a").press("Space");
         await waitForControlUiRoute(page, { routeId: "new-session", pathname: "/new" });

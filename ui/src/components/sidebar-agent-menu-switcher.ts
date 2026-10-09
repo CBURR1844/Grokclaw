@@ -2,7 +2,7 @@ import { html, nothing } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import type { AgentIdentityResult, GatewayAgentRow } from "../api/types.ts";
 import { t } from "../i18n/index.ts";
-import { normalizeAgentLabel } from "../lib/agents/display.ts";
+import { normalizeAgentLabel, pinnedAgentsFirst } from "../lib/agents/display.ts";
 import { resolveAgentAvatarUrl } from "../lib/avatar.ts";
 import { normalizeAgentId } from "../lib/sessions/session-key.ts";
 import { renderAgentSelectAvatar, renderAgentSelectCopy } from "./agent-select.ts";
@@ -23,19 +23,6 @@ export type SidebarAgentMenuSwitcherParams = {
   avatarErrorHandler: (url: string) => () => void;
   agentUnreadCount: (agentId: string) => number;
 };
-
-function sidebarAgentMenuRows(params: {
-  agents: readonly GatewayAgentRow[];
-  pinnedAgentIds: readonly string[];
-}) {
-  const { agents } = params;
-  const pinnedIds = new Set(params.pinnedAgentIds.map(normalizeAgentId));
-  return agents.toSorted((a, b) => {
-    const aPinned = pinnedIds.has(normalizeAgentId(a.id)) ? 0 : 1;
-    const bPinned = pinnedIds.has(normalizeAgentId(b.id)) ? 0 : 1;
-    return aPinned - bPinned;
-  });
-}
 
 function renderAgentAvatar(agent: GatewayAgentRow, params: SidebarAgentMenuSwitcherParams) {
   const agentId = normalizeAgentId(agent.id);
@@ -156,7 +143,7 @@ function renderAgentRow(
 }
 
 export function renderSidebarAgentMenuSwitcher(params: SidebarAgentMenuSwitcherParams) {
-  const agents = sidebarAgentMenuRows(params);
+  const agents = pinnedAgentsFirst(params.agents, params.pinnedAgentIds, (agent) => agent.id);
   const query = params.query.trim().toLocaleLowerCase();
   const nameCounts = new Map<string, number>();
   for (const agent of agents) {

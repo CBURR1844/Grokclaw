@@ -336,6 +336,7 @@ export abstract class ChatPaneLayoutRender extends ChatPaneBrowserAnnotationRend
                 savedLayout,
                 panelDefinitions,
                 subagentStop,
+                chatProps.commands,
               )}
               <openclaw-plugin-contributions
                 .kind=${"session-header"}

@@ -10,6 +10,7 @@ import {
   createBrowserPanelTestMetrics,
 } from "../../components/browser/browser-panel-controller-test-support.ts";
 import {
+  AGENT_DETAILS_PANEL_TOGGLE_EVENT,
   LINK_READER_PANEL_TOGGLE_EVENT,
   PLUGIN_PANEL_TOGGLE_EVENT,
 } from "../../components/panel-toggle-contract.ts";
@@ -135,6 +136,22 @@ describe("plugin panel intent delivery", () => {
       }
     },
   );
+});
+
+describe("bot details intent delivery", () => {
+  it("opens the details panel for the bot whose chat mounts after the request", () => {
+    const f = fixture();
+    const open = (sessionKey: string) =>
+      new CustomEvent(AGENT_DETAILS_PANEL_TOGGLE_EVENT, { detail: { sessionKey, open: true } });
+    rememberSessionPanelToggle("agent", open("session-b"));
+
+    f.controller.flush();
+    expect(f.updateSidebarLayout).not.toHaveBeenCalled();
+    f.state.sessionKey = "session-b";
+    f.controller.flush();
+
+    expect(f.state.sidebarLayout.columns[0]?.panels).toEqual([{ id: "agent", slot: "agent" }]);
+  });
 });
 
 describe("session link-reader intent delivery", () => {

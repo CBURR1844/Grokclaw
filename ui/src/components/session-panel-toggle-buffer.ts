@@ -1,6 +1,7 @@
 import { normalizeDefaultMainSessionAliasForUi } from "../lib/sessions/session-key.ts";
 
 export type SessionPanelToggleSlot =
+  | "agent"
   | "browser"
   | "desktop"
   | "portal"

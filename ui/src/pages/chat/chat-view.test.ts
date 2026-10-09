@@ -4875,6 +4875,58 @@ describe("right-click Reply", () => {
     expect(onSetReply).not.toHaveBeenCalled();
   });
 
+  it("adds whole-message actions after the message's own actions", () => {
+    const run = vi.fn();
+    const read = vi.fn((command: string) =>
+      command === "learn" ? { disabledReason: null } : null,
+    );
+    const onReadAloud = vi.fn();
+    const { bubble } = renderChatBubble(
+      {
+        commands: { read, run },
+        onReadAloud,
+        onCompanionStageAttachment: vi.fn(() => true),
+        onSetReply: vi.fn(),
+      },
+      { messageId: "message-1", text: "deploy the site" },
+    );
+
+    dispatchContextMenu(bubble);
+    expect(
+      [...document.querySelectorAll(".chat-reply-context-menu button")].map((button) =>
+        button.textContent?.trim(),
+      ),
+    ).toEqual(["Reply", "Copy as markdown", "Ask in side chat", "Save as a skill", "Read aloud"]);
+    getContextMenuAction("Save as a skill").click();
+    expect(run).toHaveBeenCalledWith("learn", { message: "deploy the site" });
+    expect(document.querySelector(".chat-reply-context-menu")).toBeNull();
+
+    dispatchContextMenu(bubble);
+    getContextMenuAction("Read aloud").click();
+    expect(onReadAloud).toHaveBeenCalledWith("deploy the site");
+  });
+
+  it("disables Save as a skill with the command's reason and omits absent actions", () => {
+    const { bubble } = renderChatBubble(
+      {
+        commands: { read: () => ({ disabledReason: "Reconnect first" }), run: vi.fn() },
+        onSetReply: vi.fn(),
+      },
+      { messageId: "message-1", text: "deploy the site" },
+    );
+
+    dispatchContextMenu(bubble);
+
+    const learn = getContextMenuAction("Save as a skill");
+    expect(learn.disabled).toBe(true);
+    expect(learn.closest("openclaw-tooltip")?.content).toBe("Reconnect first");
+    expect(
+      [...document.querySelectorAll(".chat-reply-context-menu button")].map((button) =>
+        button.textContent?.trim(),
+      ),
+    ).toEqual(["Reply", "Copy as markdown", "Save as a skill"]);
+  });
+
   it("dismisses an inline confirmation before opening the reply context menu", () => {
     const container = renderChatView({ onSetReply: vi.fn() });
     document.body.appendChild(container);

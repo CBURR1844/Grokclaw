@@ -10,7 +10,12 @@ import {
 import { GatewayRequestError } from "../../api/gateway.ts";
 import { t } from "../../i18n/index.ts";
 import { registerChatGoalsEnglish } from "../../i18n/locales/en-chat-goals.ts";
-import type { ChatGoalAction, ChatGoalDraft, ChatGoalRecovery } from "../../lib/chat/chat-types.ts";
+import type {
+  ChatGoalAction,
+  ChatGoalDraft,
+  ChatGoalDraftMode,
+  ChatGoalRecovery,
+} from "../../lib/chat/chat-types.ts";
 import {
   goalOperationExpired,
   goalOperationScopePrefix,
@@ -31,6 +36,7 @@ import { generateUUID } from "../../lib/uuid.ts";
 import { isInitialChatHistoryUnavailable, setChatError } from "./chat-history-state.ts";
 import type { ChatHost, ChatSendSubmitOptions } from "./chat-send-contract.ts";
 import { refreshChatSessionListForTarget } from "./chat-session.ts";
+import type { ChatComposerProps } from "./components/chat-composer-types.ts";
 import { adoptStartedChatRun } from "./run-lifecycle.ts";
 
 registerChatGoalsEnglish();
@@ -42,6 +48,8 @@ type ChatGoalHost = ChatHost & {
     submissionAction?: Event,
   ) => Promise<boolean | void>;
 };
+
+type ChatGoalPaneHost = ChatGoalHost & { handleChatDraftChange: (next: string) => void };
 
 type GoalParams = SessionsGoalUpdateParams | SessionsGoalClearParams;
 type GoalOperation = {
@@ -147,6 +155,31 @@ export function chatGoalRecovery(host: ChatHost): ChatGoalRecovery | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Enters or leaves goal drafting; the mode is saved with the draft so it survives reloads. */
+export function setChatGoalDraftMode(host: ChatGoalPaneHost, mode: ChatGoalDraftMode | null) {
+  host.chatGoalDraftMode = mode;
+  host.handleChatDraftChange(host.chatMessage);
+}
+
+/** The composer's goal wiring. Drafting needs a pane that sends its own messages. */
+export function chatGoalProps(
+  host: ChatGoalPaneHost,
+  canDraft: boolean,
+): Pick<
+  ChatComposerProps,
+  "goalRecovery" | "onGoalAction" | "goalDraftMode" | "onGoalDraftModeChange" | "onGoalSubmit"
+> {
+  return {
+    goalRecovery: chatGoalRecovery(host),
+    onGoalAction: (goalId, action) => void mutateChatGoal(host, { goalId, action }),
+    goalDraftMode: host.chatGoalDraftMode ?? null,
+    onGoalDraftModeChange: (mode) => setChatGoalDraftMode(host, mode),
+    onGoalSubmit: canDraft
+      ? (draft, submissionAction) => submitChatGoalDraft(host, draft, submissionAction)
+      : undefined,
+  };
 }
 
 export async function submitChatGoalDraft(

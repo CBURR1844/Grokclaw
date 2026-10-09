@@ -1,12 +1,15 @@
-import { html, nothing } from "lit";
+import { html, nothing, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import { isSessionRouteId, pathForRoute } from "../app-route-paths.ts";
+import { isSessionRouteId, pathForAgentPanel, pathForRoute } from "../app-route-paths.ts";
+import { togglePinnedAgent } from "../app/bootstrap-navigation-preferences.ts";
 import { loadSettings, patchSettings } from "../app/settings.ts";
 import { t } from "../i18n/index.ts";
 import { registerAgentsHomeEnglish } from "../i18n/locales/en-agents-home.ts";
+import { pinnedAgentsFirst } from "../lib/agents/display.ts";
 import { rosterActivityStore } from "../lib/agents/roster-activity-store.ts";
 import { AgentRosterElement } from "../lib/agents/roster-element.ts";
+import { handleContextMenuEvent } from "../lib/keyboard-shortcuts.ts";
 import { shouldHandleNavigationClick } from "../lib/navigation-click.ts";
 import { areUiSessionKeysEquivalent } from "../lib/sessions/session-key.ts";
 import { newSessionSearch } from "../pages/new-session/location.ts";
@@ -24,12 +27,29 @@ import type { SidebarRecentSession } from "./app-sidebar-session-types.ts";
 import { icons } from "./icons.ts";
 import { renderAgentIdentityAvatar } from "./identity-avatar-view.ts";
 import { renderNewSessionLink } from "./new-session-link.ts";
+import { AGENT_DETAILS_PANEL_TOGGLE_EVENT } from "./panel-toggle-contract.ts";
 import { renderTeamSessionSlots } from "./session-attention-presentation.ts";
+import { rememberSessionPanelToggle } from "./session-panel-toggle-buffer.ts";
 import { sessionRunVisibility } from "./session-run-visibility.ts";
 import "../styles/sidebar-agent-roster.css";
 
 registerAgentsHomeEnglish();
 type RosterHost = AppSidebarRenderHost & SessionListHost;
+
+function renderRowMenuItem(
+  value: string,
+  icon: TemplateResult,
+  label: string,
+  disabledReason?: string,
+) {
+  return html`<wa-dropdown-item
+    class="sidebar-customize-menu__item"
+    value=${value}
+    ?disabled=${disabledReason !== undefined}
+    title=${disabledReason ?? nothing}
+    ><span slot="icon" class="nav-item__icon">${icon}</span>${label}</wa-dropdown-item
+  >`;
+}
 
 class SidebarAgentRoster extends AgentRosterElement {
   // Selection, menus, drag state, and presence belong to the mutable host, not the row projection.
@@ -42,6 +62,7 @@ class SidebarAgentRoster extends AgentRosterElement {
   private published: {
     snapshot: ReturnType<typeof rosterActivityStore>["snapshot"];
     collapsed: ReadonlySet<string>;
+    pinned: readonly string[];
   } | null = null;
 
   protected override willUpdate() {
@@ -53,11 +74,19 @@ class SidebarAgentRoster extends AgentRosterElement {
     const store = rosterActivityStore(this.context);
     store.setInvolvingMe(this.involvingMe);
     const snapshot = store.snapshot;
-    if (this.published?.snapshot !== snapshot || this.published.collapsed !== this.collapsed) {
-      this.published = { snapshot, collapsed: this.collapsed };
+    const pinned = this.host.pinnedAgentIds;
+    if (
+      this.published?.snapshot !== snapshot ||
+      this.published.collapsed !== this.collapsed ||
+      this.published.pinned !== pinned
+    ) {
+      this.published = { snapshot, collapsed: this.collapsed, pinned };
       this.host.rosterSessionSource = {
         result: snapshot.result,
-        agentIds: snapshot.cards.map((card) => card.id),
+        // Keyboard and section order follow the visual order.
+        agentIds: pinnedAgentsFirst(snapshot.cards, pinned, (card) => card.id).map(
+          (card) => card.id,
+        ),
         collapsedAgentIds: this.collapsed,
       };
     }
@@ -89,9 +118,33 @@ class SidebarAgentRoster extends AgentRosterElement {
     this.collapsed = collapsed;
   }
 
+  // Right-click, the ContextMenu key and Shift+F10 open the row's "..." menu.
+  private readonly openRowMenu = (event: MouseEvent | KeyboardEvent) => {
+    const header = event.currentTarget as HTMLElement;
+    const dropdown = header.querySelector<HTMLElement & { open: boolean }>(
+      "wa-dropdown.sidebar-agent-roster__menu",
+    );
+    handleContextMenuEvent(event, header.querySelector("a.sidebar-agent-roster__row"), () => {
+      if (dropdown) {
+        dropdown.open = true;
+      }
+    });
+  };
+
+  // The intent waits until the bot's chat mounts, then opens its details panel.
+  private showDetails(agentId: string, sessionKey: string) {
+    const event = new CustomEvent(AGENT_DETAILS_PANEL_TOGGLE_EVENT, {
+      detail: { sessionKey, open: true },
+    });
+    rememberSessionPanelToggle("agent", event);
+    this.host.openMainSession(agentId);
+    window.dispatchEvent(event);
+  }
+
   override render() {
     return this.avatars.withActiveRoutes(() => {
-      const cards = this.cards();
+      const pinned = this.host.pinnedAgentIds;
+      const cards = pinnedAgentsFirst(this.cards(), pinned, (card) => card.id);
       const error = this.roster.error ?? this.roster.subscriptionError;
       const newSessionAccess = this.host.readNewSessionAccess();
       return renderSessionListFrame(
@@ -142,7 +195,11 @@ class SidebarAgentRoster extends AgentRosterElement {
                 data-agent-group=${card.id}
                 aria-label=${card.name}
               >
-                <div class="sidebar-agent-roster__header session-row-host">
+                <div
+                  class="sidebar-agent-roster__header session-row-host"
+                  @contextmenu=${this.openRowMenu}
+                  @keydown=${this.openRowMenu}
+                >
                   ${
                     hasSessions
                       ? html`<button
@@ -220,6 +277,20 @@ class SidebarAgentRoster extends AgentRosterElement {
                           case "main":
                             this.host.openMainSession(card.id);
                             break;
+                          case "new":
+                            this.host.requestOpenNewSession(card.id);
+                            break;
+                          case "pin":
+                            togglePinnedAgent(this.context.navigation, card.id);
+                            break;
+                          case "details":
+                            this.showDetails(card.id, mainKey);
+                            break;
+                          case "settings":
+                            this.host.onNavigate?.("agents", {
+                              pathname: pathForAgentPanel(card.id, null, this.host.basePath),
+                            });
+                            break;
                           case "sessions":
                             this.context.agentSelection.setScope(card.id);
                             this.host.onNavigate?.("sessions");
@@ -246,18 +317,28 @@ class SidebarAgentRoster extends AgentRosterElement {
                       >
                         ${icons.moreHorizontal}
                       </button>
-                      <wa-dropdown-item class="sidebar-customize-menu__item" value="main"
-                        ><span slot="icon" class="nav-item__icon">${icons.messageSquare}</span
-                        >${t("agentsHome.openMainChat")}</wa-dropdown-item
-                      >
-                      <wa-dropdown-item class="sidebar-customize-menu__item" value="sessions"
-                        ><span slot="icon" class="nav-item__icon">${icons.listTree}</span
-                        >${t("agentsHome.allSessions")}</wa-dropdown-item
-                      >
-                      <wa-dropdown-item class="sidebar-customize-menu__item" value="collapse-others"
-                        ><span slot="icon" class="nav-item__icon">${icons.foldVertical}</span
-                        >${t("agentsHome.collapseOthers")}</wa-dropdown-item
-                      >
+                      ${renderRowMenuItem("main", icons.messageSquare, t("agentsHome.openChat"))}
+                      ${renderRowMenuItem(
+                        "new",
+                        icons.messageSquarePlus,
+                        t("agentsHome.newChatWith", { agent: card.name }),
+                        newSessionAccess.allowed ? undefined : newSessionAccess.reason,
+                      )}
+                      <div class="sidebar-customize-menu__separator" role="separator"></div>
+                      ${renderRowMenuItem(
+                        "pin",
+                        pinned.includes(card.id) ? icons.pinOff : icons.pin,
+                        t(pinned.includes(card.id) ? "agentsHome.unpin" : "agentsHome.pinToTop"),
+                      )}
+                      ${renderRowMenuItem("details", icons.bot, t("agentDetails.toggle"))}
+                      ${renderRowMenuItem("settings", icons.settings, t("agentsHome.botSettings"))}
+                      <div class="sidebar-customize-menu__separator" role="separator"></div>
+                      ${renderRowMenuItem("sessions", icons.listTree, t("agentsHome.allChats"))}
+                      ${renderRowMenuItem(
+                        "collapse-others",
+                        icons.foldVertical,
+                        t("agentsHome.collapseOthers"),
+                      )}
                     </wa-dropdown>
                   </span>
                 </div>
@@ -300,7 +381,7 @@ class SidebarNewSessionMenu extends AgentRosterElement {
   override render() {
     return this.avatars.withActiveRoutes(() => {
       const access = this.host.readNewSessionAccess();
-      const cards = this.cards();
+      const cards = pinnedAgentsFirst(this.cards(), this.host.pinnedAgentIds, (card) => card.id);
       return html`<wa-dropdown
         class="sidebar-new-session-menu"
         placement="bottom-end"
