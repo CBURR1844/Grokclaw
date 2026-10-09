@@ -523,6 +523,8 @@ export function createTestChatPane(params: {
     sessions: context.sessions,
     sessionsError: null,
     sessionsLoading: false,
+    // The header reads the UI preset from settings, like the app host provides.
+    settings: { gatewayUrl: "ws://gateway.test/control" },
     sidebarContent: null,
     sidebarFocusPanelId: "",
     sidebarFocusVersion: 0,
