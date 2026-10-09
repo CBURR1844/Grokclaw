@@ -2,6 +2,7 @@ import { expect, test, vi } from "vitest";
 import { createDeferred } from "../../../test/helpers/promise.js";
 import type { GatewayOperatorRoleDefinition } from "../../config/types.gateway.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { listAgentsForGateway } from "../session-utils.js";
 import { agentListHandler } from "./agents-list.js";
 import type { GatewayClient, GatewayRequestContext, RespondFn } from "./types.js";
 
@@ -19,7 +20,7 @@ const roster = vi.hoisted(() => ({
 
 // Roster enrichment reads workspaces and model state; authorization remains real.
 vi.mock("../session-utils.js", () => ({
-  listAgentsForGateway: async () => roster,
+  listAgentsForGateway: vi.fn(async () => roster),
 }));
 
 function roleConfig(agents: GatewayOperatorRoleDefinition["agents"]): OpenClawConfig {
@@ -92,6 +93,29 @@ test.each([
     expect(respond).toHaveBeenCalledExactlyOnceWith(
       true,
       { ...roster, agents: roster.agents.filter((agent) => expected.includes(agent.id)) },
+      undefined,
+    );
+  },
+);
+
+test.each([
+  { agents: ["research", "inbox"], requesterAgentIds: ["research"] },
+  { agents: "*" as const, requesterAgentIds: ["ops", "research"] },
+])(
+  "agents.list limits Claw requesters to visible agents for agents=$agents",
+  async ({ agents, requesterAgentIds }) => {
+    const claw = { id: "inbox", name: "Inbox", claw: { requesterAgentIds: ["ops", "research"] } };
+    vi.mocked(listAgentsForGateway).mockResolvedValueOnce({
+      ...roster,
+      agents: [...roster.agents, claw],
+    });
+    const respond = await listAgents(() => roleConfig(agents));
+    const visibleBots = roster.agents.filter(
+      (agent) => agents === "*" || agents.includes(agent.id),
+    );
+    expect(respond).toHaveBeenCalledExactlyOnceWith(
+      true,
+      { ...roster, agents: [...visibleBots, { ...claw, claw: { requesterAgentIds } }] },
       undefined,
     );
   },

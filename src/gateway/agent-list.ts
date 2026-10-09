@@ -3,7 +3,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { listAgentEntries, tryResolveDefaultAgentId } from "../agents/agent-scope.js";
+import { listAgentEntries, listAgentIds, tryResolveDefaultAgentId } from "../agents/agent-scope.js";
+import {
+  resolveRequesterAllowAgents,
+  resolveSubagentAllowedTargetIds,
+} from "../agents/subagents/spawn/subagent-target-policy.js";
 import { tryResolveLegacyCompatibilityAgentId } from "../config/legacy.default-agent-owner.js";
 import { resolveStateDir } from "../config/paths.js";
 import type { SessionScope } from "../config/sessions.js";
@@ -64,6 +68,40 @@ export function resolveGatewayAgentSelectionState(cfg: OpenClawConfig): GatewayA
     ownership: legacyAgentId && cfg.agents?.ownership !== "explicit" ? "legacy" : "explicit",
     selectionRequired: !legacyAgentId,
   };
+}
+
+/**
+ * Maps each Claw (`kind: "claw"`) to the configured agents whose sessions_spawn target policy
+ * admits it. Requesters are configured non-Claw entries, so no Claw requests itself or another
+ * Claw, and system rows are never configured. A Claw that no agent admits maps to `[]`.
+ */
+export function listClawRequesterIds(cfg: OpenClawConfig): Map<string, string[]> {
+  const entries = listAgentEntries(cfg).filter((entry) => entry?.id);
+  const requestersByClaw = new Map<string, string[]>();
+  for (const entry of entries) {
+    if (entry.kind === "claw") {
+      requestersByClaw.set(normalizeAgentId(entry.id), []);
+    }
+  }
+  if (requestersByClaw.size === 0) {
+    return requestersByClaw;
+  }
+  const configuredAgentIds = listAgentIds(cfg);
+  for (const entry of entries) {
+    const requesterAgentId = normalizeAgentId(entry.id);
+    if (requestersByClaw.has(requesterAgentId)) {
+      continue;
+    }
+    const { allowedIds } = resolveSubagentAllowedTargetIds({
+      requesterAgentId,
+      allowAgents: resolveRequesterAllowAgents(cfg, requesterAgentId),
+      configuredAgentIds,
+    });
+    for (const targetId of allowedIds) {
+      requestersByClaw.get(targetId)?.push(requesterAgentId);
+    }
+  }
+  return requestersByClaw;
 }
 
 /** Lists gateway-visible agents with canonical membership, ordering, and semantic kind. */

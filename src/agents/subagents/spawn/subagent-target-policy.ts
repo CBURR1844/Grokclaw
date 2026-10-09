@@ -2,7 +2,9 @@
  * Subagent spawn target policy. Requesters can self-spawn by default, or opt
  * into a configured allowlist that is still intersected with known agents.
  */
+import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import { normalizeAgentId } from "../../../routing/session-key.js";
+import { resolveAgentConfig } from "../../agent-scope-config.js";
 
 type SubagentTargetPolicyResult = { ok: true } | { ok: false; allowedText: string; error: string };
 
@@ -15,6 +17,17 @@ function normalizeAllowAgents(allowAgents: readonly string[] | undefined): Set<s
       .map((value) => value.trim())
       .filter(Boolean)
       .map((value) => (value === "*" ? value : normalizeAgentId(value))),
+  );
+}
+
+/** Resolve a requester's sessions_spawn allowlist: its own entry's value, else the defaults' value. */
+export function resolveRequesterAllowAgents(
+  cfg: OpenClawConfig,
+  agentId: string,
+): readonly string[] | undefined {
+  return (
+    resolveAgentConfig(cfg, agentId)?.subagents?.allowAgents ??
+    cfg.agents?.defaults?.subagents?.allowAgents
   );
 }
 

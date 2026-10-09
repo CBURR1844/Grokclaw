@@ -27,7 +27,10 @@ import { resolveSenderRestrictedSpawnError } from "./spawn-requester-policy.js";
 import { countActiveRunsForSession } from "./subagents/registry/subagent-registry.js";
 import { resolveSubagentCapabilities } from "./subagents/spawn/subagent-capabilities.js";
 import { getSubagentDepthFromSessionStore } from "./subagents/spawn/subagent-depth.js";
-import { resolveSubagentTargetPolicy } from "./subagents/spawn/subagent-target-policy.js";
+import {
+  resolveRequesterAllowAgents,
+  resolveSubagentTargetPolicy,
+} from "./subagents/spawn/subagent-target-policy.js";
 
 type SpawnMode = "run" | "session";
 type SpawnBackendKind = "subagent" | "acp";
@@ -354,8 +357,7 @@ export function resolveSpawnAdmission(params: {
     requesterAgentId: params.requesterAgentId,
     targetAgentId: params.targetAgentId,
     requestedAgentId: params.requestedAgentId,
-    allowAgents:
-      requesterSubagentConfig?.allowAgents ?? params.cfg.agents?.defaults?.subagents?.allowAgents,
+    allowAgents: resolveRequesterAllowAgents(params.cfg, params.requesterAgentId),
     configuredAgentIds: params.configuredAgentIds,
   });
   if (!targetPolicy.ok) {
