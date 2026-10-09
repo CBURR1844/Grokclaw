@@ -301,7 +301,10 @@ describe("agent details Claws", () => {
     const remove = () => menu?.querySelector("wa-dropdown-item[value='remove']");
     await until(() => remove()?.hasAttribute("disabled") === true);
     expect(remove()?.getAttribute("title")).toContain("can start any agent");
+    // A selection that still gets through is refused with the same reason, without a write.
     select(menu, "remove");
+    const notice = () => panel.querySelector("[aria-labelledby='agent-details-claws'] > .callout");
+    await until(() => text(notice()).includes("can start any agent"));
     expect(patches).toEqual([]);
   });
 
