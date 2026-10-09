@@ -1,6 +1,7 @@
 import type { Page } from "playwright";
 import { expect, it } from "vitest";
 import { CONTROL_UI_BOOTSTRAP_CONFIG_PATH } from "../../../src/gateway/control-ui-bootstrap-contract.js";
+import { pinUpstreamUiDefaults } from "../test-helpers/control-ui-e2e-ui-defaults.ts";
 import {
   controlUiSessionPath,
   controlUiSessionUrl,
@@ -11,7 +12,6 @@ import {
   waitForControlUiRoute,
   type ControlUiMockGatewayScenario,
   type MockGatewayRequest,
-  pinUpstreamUiDefaults,
 } from "../test-helpers/control-ui-e2e.ts";
 import {
   captureSidebarUiProof,

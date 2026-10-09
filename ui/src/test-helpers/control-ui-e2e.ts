@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import type { HelloOk, MessageReactionSummary } from "@openclaw/gateway-protocol";
 import { normalizeAgentId } from "@openclaw/normalization-core/agent-id";
 import { buildControlUiSessionPath } from "@openclaw/session-url-contract";
-import type { BrowserContext, Locator, Page } from "playwright";
+import type { Locator, Page } from "playwright";
 import type { InlineConfig, Plugin, PreviewServer, ViteDevServer } from "vite";
 import { GATEWAY_SERVER_CAPS } from "../../../packages/gateway-protocol/src/server-capabilities.js";
 import { PROTOCOL_VERSION } from "../../../packages/gateway-protocol/src/version.js";
@@ -46,6 +46,7 @@ import {
   waitForControlUiInitialRoster,
 } from "./control-ui-e2e-readiness.ts";
 import { getSharedControlUiE2ePreview } from "./control-ui-e2e-shared-preview.ts";
+import { pinUpstreamUiDefaults } from "./control-ui-e2e-ui-defaults.ts";
 import { createControlUiMockPresence } from "./control-ui-mock-presence.ts";
 import { createControlUiMockReactions } from "./control-ui-mock-reactions.ts";
 import { createControlUiMockResponses } from "./control-ui-mock-responses.ts";
@@ -2849,18 +2850,6 @@ export async function prepareControlUiMockGatewayScenario(
       }
     : scenario;
   return { scenario: preparedScenario, assets };
-}
-
-/**
- * BotClaw opens the simple screen with the bot roster. Mocked scenarios were
- * written for OpenClaw's full screen and agent chip, so pages and contexts that
- * install the mock Gateway restore those defaults; BotClaw scenarios opt in
- * through stored settings. The mock dev server keeps BotClaw's defaults.
- */
-export async function pinUpstreamUiDefaults(target: Page | BrowserContext): Promise<void> {
-  await target.addInitScript(() => {
-    (globalThis as { openclawUpstreamUiDefaults?: boolean }).openclawUpstreamUiDefaults = true;
-  });
 }
 
 export async function installMockGateway(
