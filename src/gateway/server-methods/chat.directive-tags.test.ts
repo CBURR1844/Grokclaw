@@ -16,6 +16,7 @@ import {
   runWithCronCreatorAuthorityCapabilityResolver,
   type CronCreatorAuthorityCapability,
 } from "../../agents/cron-creator-authority-context.js";
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../../agents/defaults.js";
 import type { ModelCatalogEntry } from "../../agents/model-catalog.types.js";
 import { onTrustedMessageAuditEvent } from "../../audit/message-audit-events.js";
 import type { ReplyDispatchRun } from "../../auto-reply/get-reply-options.types.js";
@@ -832,9 +833,9 @@ function createChatContext() {
         // Keep the default model image-capable here; otherwise attachment tests
         // exercise the unsupported-model fallback instead of Pi persistence.
         {
-          provider: "openai",
-          id: "gpt-6-astra",
-          name: "GPT-6 Astra",
+          provider: DEFAULT_PROVIDER,
+          id: DEFAULT_MODEL,
+          name: "Default model",
           input: ["text", "image"],
         },
         {

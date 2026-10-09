@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import type { PluginManifestRecord } from "../plugins/manifest-registry.types.js";
 import { createPluginMetadataSnapshotFixture } from "../plugins/plugin-metadata.test-support.js";
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./defaults.js";
 import {
   buildAllowedModelSet,
   buildConfiguredModelCatalog,
@@ -201,20 +202,24 @@ describe("configured model manifest workspace scope", () => {
         entries: {
           ops: {
             models: {
-              "openai/ops": { alias: "Operations" },
+              [`${DEFAULT_PROVIDER}/ops`]: { alias: "Operations" },
             },
           },
         },
       },
     } as unknown as OpenClawConfig;
 
-    const aliases = buildModelAliasIndex({ cfg, defaultProvider: "openai", agentId: "ops" });
+    const aliases = buildModelAliasIndex({
+      cfg,
+      defaultProvider: DEFAULT_PROVIDER,
+      agentId: "ops",
+    });
 
     expect(aliases.byAlias.get("operations")).toEqual({
       alias: "Operations",
-      ref: { provider: "openai", model: "ops" },
+      ref: { provider: DEFAULT_PROVIDER, model: "ops" },
     });
-    expect(aliases.byKey.get("openai/ops")).toEqual(["Operations"]);
+    expect(aliases.byKey.get(`${DEFAULT_PROVIDER}/ops`)).toEqual(["Operations"]);
     expect(loadManifestMetadataSnapshotMock.mock.calls.length).toBe(0);
     expect(normalizeProviderModelIdWithRuntimeMock.mock.calls.length).toBe(0);
   });
@@ -227,7 +232,7 @@ describe("configured model manifest workspace scope", () => {
         entries: {
           ops: {
             model: { primary: "Operations" },
-            models: { "openai/ops": { alias: "Operations" } },
+            models: { [`${DEFAULT_PROVIDER}/ops`]: { alias: "Operations" } },
           },
         },
       },
@@ -237,10 +242,10 @@ describe("configured model manifest workspace scope", () => {
       resolveConfiguredModelRef({
         cfg,
         agentId: "ops",
-        defaultProvider: "openai",
-        defaultModel: "gpt-5.6-sol",
+        defaultProvider: DEFAULT_PROVIDER,
+        defaultModel: DEFAULT_MODEL,
       }),
-    ).toEqual({ provider: "openai", model: "ops" });
+    ).toEqual({ provider: DEFAULT_PROVIDER, model: "ops" });
     expect(loadManifestMetadataSnapshotMock.mock.calls.length).toBe(0);
     expect(normalizeProviderModelIdWithRuntimeMock.mock.calls.length).toBe(0);
   });
