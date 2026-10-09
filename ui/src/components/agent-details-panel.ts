@@ -154,9 +154,9 @@ class AgentDetailsPanel extends AgentRosterElement {
           : nothing
       }
       ${
-        routines.runFeedback
+        routines.feedback
           ? html`<div class="callout warn agent-details__error" role="status">
-              ${routines.runFeedback}
+              ${routines.feedback}
             </div>`
           : nothing
       }
