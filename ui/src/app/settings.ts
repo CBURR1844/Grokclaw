@@ -311,8 +311,7 @@ function resolveSidebarAgentsMode(stored?: unknown): "chip" | "roster" {
   if (stored === "chip" || stored === "roster") {
     return stored;
   }
-  const pinned = (globalThis as { openclawDefaultSidebarAgentsMode?: unknown })
-    .openclawDefaultSidebarAgentsMode;
+  const pinned: unknown = Reflect.get(globalThis, "openclawDefaultSidebarAgentsMode");
   return pinned === "chip" ? "chip" : "roster";
 }
 
