@@ -148,6 +148,10 @@ export type ChatComposerProps = ChatAttachmentControlsProps & {
   onOpenTalkSettings?: () => void;
   onOpenDictationSettings?: () => void;
   suggestionComposer?: boolean;
+  /** False replaces the typed "/" and "$" lists with the + menu (default true). */
+  slashCommands?: boolean;
+  /** False hides the context-usage ring (default true). */
+  contextUsage?: boolean;
   onTypingChange?: (typing: boolean, preview?: string) => void;
   composerControls?: TemplateResult | typeof nothing;
   footerContent?: TemplateResult | typeof nothing;

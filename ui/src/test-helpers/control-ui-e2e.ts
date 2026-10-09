@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import type { HelloOk, MessageReactionSummary } from "@openclaw/gateway-protocol";
 import { normalizeAgentId } from "@openclaw/normalization-core/agent-id";
 import { buildControlUiSessionPath } from "@openclaw/session-url-contract";
-import type { Locator, Page } from "playwright";
+import type { BrowserContext, Locator, Page } from "playwright";
 import type { InlineConfig, Plugin, PreviewServer, ViteDevServer } from "vite";
 import { GATEWAY_SERVER_CAPS } from "../../../packages/gateway-protocol/src/server-capabilities.js";
 import { PROTOCOL_VERSION } from "../../../packages/gateway-protocol/src/version.js";
@@ -1110,10 +1110,6 @@ function installControlUiMockGateway(
   };
 
   const scenario = input.scenario;
-  // BotClaw opens the bot roster by default. These scenarios were written for
-  // OpenClaw's agent chip; roster scenarios opt in through stored settings.
-  (globalThis as { openclawDefaultSidebarAgentsMode?: string }).openclawDefaultSidebarAgentsMode =
-    "chip";
   if (scenario.communityInviteDismissed) {
     try {
       // Same persisted preference as community-invite-state.ts, before the first sidebar render.
@@ -2855,6 +2851,18 @@ export async function prepareControlUiMockGatewayScenario(
   return { scenario: preparedScenario, assets };
 }
 
+/**
+ * BotClaw opens the simple screen with the bot roster. Mocked scenarios were
+ * written for OpenClaw's full screen and agent chip, so pages and contexts that
+ * install the mock Gateway restore those defaults; BotClaw scenarios opt in
+ * through stored settings. The mock dev server keeps BotClaw's defaults.
+ */
+export async function pinUpstreamUiDefaults(target: Page | BrowserContext): Promise<void> {
+  await target.addInitScript(() => {
+    (globalThis as { openclawUpstreamUiDefaults?: boolean }).openclawUpstreamUiDefaults = true;
+  });
+}
+
 export async function installMockGateway(
   page: Page,
   scenario: ControlUiMockGatewayScenario = {},
@@ -2876,6 +2884,7 @@ export async function installMockGateway(
     }),
   );
   await installControlUiE2eUnhandledRejectionRing(page);
+  await pinUpstreamUiDefaults(page);
   await page.addInitScript({ content: createControlUiMockGatewayInitScript(normalizedScenario) });
   const rosterGates = new Set([
     "connect",

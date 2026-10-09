@@ -9,8 +9,8 @@
     <title>BotClaw</title>
     <meta name="color-scheme" content="dark light" />
     <!-- These mirror the claw theme's --bg tokens for first paint; runtime theme application keeps them synchronized. -->
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f7" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e1015" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111318" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -119,12 +119,12 @@
       }
 
       html {
-        background: #0e1015;
+        background: #111318;
         color-scheme: dark;
       }
 
       html[data-theme-mode="light"] {
-        background: #faf9f7;
+        background: #ffffff;
         color-scheme: light;
       }
 
@@ -216,12 +216,12 @@
       }
 
       body.openclaw-mount-fallback-active {
-        --mount-fallback-bg: var(--bg, #0e1015);
-        --mount-fallback-card: var(--card, #161920);
-        --mount-fallback-text: var(--text-strong, #f4f4f5);
-        --mount-fallback-muted: var(--muted, #8b8b94);
-        --mount-fallback-link: var(--link, #ff7070);
-        --mount-fallback-ring: var(--ring, #ff5c5c);
+        --mount-fallback-bg: var(--bg, #111318);
+        --mount-fallback-card: var(--card, #1c1f27);
+        --mount-fallback-text: var(--text-strong, #eceef4);
+        --mount-fallback-muted: var(--muted, #858b9a);
+        --mount-fallback-link: var(--link, #aab9ff);
+        --mount-fallback-ring: var(--ring, #8199ff);
 
         margin: 0;
         color: var(--mount-fallback-text);
@@ -346,12 +346,12 @@
 
       .mount-fallback__button--primary {
         color: var(--primary-foreground, #ffffff);
-        background: var(--primary, #d13c3c);
+        background: var(--primary, #2e50f0);
       }
 
       .mount-fallback__button--primary:hover,
       .mount-fallback__button--primary:active {
-        background: var(--primary-hover, #c22e2e);
+        background: var(--primary-hover, #2440c8);
       }
 
       .mount-fallback__panel:focus {
@@ -365,12 +365,12 @@
       }
 
       html[data-theme-mode="light"] body.openclaw-mount-fallback-active {
-        --mount-fallback-bg: var(--bg, #faf9f7);
-        --mount-fallback-card: var(--card, #ffffff);
-        --mount-fallback-text: var(--text-strong, #18181b);
-        --mount-fallback-muted: var(--muted, #64646e);
-        --mount-fallback-link: var(--link, #b91c1c);
-        --mount-fallback-ring: var(--ring, #dc2626);
+        --mount-fallback-bg: var(--bg, #ffffff);
+        --mount-fallback-card: var(--card, #f3f5f9);
+        --mount-fallback-text: var(--text-strong, #12141a);
+        --mount-fallback-muted: var(--muted, #5f6573);
+        --mount-fallback-link: var(--link, #2440c8);
+        --mount-fallback-ring: var(--ring, #2e50f0);
       }
 
       html[data-theme-mode="light"] .mount-fallback__panel {

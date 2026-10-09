@@ -11,6 +11,7 @@ import {
   createControlUiMockGatewayInitScript,
   installMockGateway,
   type ControlUiMockGateway,
+  pinUpstreamUiDefaults,
 } from "../test-helpers/control-ui-e2e.ts";
 import { chatSessionListResponse } from "./chat-flow.test-support.ts";
 import {
@@ -474,6 +475,7 @@ suite.define(() => {
         await context.route(`**${CONTROL_UI_BOOTSTRAP_CONFIG_PATH}`, (route) =>
           route.fulfill({ json: createControlUiMockBootstrapConfig(popupScenario) }),
         );
+        await pinUpstreamUiDefaults(context);
         await context.addInitScript({
           content: createControlUiMockGatewayInitScript(popupScenario),
         });

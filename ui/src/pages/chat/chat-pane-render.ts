@@ -1,4 +1,4 @@
-import { html, nothing } from "lit";
+import { html } from "lit";
 import { resolveArtifactDownloadSource } from "../../api/artifact-download.ts";
 import { resolveControlUiAuthToken } from "../../app/control-ui-auth.ts";
 import { gatewayPresentationScope } from "../../app/gateway-presentation-scope.ts";
@@ -32,12 +32,12 @@ import { resolveChatModelSetup } from "./chat-model-setup.ts";
 import { ChatPaneLayoutRender } from "./chat-pane-layout-render.ts";
 import { createChatPaneRails } from "./chat-pane-rails.ts";
 import {
+  chatPaneComposerProps,
   createChatPaneQueuedEditProps,
   createChatPaneSessionActionCallbacks,
   readChatPaneComposerAccess,
   readChatPaneMutationAccess,
   readChatPublicationAccess,
-  renderChatPaneComposerControls,
 } from "./chat-pane-session-controls.ts";
 import {
   createSidebarFullMessageLoader,
@@ -250,9 +250,9 @@ export class ChatPane extends ChatPaneLayoutRender {
       state.requestUpdate?.();
     };
     const replyMessageAccess = this.currentReplyMessageAccess(state.sessionKey);
-    const composerControls = catalogKey
+    const composerControls: Parameters<typeof chatPaneComposerProps>[1] = catalogKey
       ? undefined
-      : renderChatPaneComposerControls({
+      : {
           state,
           selectedSession,
           agentDefaultModel,
@@ -266,7 +266,7 @@ export class ChatPane extends ChatPaneLayoutRender {
           onProviderSettings: (provider) =>
             navigateToModelProvider(this.context, currentAgentId, provider),
           onModelAccounts: () => this.context.navigate("profile"),
-        });
+        };
     const composerState = getChatComposerState(this.presentationId);
     const projectCatalog = projectsForGateway(this.context.gateway).snapshot;
     const publicationScope = this.captureConnectionScope();
@@ -554,8 +554,7 @@ export class ChatPane extends ChatPaneLayoutRender {
         basePath: state.basePath,
         modelAuthStatusResult: state.modelAuthStatusResult,
       },
-      composerControls: composerControls?.composerControls ?? nothing,
-      permissionPicker: composerControls?.permissionPicker,
+      ...chatPaneComposerProps(state.settings, composerControls),
       ...this.suggestionChatProps(state.connected, selectedSessionArchived, multiIdentity),
       messageReactions: this.messageReactions,
       onReact: this.canReactToCurrentSession() ? this.handleMessageReaction : undefined,

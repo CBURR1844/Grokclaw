@@ -25,6 +25,14 @@ const AGENT_LINKS = [
   ["files", "agentDetails.instructions", icons.fileText],
 ] as const satisfies ReadonlyArray<readonly [AgentsPanel, string, unknown]>;
 
+function renderAgentStatus(card: { activeNow: boolean; lastActiveAt?: number | null }) {
+  return card.activeNow
+    ? html`<span class="agent-details__working">${t("agentsHome.working")}</span>`
+    : card.lastActiveAt
+      ? t("agentsHome.lastActive", { time: formatRelativeTimestamp(card.lastActiveAt) })
+      : t("agentsHome.neverActive");
+}
+
 /**
  * Everything about one agent beside its conversation: who it is, what it is
  * doing, the model it runs and its routines. Editing stays on the agent's
@@ -205,11 +213,7 @@ class AgentDetailsPanel extends AgentRosterElement {
             ></span>`
           : html`<p class="agent-details__empty">${t("agentDetails.unavailable")}</p>`;
       }
-      const status = card.activeNow
-        ? html`<span class="agent-details__working">${t("agentsHome.working")}</span>`
-        : card.lastActiveAt
-          ? t("agentsHome.lastActive", { time: formatRelativeTimestamp(card.lastActiveAt) })
-          : t("agentsHome.neverActive");
+      const status = renderAgentStatus(card);
       return html`<div class="agent-details" data-agent-id=${card.id}>
         <header class="agent-details__profile">
           <span class="agent-details__avatar" aria-hidden="true"
@@ -244,6 +248,47 @@ class AgentDetailsPanel extends AgentRosterElement {
   }
 }
 
+/** The bot a chat is with, for BotClaw's simple chat header: avatar, name and what it is doing. */
+class AgentIdentity extends AgentRosterElement {
+  @property({ attribute: false }) agentId = "";
+
+  override render() {
+    if (!this.context || !this.agentId) {
+      return nothing;
+    }
+    return this.avatars.withActiveRoutes(() => {
+      const card = this.cards().find((candidate) => candidate.id === this.agentId);
+      if (!card) {
+        return this.roster.loading
+          ? html`<span
+              role="status"
+              aria-label=${t("common.loading")}
+              class="skeleton skeleton-line agent-identity__loading"
+            ></span>`
+          : nothing;
+      }
+      return html`<span class="agent-identity" data-agent-id=${card.id}>
+        <span class="agent-identity__avatar" aria-hidden="true"
+          >${renderAgentIdentityAvatar(card)}</span
+        >
+        <span class="agent-identity__text">
+          <strong class="agent-identity__name">${card.name}</strong>
+          <span class="agent-identity__status">
+            <span
+              class=${`agent-identity__dot${card.activeNow ? " agent-identity__dot--active" : ""}`}
+              aria-hidden="true"
+            ></span>
+            ${renderAgentStatus(card)}
+          </span>
+        </span>
+      </span>`;
+    });
+  }
+}
+
 if (!customElements.get("openclaw-agent-details-panel")) {
   customElements.define("openclaw-agent-details-panel", AgentDetailsPanel);
+}
+if (!customElements.get("openclaw-agent-identity")) {
+  customElements.define("openclaw-agent-identity", AgentIdentity);
 }

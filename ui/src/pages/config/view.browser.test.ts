@@ -1290,7 +1290,7 @@ describe("config view", () => {
     props.theme = "custom";
     render(renderConfig(props), container);
     expect(findButtonByText(container, "Light Green").getAttribute("aria-pressed")).toBe("true");
-    expect(findButtonByText(container, "Claw").getAttribute("aria-pressed")).toBe("false");
+    expect(findButtonByText(container, "BotClaw").getAttribute("aria-pressed")).toBe("false");
   });
 
   it("keeps direct Appearance default selections independent", () => {
@@ -1306,7 +1306,7 @@ describe("config view", () => {
     const row = (title: string) => settingsRow(container, title);
 
     expect(findButtonByText(container, "Knot").getAttribute("aria-pressed")).toBe("true");
-    expect(findButtonByText(container, "Claw").getAttribute("aria-pressed")).toBe("false");
+    expect(findButtonByText(container, "BotClaw").getAttribute("aria-pressed")).toBe("false");
     const textScaleButtons = [
       ...container.querySelectorAll<HTMLButtonElement>(".settings-text-scale__btn"),
     ];
@@ -1321,7 +1321,7 @@ describe("config view", () => {
         ?.getAttribute("aria-pressed"),
     ).toBe("false");
 
-    findButtonByText(container, "Claw").click();
+    findButtonByText(container, "BotClaw").click();
     const colorModeGroup = row("Color mode")?.querySelector<HTMLElement & { value: string }>(
       "wa-radio-group",
     );
@@ -1356,10 +1356,10 @@ describe("config view", () => {
     const themeSection = required(container, "#settings-appearance-theme", HTMLElement);
     const shortcutRow = settingsRow(container, "Send shortcut");
 
-    expect(normalizedText(themeSection)).toContain("Default: Claw");
+    expect(normalizedText(themeSection)).toContain("Default: BotClaw");
     expect(normalizedText(themeSection)).toContain("Default: System");
     expect(shortcutRow?.textContent).toContain("Default: Enter");
-    findButtonByText(themeSection, "Claw").click();
+    findButtonByText(themeSection, "BotClaw").click();
     themeSection.querySelector<HTMLElement>('wa-radio[value="system"]')?.click();
 
     expect(props.setTheme).toHaveBeenCalledWith("claw");
@@ -1395,14 +1395,14 @@ describe("config view", () => {
         }
       ).selected,
     ).toBe(true);
-    expect(themeDescription.textContent).toContain("Default: Claw");
+    expect(themeDescription.textContent).toContain("Default: BotClaw");
     expect(themeDescription.textContent).toContain("Stored in this browser only");
     expect(themeDescription.textContent).not.toContain("Synced across your devices");
     expect(
       themeSection.querySelector(".settings-theme-card--knot")?.getAttribute("aria-pressed"),
     ).toBe("true");
 
-    findButtonByText(themeSection, "Claw").click();
+    findButtonByText(themeSection, "BotClaw").click();
 
     expect(props.setTheme).toHaveBeenCalledWith("claw");
   });

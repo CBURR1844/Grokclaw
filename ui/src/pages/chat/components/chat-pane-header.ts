@@ -78,6 +78,12 @@ type ChatPaneHeaderProps = {
     connectionId?: string;
   } | null;
   parentSession: ChatPaneParentSession | null;
+  /**
+   * The simple screen's header: replaces the title crumbs (except while
+   * renaming) and drops presence, sharing, placement, branches and the layout
+   * and split controls. Panel toggles, run control, menu and close stay.
+   */
+  identity?: TemplateResult;
   branch: string | null;
   branches: SessionBranch[];
   branchSwitchDisabledReason: string | null;
@@ -303,7 +309,22 @@ export function canRevealSessionWorkspace(params: {
   );
 }
 
-export function renderChatPaneHeader(props: ChatPaneHeaderProps) {
+export function renderChatPaneHeader(input: ChatPaneHeaderProps) {
+  const props: ChatPaneHeaderProps = input.identity
+    ? {
+        ...input,
+        panelLayoutActions: nothing,
+        presence: nothing,
+        sharingControl: nothing,
+        publicAccessIndicator: nothing,
+        placementControl: nothing,
+        showOwnerChip: false,
+        branches: [],
+        onOpenSplitView: undefined,
+        onSplitDown: undefined,
+        onSplitRight: undefined,
+      }
+    : input;
   const copyPathLabel =
     props.copiedAction === "copy-path"
       ? t("chat.sessionHeader.copied")
@@ -358,7 +379,11 @@ export function renderChatPaneHeader(props: ChatPaneHeaderProps) {
               >`
             : nothing
         }
-        ${renderIdentityCrumbs(props, copied, copyPathLabel, copyBranchLabel)}
+        ${
+          props.identity && !props.editing
+            ? props.identity
+            : renderIdentityCrumbs(props, copied, copyPathLabel, copyBranchLabel)
+        }
         ${props.publicAccessIndicator ?? nothing}
         ${
           hasSharingControl

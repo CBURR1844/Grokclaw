@@ -506,6 +506,24 @@ describe("SIDEBAR_NAV_ROUTES", () => {
     ]);
   });
 
+  it("lists only the simple settings pages when Advanced is off", () => {
+    expect(
+      visibleSettingsNavigationGroups(true, null, false).map((group) => [
+        group.labelKey,
+        group.routes,
+      ]),
+    ).toEqual([
+      [null, ["custodian", "profile", "appearance", "notifications"]],
+      ["nav.settingsGroupConnections", ["devices"]],
+      ["nav.settingsGroupAgents", ["agents", "model-providers"]],
+      ["nav.settingsGroupSecurity", ["approvals"]],
+      ["nav.settingsGroupSystem", ["about"]],
+    ]);
+    expect(
+      visibleSettingsNavigationGroups(false, null, false).flatMap((group) => group.routes),
+    ).not.toContain("custodian");
+  });
+
   it("keeps personal settings first and labels remaining groups", () => {
     const settingsGroups = visibleSettingsNavigationGroups(true);
     const [firstGroup] = settingsGroups;

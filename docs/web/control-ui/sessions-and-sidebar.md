@@ -136,6 +136,26 @@ machine running a session, and unavailable measurements are not shown as zero.
 See [Cloud Worker Desktop](/gateway/cloud-workers/desktop) for worker desktop
 enablement and sizing.
 
+## Simple screen and Advanced
+
+BotClaw opens on a simple screen. The sidebar shows the BotClaw name, search,
+the **+** new-chat menu, your bots, and pinned chats. Each chat header shows the
+bot, its status, **Details**, and the chat menu. The composer shows **+**, the
+message box, the microphone, and send. The New chat page starts on the bot's
+defaults with no place, model, or permission pickers. Settings lists your
+profile, appearance, notifications, devices, bots, models, approvals, and About.
+
+Turn on **Advanced** in the menu under your name to show everything else: page
+links and their **Customize** menu, the session filter, the model, effort, and
+permission chips, typed `/` and `$` commands, the context ring, split views, the
+full chat header, Usage, Get apps, the debug overlay, and every Settings page.
+Turning it off hides them again without changing your sidebar layout. Hidden
+pages stay reachable by link and from the command palette. The switch is saved
+in this browser for each Gateway.
+
+On the simple screen, typing `/` into an empty message box opens the **+** menu.
+Use **+** > **New agent** to add a bot.
+
 ## Sidebar navigation
 
 The **Filter & sort** popover keeps **Filters** and **Display** in one panel.

@@ -602,13 +602,20 @@ function renderChatComposerPlusMenuContent(props: ChatComposerPlusMenuContentPro
   `;
 }
 
+/** Whether the + menu has anything to offer; it renders nothing otherwise. */
+export function hasChatComposerPlusMenu(
+  props: Pick<ChatComposerPlusMenuProps, "capabilityMenu" | "rootToggles" | "attachments">,
+): boolean {
+  return Boolean(
+    props.capabilityMenu ||
+    props.rootToggles?.length ||
+    uploadsEnabled(props.attachments.uploadConfig),
+  );
+}
+
 export function renderChatComposerPlusMenu(props: ChatComposerPlusMenuProps) {
   const capabilityMenu = props.capabilityMenu;
-  if (
-    !capabilityMenu &&
-    !props.rootToggles?.length &&
-    !uploadsEnabled(props.attachments.uploadConfig)
-  ) {
+  if (!hasChatComposerPlusMenu(props)) {
     return nothing;
   }
   return renderChatComposerPlusMenuContent({

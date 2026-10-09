@@ -11,8 +11,10 @@ import {
 import {
   loadGatewaySessionSelection,
   loadSettings,
+  patchSettings,
   persistSessionToken,
   resolvePageGatewaySettings,
+  resolveUiPreset,
   saveSettings,
 } from "./settings.ts";
 import { resolveApplicationStartupSettings } from "./startup-settings.ts";
@@ -370,8 +372,29 @@ describe("gateway settings and layout persistence", () => {
     expect(loadSettings().sidebarAgentsMode).toBe("chip");
   });
 
+  it("opens the simple screen with the roster and keeps the stored sidebar mode for Advanced", () => {
+    vi.stubGlobal("openclawUpstreamUiDefaults", undefined);
+    try {
+      writeStored({ sidebarAgentsMode: "chip" });
+      expect(resolveUiPreset(loadSettings())).toEqual({
+        advanced: false,
+        sidebarAgentsMode: "roster",
+      });
+      patchSettings({ navWidth: 300 });
+      expect(readStored()).not.toHaveProperty("advancedUi");
+      patchSettings({ advancedUi: true });
+      expect(readStored()).toMatchObject({ advancedUi: true, sidebarAgentsMode: "chip" });
+      expect(resolveUiPreset(loadSettings())).toEqual({
+        advanced: true,
+        sidebarAgentsMode: "chip",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("opens the roster unless storage or the host default chooses the chip", () => {
-    vi.stubGlobal("openclawDefaultSidebarAgentsMode", undefined);
+    vi.stubGlobal("openclawUpstreamUiDefaults", undefined);
     try {
       expect(loadSettings().sidebarAgentsMode).toBe("roster");
       writeStored({ sidebarAgentsMode: "chip" });

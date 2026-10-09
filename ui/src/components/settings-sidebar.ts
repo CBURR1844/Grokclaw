@@ -64,6 +64,8 @@ type SettingsSidebarProps = {
   saveIndicator: SettingsSaveIndicatorProps;
   canAdmin?: boolean;
   nativeDeviceSettings?: NativeDeviceSettingsCapability | null;
+  /** False on the simple screen: only the simple settings pages are listed. */
+  advanced?: boolean;
 };
 
 type SettingsNavigationGroupView = {
@@ -91,10 +93,15 @@ function filterSettingsNavigationGroups(
   blockMatches: readonly SettingsSearchBlock[],
   canAdmin: boolean,
   nativeDeviceSettings: NativeDeviceSettingsCapability | null,
+  advanced: boolean,
 ): readonly SettingsNavigationGroupView[] {
-  const navigationGroups = visibleSettingsNavigationGroups(canAdmin, nativeDeviceSettings);
+  const navigationGroups = visibleSettingsNavigationGroups(
+    canAdmin,
+    nativeDeviceSettings,
+    advanced,
+  );
   const visibleBlockMatches = blockMatches.filter((block) =>
-    isSettingsNavigationRouteVisible(block.routeId, canAdmin, nativeDeviceSettings),
+    isSettingsNavigationRouteVisible(block.routeId, canAdmin, nativeDeviceSettings, advanced),
   );
   const query = normalizeLowercaseStringOrEmpty(searchQuery);
   if (!query) {
@@ -108,7 +115,7 @@ function filterSettingsNavigationGroups(
     ...new Set([
       ...sidebarRoutes,
       ...SETTINGS_SEARCHABLE_SUBPAGE_ROUTES.filter((routeId) =>
-        isSettingsNavigationRouteVisible(routeId, canAdmin, nativeDeviceSettings),
+        isSettingsNavigationRouteVisible(routeId, canAdmin, nativeDeviceSettings, advanced),
       ),
       ...visibleBlockMatches.map((block) => block.routeId),
     ]),
@@ -353,6 +360,7 @@ export function renderSettingsSidebar(props: SettingsSidebarProps) {
     searchBlockMatches,
     props.canAdmin !== false,
     props.nativeDeviceSettings ?? null,
+    props.advanced !== false,
   );
   const navigation = html` <nav
     class="settings-sidebar__nav"

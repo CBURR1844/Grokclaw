@@ -1,7 +1,7 @@
 import { registerListener } from "../../../src/shared/listeners.js";
 import type { AgentsListResult } from "../api/types.ts";
 import { normalizeAgentId, parseAgentSessionKey } from "../lib/sessions/session-key.ts";
-import type { UiPreferences } from "./settings.ts";
+import { resolveUiPreset, type UiPreferences } from "./settings.ts";
 
 type AgentSelectionGateway = {
   readonly connection: {
@@ -26,7 +26,7 @@ type AgentSelectionRoster = {
 type AgentSelectionPreferences = {
   readonly settings: Pick<
     UiPreferences,
-    "gatewayUrl" | "sidebarAgentsMode" | "sidebarPreTeamScope"
+    "gatewayUrl" | "advancedUi" | "sidebarAgentsMode" | "sidebarPreTeamScope"
   >;
   patch: (patch: Pick<UiPreferences, "sidebarPreTeamScope">) => void;
   subscribe: (listener: () => void) => () => void;
@@ -115,7 +115,11 @@ export function createAgentSelectionCapability(
     options.requireConfiguredAgent && !roster.state.agentsList && persistedId
       ? normalizeAgentId(persistedId)
       : null;
-  let teamMode = preferences?.settings.sidebarAgentsMode === "roster";
+  // The simple screen presents the roster without changing the stored mode.
+  const presentedTeamMode = () =>
+    preferences !== undefined &&
+    resolveUiPreset(preferences.settings).sidebarAgentsMode === "roster";
+  let teamMode = presentedTeamMode();
   const rememberedScope = (fallback: string | null) =>
     resolveScopeId(
       preferences?.settings.sidebarPreTeamScope === undefined
@@ -176,7 +180,7 @@ export function createAgentSelectionCapability(
     if (gateway.connection.gatewayUrl !== gatewayUrl) {
       return;
     }
-    const nextTeamMode = preferences.settings.sidebarAgentsMode === "roster";
+    const nextTeamMode = presentedTeamMode();
     if (nextTeamMode === teamMode) {
       return;
     }
@@ -206,7 +210,7 @@ export function createAgentSelectionCapability(
       const nextPersistedId = persistence?.load(gatewayUrl)?.trim();
       followsGatewayDefault = !nextPersistedId;
       const selectedId = nextPersistedId ? normalizeAgentId(nextPersistedId) : nextAssistantAgentId;
-      teamMode = preferences?.settings.sidebarAgentsMode === "roster";
+      teamMode = presentedTeamMode();
       previousScopeId = rememberedScope(selectedId);
       previousScopeNeedsRoster =
         preferences?.settings.sidebarPreTeamScope === undefined && !roster.state.agentsList;

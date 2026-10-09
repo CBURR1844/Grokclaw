@@ -362,7 +362,7 @@ describe("ConfigPage synced preference provenance", () => {
     render(page.render(), container);
 
     const themeSection = container.querySelector<HTMLElement>("#settings-appearance-theme");
-    expect(themeSection?.textContent).toContain("Default: Claw");
+    expect(themeSection?.textContent).toContain("Default: BotClaw");
     expect(themeSection?.textContent).toContain("Synced across your devices");
     expect(themeSection?.textContent).not.toContain("Default: Knot");
     expect(themeSection?.textContent).not.toContain("Stored in this browser only");

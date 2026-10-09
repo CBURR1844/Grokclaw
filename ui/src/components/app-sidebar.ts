@@ -522,8 +522,12 @@ class AppSidebar extends AppSidebarSessionNavigationElement implements SessionLi
 
   override render() {
     const sidebarZone = this.reconciledSidebarZone();
-    const entries = sidebarZone.entries.filter(
-      (entry) => entry.type !== "route" || this.sidebarMenus.isRouteEnabled(entry.route),
+    // The simple screen keeps pinned chats only. The stored zone is filtered
+    // here, never rewritten, so Advanced brings the user's layout back.
+    const entries = sidebarZone.entries.filter((entry) =>
+      this.advanced
+        ? entry.type !== "route" || this.sidebarMenus.isRouteEnabled(entry.route)
+        : entry.type === "session",
     );
     const showHome = this.sidebarAgentsMode !== "roster";
     return html`
@@ -552,7 +556,7 @@ class AppSidebar extends AppSidebarSessionNavigationElement implements SessionLi
             >
               <nav
                 class="sidebar-nav"
-                @contextmenu=${this.sidebarMenus.openCustomizeMenuFromContext}
+                @contextmenu=${this.advanced ? this.sidebarMenus.openCustomizeMenuFromContext : nothing}
               >
                 <div
                   class="nav-section__items"
@@ -562,15 +566,15 @@ class AppSidebar extends AppSidebarSessionNavigationElement implements SessionLi
                     this.sessionOrganizer.handleSidebarZoneDragLeave(event)}
                   @drop=${(event: DragEvent) => this.sessionOrganizer.handleSidebarZoneDrop(event)}
                 >
-                  ${showHome || entries.length === 0 ? renderAppSidebarPagesHead(this, renderAppSidebarHomeRow(this)) : nothing}
-                  <openclaw-mcp-app-catalog surface="sidebar"></openclaw-mcp-app-catalog>
+                  ${this.advanced && (showHome || entries.length === 0) ? renderAppSidebarPagesHead(this, renderAppSidebarHomeRow(this)) : nothing}
+                  ${this.advanced ? html`<openclaw-mcp-app-catalog surface="sidebar"></openclaw-mcp-app-catalog>` : nothing}
                   ${repeat(entries, serializeSidebarEntry, (entry, index) =>
                     renderAppSidebarZoneEntry(
                       this,
                       entry,
                       sidebarZone.sessionRows,
                       sidebarZone.pluginTabs,
-                      !showHome && index === 0,
+                      this.advanced && !showHome && index === 0,
                     ),
                   )}
                 </div>
@@ -590,7 +594,7 @@ class AppSidebar extends AppSidebarSessionNavigationElement implements SessionLi
             }
           </div>
           <div class="sidebar-shell__invite">
-            ${this.communityInvitePresentation === "shown" ? renderCommunityInviteCard(this.dismissCommunityInvite, this.context?.theme.resolvedMode ?? "dark") : nothing}
+            ${this.advanced && this.communityInvitePresentation === "shown" ? renderCommunityInviteCard(this.dismissCommunityInvite, this.context?.theme.resolvedMode ?? "dark") : nothing}
           </div>
           <div class="sidebar-shell__footer">
             ${

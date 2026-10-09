@@ -222,6 +222,54 @@ describe("AppSidebar interleaved zone", () => {
     expect(sidebar.querySelector(".nav-item--home")?.hasAttribute("draggable")).toBe(false);
   });
 
+  it("shows only pinned chats on the simple screen and keeps the stored layout", async () => {
+    const { sidebar, sessions } = await mountZone();
+    const result = sessions.sessions.state.result;
+    if (!result) {
+      throw new Error("expected session list");
+    }
+    sessions.publish({
+      result: {
+        ...result,
+        sessions: result.sessions.map((row) =>
+          row.key === "agent:main:alpha"
+            ? Object.assign({}, row, { label: "Alpha", pinned: true })
+            : row,
+        ),
+      },
+    });
+    const onUpdateSidebarEntries = vi.fn();
+    sidebar.onUpdateSidebarEntries = onUpdateSidebarEntries;
+    sidebar.sidebarAgentsMode = "roster";
+    Object.assign(sidebar, { advanced: false });
+    sidebar.sidebarEntries = ["route:usage", "session:agent:main:alpha", "route:plugins"];
+    await sidebar.updateComplete;
+
+    expect(
+      [...sidebar.querySelectorAll<HTMLElement>(".sidebar-zone-entry")].map(
+        (entry) => entry.dataset.sidebarEntry,
+      ),
+    ).toEqual(["session:agent:main:alpha"]);
+    expect(sidebar.querySelector(".sidebar-nav__head-action")).toBeNull();
+    expect(sidebar.querySelector('openclaw-mcp-app-catalog[surface="sidebar"]')).toBeNull();
+    expect(sidebar.querySelector(".sidebar-workspace-header__main--static")).not.toBeNull();
+    expect(sidebar.querySelector("button.sidebar-workspace-header__main")).toBeNull();
+    sidebar
+      .querySelector(".sidebar-nav")
+      ?.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    await sidebar.updateComplete;
+    expect(sidebar.sidebarMenus.customizeMenuPosition).toBeNull();
+    expect(onUpdateSidebarEntries).not.toHaveBeenCalled();
+
+    Object.assign(sidebar, { advanced: true });
+    await sidebar.updateComplete;
+    expect(
+      [...sidebar.querySelectorAll<HTMLElement>(".sidebar-zone-entry")].map(
+        (entry) => entry.dataset.sidebarEntry,
+      ),
+    ).toEqual(["route:usage", "session:agent:main:alpha", "route:plugins"]);
+  });
+
   it.each([
     { slug: undefined, href: "/plugin?plugin=logbook&id=logbook" },
     { slug: "reports", href: "/reports" },

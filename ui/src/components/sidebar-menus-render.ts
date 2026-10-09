@@ -6,6 +6,7 @@ import { gatewayPresentationScope } from "../app/gateway-presentation-scope.ts";
 import { isMobileNavLayout } from "../app/mobile-nav-layout.ts";
 import { patchSettings } from "../app/settings.ts";
 import { isUpdateActionable } from "../app/update-schedule-projection.ts";
+import { t } from "../i18n/index.ts";
 import { normalizeAgentLabel } from "../lib/agents/display.ts";
 import { openEditor } from "../lib/editor-links.ts";
 import { isGatewayMethodAdvertised } from "../lib/gateway-methods.ts";
@@ -198,6 +199,7 @@ export function renderSidebarIdentityMenuForController(controller: SidebarMenusC
     updateAttentionDismissed,
     profileViewer: selfUser ? { ...selfUser, watchedSessions: [] } : undefined,
     canRetryConnection: canRetryGatewayStatus(host.connectionStatus),
+    advanced: host.advanced,
     themeMode: host.themeMode,
     triggerWidth: position.width,
     onTabAway: () => trigger?.focus(),
@@ -210,6 +212,12 @@ export function renderSidebarIdentityMenuForController(controller: SidebarMenusC
     onNavigate: (routeId, options) => host.onNavigate?.(routeId, options),
     onPairMobile: () => host.onPairMobile?.(),
     onRetryConnect: host.onRetryConnect,
+    onToggleAdvanced: () => {
+      // The preference owner refreshes the shell, chat and new-chat screens.
+      const advanced = !host.advanced;
+      patchSettings({ advancedUi: advanced });
+      showToast({ message: t(advanced ? "nav.advancedOn" : "nav.advancedOff") });
+    },
   });
 }
 

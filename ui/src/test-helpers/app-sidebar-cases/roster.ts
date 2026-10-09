@@ -285,8 +285,12 @@ describe("AppSidebar agent roster", () => {
     const menus = sidebar.querySelectorAll(".sidebar-new-session-menu");
     expect(menus).toHaveLength(1);
     for (const menu of menus) {
-      const options = [...menu.querySelectorAll("wa-dropdown-item")];
-      expect(options.map((item) => item.getAttribute("value"))).toEqual(agentIds(sidebar));
+      const items = [...menu.querySelectorAll("wa-dropdown-item")];
+      expect(items.map((item) => item.getAttribute("value"))).toEqual([
+        ...agentIds(sidebar),
+        "command:new-agent",
+      ]);
+      const options = items.slice(0, -1);
       expect(options.map((item) => item.querySelector("a")?.getAttribute("href"))).toEqual(
         agentIds(sidebar).map((id) => `/new?agent=${id}`),
       );

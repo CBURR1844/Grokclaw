@@ -232,7 +232,7 @@ suite.define(() => {
         )
         .toBe("true");
       await expect.poll(() => languageRow.textContent()).toContain("Default: System");
-      await expect.poll(() => themeSection.textContent()).toContain("Default: Claw");
+      await expect.poll(() => themeSection.textContent()).toContain("Default: BotClaw");
       await expect.poll(() => colorModeRow.textContent()).toContain("Default: System");
       await expect.poll(() => textSizeSection.textContent()).toContain("Default: 100%");
       await expect.poll(() => page.locator("html").getAttribute("data-theme-mode")).toBe("dark");
@@ -449,7 +449,7 @@ suite.define(() => {
         remainingPrefs: { accent: "theme" },
       });
       await expect.poll(() => page.locator("html").getAttribute("data-theme")).toBe("dark");
-      await expect.poll(() => readAccentPresentation(page)).toMatchObject({ accent: "#ff5c5c" });
+      await expect.poll(() => readAccentPresentation(page)).toMatchObject({ accent: "#8199ff" });
       await expect.poll(() => readPersistedSettings(page)).toMatchObject({ accent: "theme" });
       await expect.poll(() => mintPreset.getAttribute("aria-pressed")).toBe("false");
 
@@ -556,7 +556,7 @@ suite.define(() => {
             themeSection.locator(".settings-theme-card--knot").getAttribute("aria-pressed"),
           )
           .toBe("true");
-        await expect.poll(() => themeDescription.textContent()).toContain("Default: Claw");
+        await expect.poll(() => themeDescription.textContent()).toContain("Default: BotClaw");
         await expect
           .poll(() => themeDescription.textContent())
           .toContain("Stored in this browser only");
@@ -669,7 +669,7 @@ suite.define(() => {
       await expect
         .poll(() => themeSection.locator(".settings-theme-card--knot").getAttribute("aria-pressed"))
         .toBe("true");
-      await expect.poll(() => themeDescription.textContent()).toContain("Default: Claw");
+      await expect.poll(() => themeDescription.textContent()).toContain("Default: BotClaw");
       await expect
         .poll(() => themeDescription.textContent())
         .not.toContain("Stored in this browser only");

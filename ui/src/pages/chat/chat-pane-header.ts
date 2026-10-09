@@ -65,6 +65,9 @@ import { renderContinueInTerminalDialog } from "./components/continue-in-termina
 import { hasDirectSessionRun } from "./run-lifecycle.ts";
 import { isSidebarSlotVisible, type SidebarLayout } from "./sidebar-layout.ts";
 
+// The simple screen's chat menu keeps session actions only.
+const NO_MENU_ACTIONS: HeaderMenuQuickAction[] = [];
+
 export abstract class ChatPaneHeader extends ChatPaneDiscussion {
   private headerMenuRow?: GatewaySessionRow;
   private headerWorkspace?: ReturnType<typeof createChatPaneRails>["sessionWorkspace"];
@@ -582,6 +585,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
       copiedAction: this.headerCopiedAction,
       renameDisabledReason,
       actionsDisabled: this.state?.connected !== true,
+      identity: agentDetails.identity,
       panelActions: html`${agentDetails.toggle}${browserPanelAction}`,
       runAction: subagentStop,
       panelLayoutActions: html`${renderChatPanePanelLayoutActions(
@@ -633,8 +637,8 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
               .copyMarkdownAllowed=${canCopySessionMarkdown(this.context.gateway.snapshot)}
               .splitAllowed=${canSplitSessionView()}
               .settings=${this.state.settings}
-              .panelActions=${panelMenuActions}
-              .layoutActions=${layoutMenuActions}
+              .panelActions=${agentDetails.identity ? NO_MENU_ACTIONS : panelMenuActions}
+              .layoutActions=${agentDetails.identity ? NO_MENU_ACTIONS : layoutMenuActions}
               .boardWidgetMenu=${boardWidgetMenu}
               .sessionActions=${this.headerSessionActions.read(
                 this.context,

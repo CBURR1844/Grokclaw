@@ -236,7 +236,9 @@ an invalid source folder.
 
 ## Composer capability menu
 
-Select **+** beside the chat composer to open attachments and session capabilities in one menu:
+Select **+** beside the chat composer to open attachments and session capabilities in one menu. With
+**Advanced** off, typing `/` into an empty message box opens this menu instead of the slash-command
+list; see [Simple screen and Advanced](/web/control-ui/sessions-and-sidebar#simple-screen-and-advanced).
 
 - **Skills** enables or disables individual skills for this session.
 - **Connectors** enables or disables configured MCP servers for this session. A **session** tag marks values that differ from the inherited configuration.

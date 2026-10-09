@@ -16,6 +16,7 @@ import { createControlUiE2eArtifactDir } from "../test-helpers/control-ui-e2e-ar
 import {
   canRunPlaywrightChromium,
   controlUiSessionUrl,
+  pinUpstreamUiDefaults,
   resolvePlaywrightChromiumExecutablePath,
   type ControlUiMockGateway,
 } from "../test-helpers/control-ui-e2e.ts";
@@ -894,6 +895,8 @@ describeStandaloneMockServer("standalone Control UI mock server", () => {
   it("opens a visible catalog session with its transcript in chronological order", async () => {
     const page = await browser.newPage();
     try {
+      // Host catalog sessions list in the full screen's session sidebar.
+      await pinUpstreamUiDefaults(page);
       await page.goto(new URL("/chat", fixtureServer.url).toString(), { waitUntil: "networkidle" });
       await page.getByText("Release checklist sweep", { exact: true }).click();
 

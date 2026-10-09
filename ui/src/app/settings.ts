@@ -217,6 +217,7 @@ export type UiSettings = {
   navCollapsed: boolean; // Collapsible sidebar state
   navWidth: number; // Sidebar width when expanded (240–400px)
   sidebarAgentsMode?: "chip" | "roster";
+  advancedUi?: boolean; // Browser-local Advanced switch; absent = product default
   sidebarPreTeamScope?: string | null; // null remembers All agents; undefined means unset.
   sidebarCollapsedAgentIds?: string[];
   sidebarEntries: string[]; // Ordered routes, plugin navigation, and pinned sessions below Home
@@ -304,16 +305,35 @@ type PersistedSettingsSource = {
 };
 
 /**
- * BotClaw opens the bot roster. OpenClaw's UI suites were written for the
- * agent chip; their setup and mock Gateway pin it through this global.
+ * BotClaw opens the simple screen with the bot roster. OpenClaw's UI suites
+ * were written for the full screen and the agent chip; their setup and mock
+ * Gateway restore those defaults through this global.
  */
+function upstreamUiDefaults(): boolean {
+  return (
+    (globalThis as { openclawUpstreamUiDefaults?: unknown }).openclawUpstreamUiDefaults === true
+  );
+}
+
 function resolveSidebarAgentsMode(stored?: unknown): "chip" | "roster" {
   if (stored === "chip" || stored === "roster") {
     return stored;
   }
-  const pinned = (globalThis as { openclawDefaultSidebarAgentsMode?: unknown })
-    .openclawDefaultSidebarAgentsMode;
-  return pinned === "chip" ? "chip" : "roster";
+  return upstreamUiDefaults() ? "chip" : "roster";
+}
+
+/**
+ * What the screen presents: the simple screen always shows the bot roster and
+ * leaves the stored sidebar mode for when Advanced is turned back on.
+ */
+export function resolveUiPreset(
+  settings: Pick<UiPreferences, "advancedUi" | "sidebarAgentsMode">,
+): { advanced: boolean; sidebarAgentsMode: "chip" | "roster" } {
+  const advanced = settings.advancedUi ?? upstreamUiDefaults();
+  return {
+    advanced,
+    sidebarAgentsMode: advanced ? resolveSidebarAgentsMode(settings.sidebarAgentsMode) : "roster",
+  };
 }
 
 function readSettingsForGateway(
@@ -566,6 +586,7 @@ export function loadUiPreferences(
           ? parsed.navWidth
           : defaults.navWidth,
       sidebarAgentsMode: resolveSidebarAgentsMode(parsed.sidebarAgentsMode),
+      advancedUi: normalizeBooleanSetting(parsed.advancedUi, undefined),
       sidebarPreTeamScope: normalizeSidebarPreTeamScope(parsed.sidebarPreTeamScope),
       sidebarCollapsedAgentIds: normalizeUniqueTrimmedStringList(parsed.sidebarCollapsedAgentIds),
       sidebarEntries:
@@ -709,6 +730,8 @@ export function saveSettings(next: UiSettings, options: { selectGateway?: boolea
         : undefined,
     navWidth: next.navWidth, // Persist size, not visibility: shared localStorage leaks across tabs.
     sidebarAgentsMode: resolveSidebarAgentsMode(next.sidebarAgentsMode),
+    // Only an explicit choice persists, so the product default can change.
+    advancedUi: typeof next.advancedUi === "boolean" ? next.advancedUi : undefined,
     sidebarPreTeamScope: normalizeSidebarPreTeamScope(next.sidebarPreTeamScope),
     sidebarCollapsedAgentIds: next.sidebarCollapsedAgentIds?.length
       ? normalizeUniqueTrimmedStringList(next.sidebarCollapsedAgentIds)

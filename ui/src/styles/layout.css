@@ -3249,6 +3249,12 @@ a:is(
   background: color-mix(in srgb, var(--bg-hover) 96%, transparent);
 }
 
+/* The simple screen's brand is not a menu trigger. */
+.sidebar-workspace-header__main.sidebar-workspace-header__main--static {
+  cursor: default;
+  background: transparent;
+}
+
 .sidebar-agent-card__main:focus-visible,
 .sidebar-workspace-header__main:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 48%, transparent);

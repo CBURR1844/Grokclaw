@@ -30,6 +30,8 @@ export type NewSessionComposerOptions = {
   requiresModifier: boolean;
   requestUpdate: () => void;
   refreshCommands?: () => void | Promise<void>;
+  /** False replaces the typed "/" and "$" lists with the + menu (default true). */
+  slashCommands?: boolean;
   submitDisabledReason?: string;
   blockedSubmitNotice?: string;
   dictationActive?: boolean;

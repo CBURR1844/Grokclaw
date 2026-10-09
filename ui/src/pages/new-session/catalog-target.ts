@@ -376,10 +376,15 @@ export function renderBar(params: {
   groupPending?: boolean;
 }) {
   const pending = isPendingRouteTarget(params.data) || params.groupPending === true;
+  const target = renderTarget(params.data);
+  const agentSelect = isTarget(params.data) ? nothing : params.agentSelect;
+  // No empty row when every picker is off (one bot on the simple screen).
+  if (target === nothing && agentSelect === nothing && params.placeSelect === nothing && !pending) {
+    return nothing;
+  }
   return html`
     <div class="new-session-page__triggers">
-      ${renderTarget(params.data)} ${isTarget(params.data) ? nothing : params.agentSelect}
-      ${params.placeSelect}
+      ${target} ${agentSelect} ${params.placeSelect}
       ${
         pending
           ? html`<span class="new-session-page__catalog-unavailable">

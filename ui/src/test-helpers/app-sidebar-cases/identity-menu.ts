@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GatewayBrowserClient } from "../../api/gateway.ts";
 import type { ApplicationOverlays } from "../../app/overlays-types.ts";
+import { loadSettings } from "../../app/settings.ts";
 import {
   dismissSidebarAttention,
   resolveSidebarAttentionKey,
@@ -30,6 +31,39 @@ describe("AppSidebar footer identity menu", () => {
     expect(sidebar.onNavigate).toHaveBeenCalledWith("profile", {
       hash: "#settings-profile-identity",
     });
+  });
+
+  it("keeps the simple screen's menu short and turns Advanced on from it", async () => {
+    const { sidebar } = await mountSidebar(
+      createGatewayHarness({ instanceId: "self-instance" } as GatewayBrowserClient).gateway,
+      createSessions("main", ["agent:main:main"]),
+    );
+    Object.assign(sidebar, { advanced: false });
+    await sidebar.updateComplete;
+    sidebar.querySelector<HTMLButtonElement>(".sidebar-identity-card")?.click();
+    await sidebar.updateComplete;
+
+    const menu = sidebar.querySelector<HTMLElement>(".sidebar-identity-menu");
+    expect(
+      [...(menu?.children ?? [])]
+        .filter((element) => element.localName === "wa-dropdown-item")
+        .map((element) => element.getAttribute("value")),
+    ).toEqual([
+      "command:profile",
+      "command:settings",
+      "command:pair-mobile",
+      "command:advanced",
+      "command:help",
+    ]);
+    const advanced = menu?.querySelector<HTMLElement & { checked?: boolean }>(
+      'wa-dropdown-item[value="command:advanced"]',
+    );
+    expect(advanced?.checked).toBe(false);
+    menu?.dispatchEvent(
+      new CustomEvent("wa-select", { detail: { item: advanced }, bubbles: true }),
+    );
+    await sidebar.updateComplete;
+    expect(loadSettings().advancedUi).toBe(true);
   });
 
   it("keeps a dismissed update as a discreet account-menu chip", async () => {
@@ -171,6 +205,7 @@ describe("AppSidebar footer identity menu", () => {
       "command:pair-mobile",
       "command:apps",
       "command:debug-overlay",
+      "command:advanced",
       "command:help",
     ]);
     const footerName = identity?.querySelector(".sidebar-identity-card__name");
@@ -209,7 +244,7 @@ describe("AppSidebar footer identity menu", () => {
     ).toBe("identity");
     expect(menu?.querySelector("openclaw-theme-mode-toggle")).not.toBeNull();
     expect(menu?.textContent).not.toContain("Recent activity");
-    expect(menu?.querySelectorAll(':scope > [role="separator"]')).toHaveLength(4);
+    expect(menu?.querySelectorAll(':scope > [role="separator"]')).toHaveLength(5);
     expect(identity?.querySelector(".sidebar-identity-card__more")).toBeNull();
     expect(identity?.querySelector(".sidebar-identity-card__chevron")).toBeNull();
 

@@ -427,7 +427,9 @@ suite.define(() => {
   );
 
   it("keeps system chrome with the mounted route across shell and viewport lifecycles", async () => {
-    const { page } = await openThemedChat("claw", "light");
+    // BotClaw's default light theme paints chat and pages the same white, so
+    // Dash's distinct chat surface shows each chrome handoff.
+    const { page } = await openThemedChat("dash", "light");
     await page.setViewportSize({ width: 720, height: 900 });
     await page.goto(`${suite.server.baseUrl}chat`);
     await page.locator(".agent-chat__composer-combobox textarea").waitFor();
@@ -451,8 +453,8 @@ suite.define(() => {
         ],
       });
     };
-    const pageColor = "#faf9f7";
-    const chatColor = "#f4f1ec";
+    const pageColor = "#f7f2ec";
+    const chatColor = "#f0e8e0";
     await expectChrome(chatColor);
 
     // Use the shell's actual shortcut and browser history without rebuilding the runtime.

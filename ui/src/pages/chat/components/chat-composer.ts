@@ -32,6 +32,7 @@ import { createGoalComposerController } from "./chat-composer-goal-mode.ts";
 import { createComposerKeyDownHandler } from "./chat-composer-keydown.ts";
 import type { HumanMentionMenuHost } from "./chat-composer-mention-menu.ts";
 import { resolveChatSlashCommandArgOptions, resolveComposerMenus } from "./chat-composer-menus.ts";
+import { hasChatComposerPlusMenu } from "./chat-composer-plus-menu.ts";
 import { resolveComposerQuestionPanel } from "./chat-composer-question.ts";
 import {
   isSkillMenuVisible,
@@ -40,6 +41,7 @@ import {
   updateSkillMenu,
 } from "./chat-composer-skill-menu.ts";
 import {
+  interceptSlashIntent,
   resetSlashMenuState,
   type SlashMenuHost,
   updateSlashMenu,
@@ -159,6 +161,22 @@ export function renderChatComposer(props: ChatComposerProps) {
     commitDraft: commitMenuDraft,
     getTextarea: () => state.composerTextarea,
     refreshCommands: props.onSlashIntent,
+    openAddMenu:
+      props.slashCommands === false
+        ? () => {
+            if (
+              !canCompose ||
+              props.suggestionComposer === true ||
+              !hasChatComposerPlusMenu({ capabilityMenu: props.capabilityMenu, attachments: props })
+            ) {
+              return false;
+            }
+            state.capabilityMenuView = "root";
+            state.capabilityMenuOpen = true;
+            requestUpdate();
+            return true;
+          }
+        : undefined,
   };
   const slashMenuHost: SlashMenuHost = {
     ...skillMenuHost,
@@ -337,7 +355,7 @@ export function renderChatComposer(props: ChatComposerProps) {
   };
   const handleBeforeInput = (event: InputEvent) => {
     const target = event.target;
-    if (!(target instanceof HTMLTextAreaElement)) {
+    if (!(target instanceof HTMLTextAreaElement) || interceptSlashIntent(event, skillMenuHost)) {
       return;
     }
     state.mentionInput = {

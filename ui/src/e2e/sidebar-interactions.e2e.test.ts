@@ -11,6 +11,7 @@ import {
   waitForControlUiRoute,
   type ControlUiMockGatewayScenario,
   type MockGatewayRequest,
+  pinUpstreamUiDefaults,
 } from "../test-helpers/control-ui-e2e.ts";
 import {
   captureSidebarUiProof,
@@ -80,6 +81,7 @@ suite.define(() => {
     await context.route(`**${CONTROL_UI_BOOTSTRAP_CONFIG_PATH}`, (route) =>
       route.fulfill({ json: createControlUiMockBootstrapConfig(scenario) }),
     );
+    await pinUpstreamUiDefaults(context);
     await context.addInitScript({ content: createControlUiMockGatewayInitScript(scenario) });
     const page = await context.newPage();
     const sessionCreates = (target: Page) =>
