@@ -1,6 +1,6 @@
 // Control UI test helper supports control ui e2e setup.
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -65,6 +65,11 @@ export type {
   MockGatewayWindow,
 } from "./control-ui-e2e-contract.ts";
 
+export {
+  canRunPlaywrightChromium,
+  resolvePlaywrightChromiumExecutablePath,
+  systemChromiumExecutableCandidates,
+} from "./control-ui-e2e-chromium.ts";
 export {
   captureControlUiE2eFailureDiagnostics,
   installControlUiRpcDiagnostics,
@@ -579,43 +584,9 @@ export async function reconnectMockGateway(
   );
 }
 
-const chromiumExecutableOverrideEnvKey = "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH";
-export const systemChromiumExecutableCandidates = [
-  "/snap/bin/chromium",
-  "/usr/bin/chromium-browser",
-  "/usr/bin/chromium",
-  "/usr/bin/google-chrome",
-  "/usr/bin/google-chrome-stable",
-] as const;
-
 function resolveRepoRoot(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
   return path.resolve(here, "../../..");
-}
-
-export function resolvePlaywrightChromiumExecutablePath(
-  defaultExecutablePath: string,
-  env: NodeJS.ProcessEnv = process.env,
-  canRun: (chromiumExecutablePath: string) => boolean = canRunPlaywrightChromium,
-): string {
-  const executableOverride = env[chromiumExecutableOverrideEnvKey]?.trim();
-  if (executableOverride) {
-    return executableOverride;
-  }
-  if (canRun(defaultExecutablePath)) {
-    return defaultExecutablePath;
-  }
-  return (
-    systemChromiumExecutableCandidates.find((candidate) => canRun(candidate)) ??
-    defaultExecutablePath
-  );
-}
-
-export function canRunPlaywrightChromium(chromiumExecutablePath: string): boolean {
-  if (!existsSync(chromiumExecutablePath)) {
-    return false;
-  }
-  return spawnSync(chromiumExecutablePath, ["--version"], { stdio: "ignore" }).status === 0;
 }
 
 // Pause an installed virtual clock slightly ahead of its current time so

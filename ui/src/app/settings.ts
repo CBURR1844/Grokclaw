@@ -310,9 +310,7 @@ type PersistedSettingsSource = {
  * Gateway restore those defaults through this global.
  */
 function upstreamUiDefaults(): boolean {
-  return (
-    (globalThis as { openclawUpstreamUiDefaults?: unknown }).openclawUpstreamUiDefaults === true
-  );
+  return Reflect.get(globalThis, "openclawUpstreamUiDefaults") === true;
 }
 
 function resolveSidebarAgentsMode(stored?: unknown): "chip" | "roster" {
