@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { useAutoCleanupTempDirTracker } from "../../test/helpers/temp-dir.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { createCanonicalAgentConfigFixture } from "../test-utils/config-roster.js";
-import { listGatewayAgentsBasic } from "./agent-list.js";
+import { listClawRequesterIds, listGatewayAgentsBasic } from "./agent-list.js";
 
 const tempDirs = useAutoCleanupTempDirTracker(afterEach);
 
@@ -142,5 +142,78 @@ describe("listGatewayAgentsBasic", () => {
     const result = await listGatewayAgentsBasic(cfg);
 
     expect(result.agents).toEqual([{ id: "main", kind: "agent", name: "Ops" }]);
+  });
+});
+
+describe("listClawRequesterIds", () => {
+  let stateDir: string;
+  beforeEach(() => {
+    stateDir = tempDirs.make("openclaw-claw-requesters-");
+    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("maps each Claw to the agents whose own, wildcard, or inherited allowlist admits it", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        ownership: "explicit",
+        defaults: { subagents: { allowAgents: ["inbox"] } },
+        entries: {
+          main: {},
+          ops: { subagents: { allowAgents: ["*"] } },
+          writer: { subagents: { allowAgents: ["report"] } },
+          solo: { subagents: { allowAgents: [] } },
+          inbox: { kind: "claw" },
+          report: { kind: "claw" },
+        },
+      },
+    };
+
+    expect(listClawRequesterIds(cfg)).toEqual(
+      new Map([
+        ["inbox", ["main", "ops"]],
+        ["report", ["ops", "writer"]],
+      ]),
+    );
+  });
+
+  it("never counts Claws, system agents, or the Claw itself as requesters", async () => {
+    await Promise.all(
+      ["openclaw", "crestodian"].map((id) =>
+        fs.mkdir(path.join(stateDir, "agents", id), { recursive: true }),
+      ),
+    );
+    const cfg: OpenClawConfig = {
+      agents: {
+        ownership: "explicit",
+        defaults: { subagents: { allowAgents: ["*"] } },
+        entries: {
+          main: {},
+          inbox: { kind: "claw" },
+          report: { kind: "claw", subagents: { allowAgents: ["inbox", "report"] } },
+        },
+      },
+    };
+
+    const roster = await listGatewayAgentsBasic(cfg);
+    expect(roster.agents.filter((agent) => agent.kind === "system").map(({ id }) => id)).toEqual([
+      "crestodian",
+      "openclaw",
+    ]);
+    expect(listClawRequesterIds(cfg)).toEqual(
+      new Map([
+        ["inbox", ["main"]],
+        ["report", ["main"]],
+      ]),
+    );
+  });
+
+  it("gives a Claw that no agent admits an empty requester list", () => {
+    expect(
+      listClawRequesterIds({
+        agents: { ownership: "explicit", entries: { main: {}, inbox: { kind: "claw" } } },
+      }),
+    ).toEqual(new Map([["inbox", []]]));
+    expect(listClawRequesterIds({ agents: { entries: { main: {} } } })).toEqual(new Map());
   });
 });

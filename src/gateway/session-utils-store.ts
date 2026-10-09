@@ -41,7 +41,7 @@ import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.j
 import { isAcpSessionKey } from "../sessions/session-key-utils.js";
 import { dedupeByKey } from "../shared/dedupe-by-key.js";
 import { listAgentProvenance } from "../state/agent-provenance.js";
-import { listGatewayAgentsBasic } from "./agent-list.js";
+import { listClawRequesterIds, listGatewayAgentsBasic } from "./agent-list.js";
 import type { GatewayAgentOwnership } from "./agent-list.js";
 import { resolveGatewayAssistantAvatar } from "./assistant-avatar.js";
 import { tryResolveSessionCompatibilityOwnerAgentId } from "./session-request-agent.js";
@@ -424,6 +424,7 @@ export async function listAgentsForGateway(
   const provenanceById = new Map(
     provenanceRecords.map((record) => [record.agentId, record] as const),
   );
+  const clawRequesterIds = listClawRequesterIds(cfg);
   const agents = roster.map((entry) => {
     const { id } = entry;
     const execDefaults = resolveExecDefaults({ cfg, agentId: id, execApprovals });
@@ -497,13 +498,16 @@ export async function listAgentsForGateway(
       defaultPermissionMode ? { defaultPermissionMode } : {},
     );
     const provenance = provenanceById.get(id);
-    return provenance
+    const row = provenance
       ? Object.assign(agent, {
           createdVia: provenance.createdVia,
           creatorAgentId: provenance.creatorAgentId,
           createdAt: provenance.createdAtMs,
         })
       : agent;
+    // Appended last so rows without a Claw stay byte-identical to the established projection.
+    const requesterAgentIds = clawRequesterIds.get(id);
+    return requesterAgentIds ? Object.assign(row, { claw: { requesterAgentIds } }) : row;
   });
   return {
     defaultId: basic.defaultId,
