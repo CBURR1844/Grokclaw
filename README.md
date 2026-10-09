@@ -1,3 +1,16 @@
+# Grokclaw
+
+Grokclaw is an open-source personal agent built on [OpenClaw](https://github.com/openclaw/openclaw). It aims to match persistent-agent products like Grok Bot (named bots, routines, approvals, a computer per bot) while staying open source and letting you choose the model provider.
+
+How it differs from upstream OpenClaw today:
+
+- **Claude by default.** Anthropic is listed first during onboarding, and `anthropic/claude-opus-5-5` is the fallback model when none is configured. Every other provider still works.
+- **Sandbox on when possible.** Onboarding turns on `agents.defaults.sandbox.mode: non-main` when Docker is available, so group and channel chats run their tools in a container. Without Docker it explains how to turn it on.
+
+Commands, config keys and package names stay `openclaw` so upstream changes merge cleanly. OpenClaw is MIT-licensed; see [LICENSE](LICENSE).
+
+---
+
 # OpenClaw 🦞 — Your assistant, on your devices, in your chats
 
 <p align="center">

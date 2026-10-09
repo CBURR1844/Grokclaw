@@ -1,9 +1,9 @@
 const FEATURED_PROVIDER_AUTH_GROUP_ORDER = new Map<string, number>([
-  ["openai", 0],
-  ["openrouter", 1],
-  ["xai", 2],
-  ["google", 3],
-  ["anthropic", 4],
+  ["anthropic", 0],
+  ["openai", 1],
+  ["openrouter", 2],
+  ["xai", 3],
+  ["google", 4],
 ]);
 const providerAuthGroupCollator = new Intl.Collator(undefined, { sensitivity: "base" });
 
