@@ -304,8 +304,8 @@ type PersistedSettingsSource = {
 };
 
 /**
- * BotClaw opens the bot roster. OpenClaw's browser suites were written for the
- * agent chip; their mock Gateway pins it through this page global.
+ * BotClaw opens the bot roster. OpenClaw's UI suites were written for the
+ * agent chip; their setup and mock Gateway pin it through this global.
  */
 function resolveSidebarAgentsMode(stored?: unknown): "chip" | "roster" {
   if (stored === "chip" || stored === "roster") {

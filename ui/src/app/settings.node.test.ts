@@ -363,20 +363,19 @@ describe("gateway settings and layout persistence", () => {
     expect(loadSettings()).toEqual(settings);
   });
 
-  it("defaults to the roster, persists chip mode and defaults invalid stored modes to the roster", () => {
+  it("persists roster mode and defaults invalid stored modes to chip", () => {
+    saveSettings({ ...loadSettings(), sidebarAgentsMode: "roster" });
     expect(loadSettings().sidebarAgentsMode).toBe("roster");
-    saveSettings({ ...loadSettings(), sidebarAgentsMode: "chip" });
-    expect(loadSettings().sidebarAgentsMode).toBe("chip");
     writeStored({ sidebarAgentsMode: "invalid" });
-    expect(loadSettings().sidebarAgentsMode).toBe("roster");
+    expect(loadSettings().sidebarAgentsMode).toBe("chip");
   });
 
-  it("lets a host pin the agent chip as the default without overriding a stored roster", () => {
-    vi.stubGlobal("openclawDefaultSidebarAgentsMode", "chip");
+  it("opens the roster unless storage or the host default chooses the chip", () => {
+    vi.stubGlobal("openclawDefaultSidebarAgentsMode", undefined);
     try {
-      expect(loadSettings().sidebarAgentsMode).toBe("chip");
-      writeStored({ sidebarAgentsMode: "roster" });
       expect(loadSettings().sidebarAgentsMode).toBe("roster");
+      writeStored({ sidebarAgentsMode: "chip" });
+      expect(loadSettings().sidebarAgentsMode).toBe("chip");
     } finally {
       vi.unstubAllGlobals();
     }
