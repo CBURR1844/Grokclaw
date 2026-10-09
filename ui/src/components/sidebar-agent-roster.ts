@@ -120,7 +120,10 @@ class SidebarAgentRoster extends AgentRosterElement {
 
   // Right-click, the ContextMenu key and Shift+F10 open the row's "..." menu.
   private readonly openRowMenu = (event: MouseEvent | KeyboardEvent) => {
-    const header = event.currentTarget as HTMLElement;
+    const header = event.currentTarget;
+    if (!(header instanceof HTMLElement)) {
+      return;
+    }
     const dropdown = header.querySelector<HTMLElement & { open: boolean }>(
       "wa-dropdown.sidebar-agent-roster__menu",
     );

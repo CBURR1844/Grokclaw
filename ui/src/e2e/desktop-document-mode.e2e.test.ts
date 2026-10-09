@@ -4,6 +4,7 @@ import { CONTROL_UI_BOOTSTRAP_CONFIG_PATH } from "../../../src/gateway/control-u
 import type { DesktopClient } from "../components/desktop/desktop-client.ts";
 import { createControlUiE2eArtifactDir } from "../test-helpers/control-ui-e2e-artifacts.ts";
 import { waitForControlUiGatewayReady } from "../test-helpers/control-ui-e2e-readiness.ts";
+import { pinUpstreamUiDefaults } from "../test-helpers/control-ui-e2e-ui-defaults.ts";
 import {
   controlUiBundledSettingsStorageKey,
   controlUiSessionUrl,
@@ -11,7 +12,6 @@ import {
   createControlUiMockGatewayInitScript,
   installMockGateway,
   type ControlUiMockGateway,
-  pinUpstreamUiDefaults,
 } from "../test-helpers/control-ui-e2e.ts";
 import { chatSessionListResponse } from "./chat-flow.test-support.ts";
 import {

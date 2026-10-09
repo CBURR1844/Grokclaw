@@ -20,8 +20,14 @@ vi.mock("./chat-commands.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./chat-commands.ts")>()),
   dispatchChatSlashCommand: dispatch,
 }));
-vi.mock("../../components/input-dialog.ts", () => ({ showInputDialog }));
-vi.mock("../../lib/toast.ts", () => ({ showToast }));
+vi.mock("../../components/input-dialog.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../components/input-dialog.ts")>()),
+  showInputDialog,
+}));
+vi.mock("../../lib/toast.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/toast.ts")>()),
+  showToast,
+}));
 
 const COMMANDS: ChatControlCommand[] = ["goal", "compact", "learn", "loop", "export"];
 const GOAL = {

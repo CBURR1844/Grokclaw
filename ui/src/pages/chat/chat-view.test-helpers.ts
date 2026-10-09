@@ -222,6 +222,33 @@ export function renderChatInto(container: HTMLElement, overrides: Partial<ChatPr
   render(renderChat(createChatProps(overrides)), container);
 }
 
+export function dispatchContextMenu(target: EventTarget): MouseEvent {
+  const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+  target.dispatchEvent(event);
+  return event;
+}
+
+export function getContextMenuAction(name: string): HTMLButtonElement {
+  const matches = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '.chat-reply-context-menu button[role="menuitem"]',
+    ),
+  ].filter((button) => button.textContent?.trim() === name);
+  expect(matches).toHaveLength(1);
+  const button = expectDefined(matches[0], `${name} context-menu action`);
+  expect(button.getAttribute("aria-label")).toBeNull();
+  expect(button.getAttribute("aria-labelledby")).toBeNull();
+  return button;
+}
+
+export function renderChatBubble(
+  chatOverrides: Partial<ChatProps> = {},
+  bubbleOverrides: Parameters<typeof appendChatBubble>[1] = {},
+) {
+  const container = renderChatView(chatOverrides);
+  return { container, ...appendChatBubble(container, bubbleOverrides) };
+}
+
 export function getChatModelSelect(container: Element): HTMLElement {
   const select = container.querySelector<HTMLElement>('[data-chat-model-select="true"]');
   expect(select).toBeInstanceOf(HTMLElement);
