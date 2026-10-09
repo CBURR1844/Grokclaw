@@ -79,6 +79,7 @@ import {
 import { handleChatSend } from "./chat-send-handler.js";
 import { readChatSendDedupeResponse } from "./chat-send-reservation.js";
 import {
+  bindTestToolAuthority,
   ChatDirectiveDedupe,
   createChatDirectiveReplyBackend,
   createGlobalChatDirectiveConfig,
@@ -106,9 +107,6 @@ type RespondMock = ReturnType<typeof vi.fn<RespondFn>>;
 type TranscriptUpdate = Parameters<
   typeof import("../../sessions/transcript-events.js").emitSessionTranscriptUpdate
 >[0];
-
-const TEST_TOOL_AUTHORITY_FINGERPRINT = "test-tool-authority";
-const TEST_TOOL_AUTHORITY_ROUTE = { provider: "openai", model: "gpt-6-astra" } as const;
 
 const mockState = vi.hoisted(() => {
   const createTestState = () => ({
@@ -958,14 +956,6 @@ function createSlashCommandMediaReply(
 
 function managedAudioBlocks(content: Array<Record<string, unknown>>) {
   return content.filter((block) => block.type === "audio");
-}
-
-function bindTestToolAuthority(operation: ReplyOperation) {
-  operation.bindToolAuthoritySnapshot({
-    fingerprint: () => TEST_TOOL_AUTHORITY_FINGERPRINT,
-    project: () => TEST_TOOL_AUTHORITY_FINGERPRINT,
-  });
-  operation.bindToolAuthorityRoute(TEST_TOOL_AUTHORITY_ROUTE);
 }
 
 function beginActiveReplyOperation(params: {
