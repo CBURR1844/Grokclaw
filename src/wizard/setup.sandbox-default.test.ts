@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { WizardPrompter } from "./prompts.js";
 import { applyOnboardingSandboxDefault } from "./setup.sandbox-default.js";
 
 function prompter() {
-  return { note: vi.fn(async () => {}) };
+  return { note: vi.fn<WizardPrompter["note"]>(async () => {}) };
 }
 
 describe("applyOnboardingSandboxDefault", () => {
