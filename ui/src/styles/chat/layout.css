@@ -1448,6 +1448,36 @@ openclaw-chat-video-player {
   animation: menu-in 140ms var(--ease-out);
 }
 
+/* ≤560px: the message menu is a sheet along the bottom edge, like the other menus. */
+@media (max-width: 560px) {
+  /* Doubled to outrank the corner rule in base.css. */
+  .chat-reply-context-menu.chat-reply-context-menu {
+    /* Outranks the inline left/top the menu is placed at. */
+    inset: auto var(--safe-area-right) 0 var(--safe-area-left) !important;
+    max-height: calc(100dvh - var(--safe-area-top) - var(--space-7));
+    overflow-y: auto;
+    padding-block-end: calc(var(--menu-padding) + var(--safe-area-bottom));
+    border-width: 1px 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation: menu-sheet-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-reply-context-menu {
+    animation: none;
+  }
+}
+
+/* A long press opens the message menu, so iOS shows no callout over the bubble; links and media keep theirs. */
+.chat-bubble {
+  -webkit-touch-callout: none;
+}
+
+.chat-bubble :is(a, img, video, audio) {
+  -webkit-touch-callout: default;
+}
+
 .chat-reply-context-menu button,
 .chat-selection-popup button {
   display: flex;

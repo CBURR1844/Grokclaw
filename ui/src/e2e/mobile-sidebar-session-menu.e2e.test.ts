@@ -282,10 +282,11 @@ suite.define(() => {
         if (!menuBox) {
           throw new Error("expected visible compact sidebar session menu");
         }
-        expect(menuBox.x).toBeGreaterThanOrEqual(8);
-        expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(382);
+        // A phone shows the menu as a sheet along the bottom edge.
+        expect(menuBox.x).toBeCloseTo(0, 0);
+        expect(menuBox.width).toBeCloseTo(390, 0);
         expect(menuBox.y).toBeGreaterThanOrEqual(8);
-        expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(642);
+        expect(menuBox.y + menuBox.height).toBeCloseTo(650, 0);
         const scroll = await menu.evaluate((element) => {
           element.scrollTop = element.scrollHeight;
           return {

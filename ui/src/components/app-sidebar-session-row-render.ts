@@ -479,6 +479,7 @@ export function renderRecentSession(params: {
               host.sessionOrganizer.finishSessionDrag();
             }
       }
+      data-touch-contextmenu
       @contextmenu=${openMenuFromEvent}
       @keydown=${openMenuFromEvent}
     >

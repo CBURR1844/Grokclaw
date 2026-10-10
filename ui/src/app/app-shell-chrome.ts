@@ -165,6 +165,14 @@ export class ShellChromeOwner {
     if (isMobileNavLayout()) {
       this.navDrawerSwipe.load();
     }
+    // Any touch screen, including a wide tablet, opens context menus by long press.
+    if (globalThis.matchMedia?.("(any-pointer: coarse)").matches) {
+      const { signal } = this.listeners;
+      void import("./touch-context-menu.runtime.ts").then(
+        ({ connectTouchContextMenu }) => !signal.aborted && connectTouchContextMenu(signal),
+        () => undefined,
+      );
+    }
     // Document load can be a proxy sign-in page; the listener owner records readiness.
     nativeCommandsOwner = this.listeners;
     Object.assign(window, { __OPENCLAW_NATIVE_COMMANDS_READY__: true });
