@@ -271,6 +271,7 @@ suite.define(() => {
             "Subagents",
             "Processes",
             "Review",
+            "Details",
             "Terminal",
             "Browser",
             "Files",
