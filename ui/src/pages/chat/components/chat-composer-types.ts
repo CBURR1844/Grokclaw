@@ -61,6 +61,8 @@ export type ChatComposerDisabledBanner = {
   presentation?: "compact" | "hidden";
   title?: string;
   text: string;
+  /** A typed-command tip, shown only where the composer takes typed commands. */
+  commandHint?: string;
   tone?: "info" | "neutral";
   icon?: "warning" | "archive" | "eye";
   actionStyle?: "primary";

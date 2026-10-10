@@ -78,7 +78,8 @@ export function createChatModelSetupBanner(
 ): ChatComposerDisabledBanner {
   return {
     kind: "above-composer",
-    text: `${text} ${t("modelSetup.commandHint")}`,
+    text,
+    commandHint: t("modelSetup.commandHint"),
     actionLabel: t("modelSetup.required.action"),
     onAction,
   };
