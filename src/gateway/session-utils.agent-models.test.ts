@@ -95,3 +95,27 @@ describe("listAgentsForGateway model identity", () => {
     expect(cfg).toEqual(original);
   });
 });
+
+describe("listAgentsForGateway Claw rows", () => {
+  test("appends requesters to Claw rows and leaves other rows byte-identical", async () => {
+    const cfg = (inboxKind?: "claw"): OpenClawConfig => ({
+      agents: {
+        ownership: "explicit",
+        entries: {
+          main: { subagents: { allowAgents: ["inbox"] } },
+          inbox: inboxKind ? { kind: inboxKind } : {},
+        },
+      },
+    });
+
+    const before = await listAgentsForGateway(cfg());
+    const after = await listAgentsForGateway(cfg("claw"));
+
+    expect(before.agents.some((row) => "claw" in row)).toBe(false);
+    const expected = structuredClone(before.agents);
+    Object.assign(expected.find((row) => row.id === "inbox") ?? {}, {
+      claw: { requesterAgentIds: ["main"] },
+    });
+    expect(JSON.stringify(after.agents)).toBe(JSON.stringify(expected));
+  });
+});

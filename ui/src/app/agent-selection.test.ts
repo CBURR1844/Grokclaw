@@ -696,6 +696,18 @@ describe("configured Settings agent selection", () => {
       expected: "research",
     },
     {
+      requested: "removed",
+      defaultId: "gone",
+      agents: [{ id: "sorter", claw: { requesterAgentIds: ["research"] } }, { id: "research" }],
+      expected: "research",
+    },
+    {
+      requested: "sorter",
+      defaultId: "main",
+      agents: [{ id: "main" }, { id: "sorter", claw: { requesterAgentIds: ["main"] } }],
+      expected: "sorter",
+    },
+    {
       requested: "main",
       defaultId: "main",
       agents: [{ id: "system", kind: "system" as const }],

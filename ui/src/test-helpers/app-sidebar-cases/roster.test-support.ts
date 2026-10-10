@@ -21,6 +21,7 @@ export const roster: AgentsListResult = {
     { id: "recent", name: "Scout" },
     { id: "working", name: "Forge" },
     { id: "system", name: "System helper", kind: "system" },
+    { id: "sorter", name: "Inbox Sorter", claw: { requesterAgentIds: ["working"] } },
   ],
 };
 export const owners = [

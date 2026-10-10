@@ -11,8 +11,11 @@ import {
 import {
   buildAgentContext,
   buildModelOptions,
+  clawsOf,
   createPrimaryModelExclusion,
   formatBytes,
+  isClawAgent,
+  listChatAgents,
   listSelectableAgents,
   normalizeAgentLabel,
   normalizeAgentTargetLabel,
@@ -349,6 +352,33 @@ describe("listSelectableAgents", () => {
 
     expect(listSelectableAgents(agents)).toEqual([agents[0], agents[2]]);
     expect(agents).toHaveLength(3);
+  });
+});
+
+describe("Claw rows", () => {
+  const agents = [
+    { id: "forge" },
+    { id: "ops", kind: "system" as const },
+    { id: "sorter", claw: { requesterAgentIds: ["forge", "Scout"] } },
+    { id: "brief", claw: { requesterAgentIds: ["scout"] } },
+    { id: "idle", claw: { requesterAgentIds: [] } },
+    { id: "scout", kind: "agent" as const },
+  ];
+
+  it("hides system rows and every Claw, used or not, from chat partners", () => {
+    expect(listChatAgents(agents).map((agent) => agent.id)).toEqual(["forge", "scout"]);
+    expect(listSelectableAgents(agents)).toHaveLength(5);
+    expect(agents.filter(isClawAgent).map((agent) => agent.id)).toEqual([
+      "sorter",
+      "brief",
+      "idle",
+    ]);
+  });
+
+  it("finds a Bot's Claws only from the Gateway's requester ids", () => {
+    expect(clawsOf(agents, "forge").map((agent) => agent.id)).toEqual(["sorter"]);
+    expect(clawsOf(agents, "SCOUT").map((agent) => agent.id)).toEqual(["sorter", "brief"]);
+    expect(clawsOf(agents, "idle")).toEqual([]);
   });
 });
 

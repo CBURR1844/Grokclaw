@@ -7,7 +7,7 @@ export class AgentsHomePage extends AgentRosterElement {
   override render() {
     return this.avatars.withActiveRoutes(() => {
       return renderAgentsHome({
-        cards: this.cards().toSorted(
+        cards: this.chatCards().toSorted(
           (a, b) =>
             Number(b.activeNow) - Number(a.activeNow) ||
             b.lastActiveAt - a.lastActiveAt ||

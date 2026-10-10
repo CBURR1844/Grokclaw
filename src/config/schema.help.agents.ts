@@ -65,6 +65,8 @@ export const AGENT_FIELD_HELP: Record<string, string> = {
     "Plugin-defined configuration payload interpreted by that plugin's own schema and validation rules. Use only documented fields from the plugin to prevent ignored or invalid settings.",
   "agents.entries.*.identity.avatar":
     "Agent avatar (workspace-relative path, http(s) URL, or data URI).",
+  "agents.entries.*.kind":
+    'Set to "claw" to mark a single-job agent that Bots start through their subagents.allowAgents; omit for a Bot. Classifies only: tools, skills, sandbox, routing, and spawn admission are unchanged.',
   "agents.defaults.model.primary": "Primary model (provider/model).",
   "agents.defaults.model.fallbacks":
     "Ordered fallback models (provider/model). Used when the primary model fails.",

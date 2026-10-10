@@ -931,12 +931,30 @@ function buildModelProviderMocks(baseTime: number) {
  * across a few real section keys, and `config.get` returns a matching
  * snapshot with the hash `config.set`/`config.apply` are guarded by.
  */
-function buildConfigMocks(options: { swarmEnabled?: boolean; workboardEnabled?: boolean } = {}) {
+function buildConfigMocks(
+  options: {
+    swarmEnabled?: boolean;
+    workboardEnabled?: boolean;
+    claws?: { botId: string; clawIds: readonly string[] };
+  } = {},
+) {
+  const claws = options.claws;
   const config = {
     logging: { level: "info", consoleTimestamps: true },
     messages: { queueLimit: 5, responsePrefix: "" },
     gateway: { port: 18789, bind: "127.0.0.1", publicOrigin: "https://gateway.example" },
-    agents: { defaults: { thinkingDefault: "medium" } },
+    agents: {
+      defaults: { thinkingDefault: "medium" },
+      // The Gateway projects these entries into agents.list as each Claw's requesters.
+      ...(claws
+        ? {
+            entries: {
+              [claws.botId]: { subagents: { allowAgents: [...claws.clawIds] } },
+              ...Object.fromEntries(claws.clawIds.map((id) => [id, { kind: "claw" }])),
+            },
+          }
+        : {}),
+    },
     commands: { native: "auto", nativeSkills: "auto" },
     models: { mode: "merge" },
     ui: { prefs: { locale: "en" } },
@@ -1157,6 +1175,7 @@ function buildConfigMocks(options: { swarmEnabled?: boolean; workboardEnabled?: 
   return {
     get,
     set: writeAck,
+    patch: writeAck,
     apply: {
       ...writeAck,
       sentinel: {
@@ -1463,6 +1482,14 @@ async function createChatPickerScenario(
       sessionLabels: ["Welcome guide", "Story ideas"],
     },
   ] as const;
+  // Single-job agents Forge starts; the sidebar-roster fixture lists them as its Claws.
+  const clawAgents = [
+    { id: "inbox-sorter", name: "Inbox Sorter", theme: "Sorts new email", emoji: "📬" },
+    { id: "morning-brief", name: "Morning Brief", theme: "Writes the day's brief", emoji: "☀️" },
+  ] as const;
+  const clawBot = "forge";
+  const listedClaws: ReadonlyArray<(typeof clawAgents)[number]> =
+    fixture === "sidebar-roster" ? clawAgents : [];
   const pickerInventory = process.env.MOCK_PICKER_INVENTORY === "1";
   const selfProfile: UserProfile = {
     id: fixture === "reactions" ? "presence-avery" : "presence-riley",
@@ -2092,7 +2119,12 @@ async function createChatPickerScenario(
   const richAttention = fixture === "approval";
   const cronMocks = buildCronMocks(Date.now(), {
     richAttention,
-    ...(fixture === "sidebar-roster" ? { secondAgentId: "forge" } : {}),
+    ...(fixture === "sidebar-roster"
+      ? {
+          secondAgentId: clawBot,
+          clawAgentIds: [clawAgents[0].id, clawAgents[1].id] as const,
+        }
+      : {}),
   });
   const updateFixtureNow = Date.now();
   const updateFixture = buildUpdateFixture(fixture, updateFixtureNow);
@@ -2135,6 +2167,9 @@ async function createChatPickerScenario(
     : modelProviders.authStatus;
   const channelWizard = buildChannelWizardMocks();
   const configMocks = buildConfigMocks({
+    ...(fixture === "sidebar-roster"
+      ? { claws: { botId: clawBot, clawIds: clawAgents.map((agent) => agent.id) } }
+      : {}),
     swarmEnabled: fixture === "swarm",
     workboardEnabled: fixture === "workboard" || fixture === "workboard-states",
   });
@@ -2469,21 +2504,36 @@ async function createChatPickerScenario(
       ...cronMocks,
       "tts.speak": silentSpeech(),
       "agents.list": {
-        agents: rosterAgents.map(({ id, name, theme, emoji, avatar }) => ({
-          id,
-          name,
-          identity: { name, theme, emoji, avatar },
-          model: { primary: "example/model-small" },
-        })),
+        agents: [
+          ...rosterAgents.map(({ id, name, theme, emoji, avatar }) => ({
+            id,
+            name,
+            identity: { name, theme, emoji, avatar },
+            model: { primary: "example/model-small" },
+          })),
+          ...listedClaws.map(({ id, name, theme, emoji }) => ({
+            id,
+            name,
+            identity: { name, theme, emoji },
+            model: { primary: "example/model-small" },
+            claw: { requesterAgentIds: [clawBot] },
+          })),
+        ],
         defaultId: "main",
         mainKey: "main",
         scope: "per-sender",
       },
       "agent.identity.get": {
-        cases: rosterAgents.map(({ id, name, theme, emoji, avatar }) => ({
-          match: { agentId: id },
-          response: { agentId: id, name, theme, emoji, avatar, avatarStatus: "data" },
-        })),
+        cases: [
+          ...rosterAgents.map(({ id, name, theme, emoji, avatar }) => ({
+            match: { agentId: id },
+            response: { agentId: id, name, theme, emoji, avatar, avatarStatus: "data" },
+          })),
+          ...listedClaws.map(({ id, name, theme, emoji }) => ({
+            match: { agentId: id },
+            response: { agentId: id, name, theme, emoji, avatar: "" },
+          })),
+        ],
       },
       "progressCard.get": { card: null },
       "users.self": { profile: selfProfile },
@@ -3314,6 +3364,7 @@ async function createChatPickerScenario(
   if (fixture === "sidebar-roster") {
     scenario.methodResponses = {
       ...scenario.methodResponses,
+      "config.patch": configMocks.patch,
       "sessions.catalog.list": { catalogs: [] },
       "cron.list": {
         cases: [

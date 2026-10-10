@@ -1,4 +1,4 @@
-import { expect, test, vi } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 import { createDeferred } from "../../../test/helpers/promise.js";
 import type { GatewayOperatorRoleDefinition } from "../../config/types.gateway.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
@@ -92,6 +92,29 @@ test.each([
     expect(respond).toHaveBeenCalledExactlyOnceWith(
       true,
       { ...roster, agents: roster.agents.filter((agent) => expected.includes(agent.id)) },
+      undefined,
+    );
+  },
+);
+
+test.each([
+  { agents: ["research", "inbox"], requesterAgentIds: ["research"] },
+  { agents: "*" as const, requesterAgentIds: ["ops", "research"] },
+])(
+  "agents.list limits Claw requesters to visible agents for agents=$agents",
+  async ({ agents, requesterAgentIds }) => {
+    const visibleBots = roster.agents.filter(
+      (agent) => agents === "*" || agents.includes(agent.id),
+    );
+    const claw = { id: "inbox", name: "Inbox", claw: { requesterAgentIds: ["ops", "research"] } };
+    roster.agents.push(claw);
+    onTestFinished(() => {
+      roster.agents.pop();
+    });
+    const respond = await listAgents(() => roleConfig(agents));
+    expect(respond).toHaveBeenCalledExactlyOnceWith(
+      true,
+      { ...roster, agents: [...visibleBots, { ...claw, claw: { requesterAgentIds } }] },
       undefined,
     );
   },

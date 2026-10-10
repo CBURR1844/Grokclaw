@@ -7,6 +7,7 @@ export const en: TranslationMap & {
   mcpApp: TranslationMap;
   linkReader: TranslationMap;
   agentTools: TranslationMap;
+  agentDetails: TranslationMap & { claws: TranslationMap; schedule: TranslationMap };
   board: TranslationMap & { widget: TranslationMap };
   browser: TranslationMap & { errors: TranslationMap; annotatePrompt: TranslationMap };
   shortcutsOverlay: TranslationMap & { title: string };
@@ -153,6 +154,9 @@ export const en: TranslationMap & {
     memory: "Memory",
     instructions: "Instructions and files",
     unavailable: "This agent is not available on this Gateway.",
+    // Lazy: en-agent-details-claws.ts
+    claws: {},
+    schedule: {},
   },
   common: {
     productName: "BotClaw",

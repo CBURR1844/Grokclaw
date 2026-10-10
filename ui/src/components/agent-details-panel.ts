@@ -5,18 +5,21 @@ import type { CronCompactJob } from "../api/types.ts";
 import { pathForAgentPanel, pathForRoute } from "../app-route-paths.ts";
 import type { ApplicationContext } from "../app/context.ts";
 import { t } from "../i18n/index.ts";
+import { registerAgentDetailsClawsEnglish } from "../i18n/locales/en-agent-details-claws.ts";
 import { registerAgentsHomeEnglish } from "../i18n/locales/en-agents-home.ts";
 import { AgentRoutines } from "../lib/agents/agent-routines.ts";
 import type { AgentsPanel } from "../lib/agents/panels.ts";
 import { AgentRosterElement } from "../lib/agents/roster-element.ts";
-import { formatRelativeTimestamp } from "../lib/format.ts";
+import { formatList, formatRelativeTimestamp } from "../lib/format.ts";
 import { shouldHandleNavigationClick } from "../lib/navigation-click.ts";
 import { formatCronSchedule } from "../lib/presenter.ts";
 import { icons } from "./icons.ts";
 import { renderAgentIdentityAvatar } from "./identity-avatar-view.ts";
+import "./agent-details-claws.ts";
 import "../styles/agent-details-panel.css";
 
 registerAgentsHomeEnglish();
+registerAgentDetailsClawsEnglish();
 
 const AGENT_LINKS = [
   ["skills", "agentDetails.skills", icons.zap],
@@ -79,7 +82,7 @@ class AgentDetailsPanel extends AgentRosterElement {
   }
 
   private renderRoutine(job: CronCompactJob, routines: AgentRoutines) {
-    const running = job.runningAtMs !== undefined || routines.starting.has(job.id);
+    const running = routines.isRunning(job);
     const when = running
       ? t("agentDetails.routineRunning")
       : !job.enabled
@@ -154,9 +157,9 @@ class AgentDetailsPanel extends AgentRosterElement {
           : nothing
       }
       ${
-        routines.runFeedback
+        routines.feedback
           ? html`<div class="callout warn agent-details__error" role="status">
-              ${routines.runFeedback}
+              ${routines.feedback}
             </div>`
           : nothing
       }
@@ -203,7 +206,8 @@ class AgentDetailsPanel extends AgentRosterElement {
       return nothing;
     }
     return this.avatars.withActiveRoutes(() => {
-      const card = this.cards().find((candidate) => candidate.id === this.agentId);
+      const cards = this.cards();
+      const card = cards.find((candidate) => candidate.id === this.agentId);
       if (!card) {
         return this.roster.loading
           ? html`<span
@@ -214,6 +218,9 @@ class AgentDetailsPanel extends AgentRosterElement {
           : html`<p class="agent-details__empty">${t("agentDetails.unavailable")}</p>`;
       }
       const status = renderAgentStatus(card);
+      const bots = card.claw?.requesterAgentIds.map(
+        (id) => cards.find((candidate) => candidate.id === id)?.name ?? id,
+      );
       return html`<div class="agent-details" data-agent-id=${card.id}>
         <header class="agent-details__profile">
           <span class="agent-details__avatar" aria-hidden="true"
@@ -223,6 +230,13 @@ class AgentDetailsPanel extends AgentRosterElement {
             <strong class="agent-details__name">${card.name}</strong>
             ${card.role ? html`<span class="agent-details__role">${card.role}</span>` : nothing}
             <span class="agent-details__status">${status}</span>
+            ${
+              bots?.length
+                ? html`<span class="agent-details__works-for"
+                    >${t("agentDetails.claws.worksFor", { names: formatList(bots) })}</span
+                  >`
+                : nothing
+            }
           </span>
           ${this.agentLink(null, t("agentDetails.editProfile"), icons.pencil, "btn btn--sm agent-details__edit")}
         </header>
@@ -234,6 +248,15 @@ class AgentDetailsPanel extends AgentRosterElement {
             >${icons.cpu}<span>${card.model ?? t("agentDetails.defaultModel")}</span></span
           >
         </section>
+        ${
+          card.claw
+            ? nothing
+            : html`<openclaw-agent-details-claws
+                .botId=${card.id}
+                .active=${this.active}
+                .presented=${this.presented}
+              ></openclaw-agent-details-claws>`
+        }
         ${this.renderRoutines()}
         <nav
           class="agent-details__section agent-details__links"

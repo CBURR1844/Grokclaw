@@ -1,5 +1,6 @@
 import { registerListener } from "../../../src/shared/listeners.js";
 import type { AgentsListResult } from "../api/types.ts";
+import { listChatAgents } from "../lib/agents/display.ts";
 import { normalizeAgentId, parseAgentSessionKey } from "../lib/sessions/session-key.ts";
 import type { UiPreferences } from "./settings.ts";
 import { resolveUiPreset } from "./ui-preset.ts";
@@ -86,12 +87,14 @@ export function createAgentSelectionCapability(
       agents.some((agent) => normalizeAgentId(agent.id) === id);
     // Gateway routing defaults can name an agent outside this caller's visible roster.
     const defaultId = agentsList ? normalizeAgentId(agentsList.defaultId) : null;
+    // An explicit Claw stays selected; only the fallback prefers a chat partner.
+    const fallback = listChatAgents(agents)[0] ?? agents[0];
     return hasAgent(selectedId)
       ? selectedId
       : hasAgent(defaultId)
         ? defaultId
-        : agents[0]
-          ? normalizeAgentId(agents[0].id)
+        : fallback
+          ? normalizeAgentId(fallback.id)
           : null;
   };
   const resolveScopeId = (value: string | null): string | null => {

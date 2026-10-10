@@ -85,6 +85,12 @@ export const AgentSummarySchema = closedObject({
   thinkingDefault: Type.Optional(NonEmptyString),
   // Configured posture for display only, never an authorization decision.
   defaultPermissionMode: Type.Optional(SessionPermissionModeSchema),
+  /**
+   * Present on single-job agents (`agents.entries.<id>.kind: "claw"`): the visible non-Claw,
+   * non-system agents whose sessions_spawn target policy admits this agent. Display only;
+   * spawn admission stays the authority. Unrelated to the `createdVia: "claw"` package source.
+   */
+  claw: Type.Optional(closedObject({ requesterAgentIds: Type.Array(NonEmptyString) })),
 });
 
 /** Empty request payload for listing configured agents. */

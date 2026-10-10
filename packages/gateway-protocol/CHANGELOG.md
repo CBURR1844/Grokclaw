@@ -8,7 +8,12 @@ authoring dates (2026), not package publication dates.
 
 ## Unreleased
 
-No changes outside the dated history below.
+- Add optional, display-only `claw: { requesterAgentIds }` to `agents.list` rows
+  (`AgentSummary`), additive inside v4 with no version bump. It is present only on agents
+  marked `agents.entries.<id>.kind: "claw"` and lists the visible non-Claw, non-system
+  agents whose `sessions_spawn` target policy admits that agent; operator roles narrow it to
+  agents they may see. Spawn admission stays the authority. Unrelated to
+  `createdVia: "claw"`.
 
 ## Deferred to the next wire version
 

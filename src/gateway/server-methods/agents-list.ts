@@ -57,7 +57,20 @@ export const agentListHandler: GatewayRequestHandler = async ({
   const allowedAgents = resolveOperatorRolePolicy(client, currentConfig)?.agents;
   const agents =
     allowedAgents && allowedAgents !== "*"
-      ? result.agents.filter((agent) => allowedAgents.includes(agent.id))
+      ? result.agents
+          .filter((agent) => allowedAgents.includes(agent.id))
+          .map((agent) =>
+            // Rows are built fresh per call, so narrowing in place leaks nothing.
+            agent.claw
+              ? Object.assign(agent, {
+                  claw: {
+                    requesterAgentIds: agent.claw.requesterAgentIds.filter((id) =>
+                      allowedAgents.includes(id),
+                    ),
+                  },
+                })
+              : agent,
+          )
       : result.agents;
   const policy = prepareOperatorModelPresentation({
     cfg: currentConfig,

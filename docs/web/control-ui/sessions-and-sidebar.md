@@ -156,6 +156,24 @@ in this browser for each Gateway.
 On the simple screen, typing `/` into an empty message box opens the **+** menu.
 Use **+** > **New agent** to add a bot.
 
+### Claws
+
+A Claw is an agent that does one repeating job for a bot, such as sorting new
+email every 15 minutes. An agent is a Claw when its entry has `kind: "claw"`;
+the bots whose `subagents.allowAgents` can start it are the bots it works for.
+Claws stay out of the sidebar, the **+** new-chat menu, the New chat page and
+command-palette agent pickers (`/new?agent=<claw>` opens a chat with a bot
+instead), the Advanced agent switcher, and the bots page. They remain in
+Settings, the Agents settings page, and the Automations agent picker. A bot's **Details** lists its Claws: each
+card shows when the Claw last ran and what it reported, one switch and
+**Run now** for each schedule, and a menu with its skills, tools, and
+instructions. **Add a Claw** links an existing agent in one config change, and
+**Remove from** the last bot makes it an ordinary bot again. A bot whose list is
+`"*"` can start any agent, so it cannot drop one Claw until you change that list
+in its settings. Details shows up to 12 Claws and links to the rest; a Claw's
+own Details names the bots it works for. These Claws are unrelated to the
+experimental [`openclaw claws`](/cli/claws) agent packages.
+
 ## Sidebar navigation
 
 The **Filter & sort** popover keeps **Filters** and **Display** in one panel.

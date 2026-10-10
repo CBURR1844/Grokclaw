@@ -6,7 +6,7 @@ import { togglePinnedAgent } from "../app/bootstrap-navigation-preferences.ts";
 import { loadSettings, patchSettings } from "../app/settings.ts";
 import { t } from "../i18n/index.ts";
 import { registerAgentsHomeEnglish } from "../i18n/locales/en-agents-home.ts";
-import { pinnedAgentsFirst } from "../lib/agents/display.ts";
+import { listChatAgents, pinnedAgentsFirst } from "../lib/agents/display.ts";
 import { rosterActivityStore } from "../lib/agents/roster-activity-store.ts";
 import { AgentRosterElement } from "../lib/agents/roster-element.ts";
 import { handleContextMenuEvent } from "../lib/keyboard-shortcuts.ts";
@@ -84,7 +84,7 @@ class SidebarAgentRoster extends AgentRosterElement {
       this.host.rosterSessionSource = {
         result: snapshot.result,
         // Keyboard and section order follow the visual order.
-        agentIds: pinnedAgentsFirst(snapshot.cards, pinned, (card) => card.id).map(
+        agentIds: pinnedAgentsFirst(listChatAgents(snapshot.cards), pinned, (card) => card.id).map(
           (card) => card.id,
         ),
         collapsedAgentIds: this.collapsed,
@@ -147,7 +147,7 @@ class SidebarAgentRoster extends AgentRosterElement {
   override render() {
     return this.avatars.withActiveRoutes(() => {
       const pinned = this.host.pinnedAgentIds;
-      const cards = pinnedAgentsFirst(this.cards(), pinned, (card) => card.id);
+      const cards = pinnedAgentsFirst(this.chatCards(), pinned, (card) => card.id);
       const error = this.roster.error ?? this.roster.subscriptionError;
       const newSessionAccess = this.host.readNewSessionAccess();
       return renderSessionListFrame(
@@ -384,7 +384,11 @@ class SidebarNewSessionMenu extends AgentRosterElement {
   override render() {
     return this.avatars.withActiveRoutes(() => {
       const access = this.host.readNewSessionAccess();
-      const cards = pinnedAgentsFirst(this.cards(), this.host.pinnedAgentIds, (card) => card.id);
+      const cards = pinnedAgentsFirst(
+        this.chatCards(),
+        this.host.pinnedAgentIds,
+        (card) => card.id,
+      );
       return html`<wa-dropdown
         class="sidebar-new-session-menu"
         placement="bottom-end"
