@@ -1,6 +1,7 @@
 import { parseModelCatalogRef } from "@openclaw/model-catalog-core/model-catalog-refs";
 import { findNormalizedProviderValue } from "@openclaw/model-catalog-core/provider-id";
 import { formatByteSize } from "@openclaw/normalization-core";
+import { normalizeAgentId } from "@openclaw/normalization-core/agent-id";
 import { asOptionalRecord, isRecord } from "@openclaw/normalization-core/record-coerce";
 import {
   normalizeLowercaseStringOrEmpty,
@@ -34,6 +35,17 @@ type AgentRosterEntry = {
 /** Ordinary agent targets; system rows remain available to diagnostic surfaces. */
 export function listSelectableAgents<T extends AgentRosterEntry>(agents: readonly T[]): T[] {
   return agents.filter((agent) => agent.kind !== "system");
+}
+
+/** Pinned agents first, each group in its given order. Pins order every agent list the same way. */
+export function pinnedAgentsFirst<T>(
+  items: readonly T[],
+  pinnedIds: readonly string[],
+  idOf: (item: T) => string,
+): T[] {
+  const pinned = new Set(pinnedIds.map(normalizeAgentId));
+  const rank = (item: T) => (pinned.has(normalizeAgentId(idOf(item))) ? 0 : 1);
+  return items.toSorted((a, b) => rank(a) - rank(b));
 }
 
 export function selectableAgentsList(agentsList: AgentsListResult): AgentsListResult {

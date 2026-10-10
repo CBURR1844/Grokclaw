@@ -1,6 +1,7 @@
 import type { ControlUiLinkReaderDescriptor } from "../../../../src/shared/control-ui-link-reader.js";
 import { resolveLinkReaderTarget } from "../../components/link-reader-target.ts";
 import {
+  AGENT_DETAILS_PANEL_TOGGLE_EVENT,
   BROWSER_PANEL_TOGGLE_EVENT,
   LINK_READER_PANEL_TOGGLE_EVENT,
   DESKTOP_PANEL_TOGGLE_EVENT,
@@ -52,6 +53,7 @@ const panelToggleEvents = [
   [LINK_READER_PANEL_TOGGLE_EVENT, "link-reader", "openclaw-link-reader-panel"],
   [DESKTOP_PANEL_TOGGLE_EVENT, "desktop", "openclaw-desktop-panel"],
   [PORTAL_PANEL_TOGGLE_EVENT, "portal", "openclaw-portals-page"],
+  [AGENT_DETAILS_PANEL_TOGGLE_EVENT, "agent", "openclaw-agent-details-panel"],
 ] as const;
 
 type PanelTagName = (typeof panelToggleEvents)[number][2];

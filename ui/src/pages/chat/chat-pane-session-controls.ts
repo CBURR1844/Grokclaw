@@ -19,6 +19,13 @@ import {
   type SessionPatch,
 } from "../../lib/sessions/index.ts";
 import { areUiSessionKeysEquivalent } from "../../lib/sessions/session-key.ts";
+import {
+  chatGoalRecovery,
+  mutateChatGoal,
+  setChatGoalDraftMode,
+  submitChatGoalDraft,
+  type ChatGoalPaneHost,
+} from "./chat-goals.ts";
 import { readChatSessionActionAccess } from "./chat-session-action-access.ts";
 import {
   switchChatContextWindow,
@@ -31,6 +38,7 @@ import type { ChatPageHost } from "./chat-state-host.ts";
 import { refreshChatModelCatalogOnDemand } from "./chat-state-refresh.ts";
 import { selectedChatSessionRow } from "./chat-state-route.ts";
 import type { ChatProps } from "./chat-view.ts";
+import type { ChatComposerProps } from "./components/chat-composer-types.ts";
 import { renderChatModelAccountControl } from "./components/chat-model-account-control.ts";
 import { renderChatModelControls } from "./components/chat-model-controls.ts";
 import type { ChatPermissionPickerProps } from "./components/chat-permission-picker.ts";
@@ -524,6 +532,25 @@ export function createChatPaneSessionActionCallbacks(params: {
       : undefined,
     onForkMessage: access.fork.allowed
       ? (entryId) => (requireCurrent("fork") ? params.onFork(entryId) : undefined)
+      : undefined,
+  };
+}
+
+/** The composer's goal wiring. Drafting needs a pane that sends its own messages. */
+export function chatGoalProps(
+  host: ChatGoalPaneHost,
+  canDraft: boolean,
+): Pick<
+  ChatComposerProps,
+  "goalRecovery" | "onGoalAction" | "goalDraftMode" | "onGoalDraftModeChange" | "onGoalSubmit"
+> {
+  return {
+    goalRecovery: chatGoalRecovery(host),
+    onGoalAction: (goalId, action) => void mutateChatGoal(host, { goalId, action }),
+    goalDraftMode: host.chatGoalDraftMode ?? null,
+    onGoalDraftModeChange: (mode) => setChatGoalDraftMode(host, mode),
+    onGoalSubmit: canDraft
+      ? (draft, submissionAction) => submitChatGoalDraft(host, draft, submissionAction)
       : undefined,
   };
 }

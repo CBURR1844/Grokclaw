@@ -53,6 +53,9 @@ import * as chatThread from "./chat-thread.ts";
 import { resetChatViewState } from "./chat-view-state.ts";
 import {
   appendChatBubble,
+  dispatchContextMenu,
+  getContextMenuAction,
+  renderChatBubble,
   replaceSkillCommands,
   inputDraft,
   inputDraftAtEnd,
@@ -4755,33 +4758,6 @@ describe("right-click Reply", () => {
         resetChatViewState(paneId, container);
       },
     };
-  }
-
-  function dispatchContextMenu(target: EventTarget): MouseEvent {
-    const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
-    target.dispatchEvent(event);
-    return event;
-  }
-
-  function getContextMenuAction(name: string): HTMLButtonElement {
-    const matches = [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.chat-reply-context-menu button[role="menuitem"]',
-      ),
-    ].filter((button) => button.textContent?.trim() === name);
-    expect(matches).toHaveLength(1);
-    const button = expectDefined(matches[0], `${name} context-menu action`);
-    expect(button.getAttribute("aria-label")).toBeNull();
-    expect(button.getAttribute("aria-labelledby")).toBeNull();
-    return button;
-  }
-
-  function renderChatBubble(
-    chatOverrides: Partial<ChatProps> = {},
-    bubbleOverrides: Parameters<typeof appendChatBubble>[1] = {},
-  ) {
-    const container = renderChatView(chatOverrides);
-    return { container, ...appendChatBubble(container, bubbleOverrides) };
   }
 
   it.each([false, true])(

@@ -15,6 +15,7 @@ import { clearCompositionEnd } from "../../../lib/ime.ts";
 import { detectTextDirection } from "../../../lib/text-direction.ts";
 import { presentedContent } from "../../../lit/presentation-binding.ts";
 import "../../../styles/chat/composer-context-strip.css";
+import type { ChatCommandControls, ChatControlCommand } from "../chat-command-controls.ts";
 import type { ComposerDictationController } from "../composer-dictation.ts";
 import { insertComposerDictation } from "../composer-dictation.ts";
 import { renderChatAttachmentInputs } from "./chat-attachment-inputs.ts";
@@ -89,6 +90,32 @@ type ChatComposerViewContext = {
   slashMenuHost: SlashMenuHost;
   goalComposer: GoalComposerController;
 };
+
+// The + menu's commands, in menu order, each shown only where its command is offered.
+const PLUS_MENU_COMMANDS = [
+  ["goal", () => t("chat.commandControls.setGoal"), icons.target],
+  ["loop", () => t("chat.commandControls.repeatOnSchedule"), icons.repeat],
+  ["learn", () => t("chat.commandControls.teachSkill"), icons.wandSparkles],
+] as const satisfies readonly (readonly [ChatControlCommand, () => string, unknown])[];
+
+/** The + menu's command rows; the composer's "/" shortcut opens the menu when any exist. */
+export function plusMenuCommandActions(commands: ChatCommandControls | undefined) {
+  return PLUS_MENU_COMMANDS.flatMap(([command, label, icon]) => {
+    const state = commands?.read(command);
+    return state
+      ? [
+          {
+            value: command,
+            label: label(),
+            icon,
+            disabled: state.disabledReason !== null,
+            title: state.disabledReason,
+            onSelect: () => commands?.run(command),
+          },
+        ]
+      : [];
+  });
+}
 
 export function renderChatComposerQueue(props: ChatComposerProps, showAbortableUi: boolean) {
   const canAct = props.connected && props.canSend && !props.submitDisabledReason;
@@ -620,6 +647,7 @@ export function renderChatComposerView(context: ChatComposerViewContext) {
                     open: state.capabilityMenuOpen,
                     view: state.capabilityMenuView,
                     toolOverrides: props.toolOverrides,
+                    rootActions: plusMenuCommandActions(props.commands),
                     onOpenChange: (open) => {
                       state.capabilityMenuOpen = open;
                       if (!open) {

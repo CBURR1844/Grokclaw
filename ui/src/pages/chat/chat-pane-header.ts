@@ -31,15 +31,16 @@ import {
   canSplitSessionView,
 } from "../../lib/sessions/session-menu-navigation.ts";
 import { resolveSessionWorkspace } from "../../lib/sessions/workspace.ts";
+import type { ChatCommandControls } from "./chat-command-controls.ts";
 import { displayedChatSessionBranches } from "./chat-history-branches.ts";
 import { ChatPaneDiscussion } from "./chat-pane-discussion.ts";
 import { sidebarPanelDefinitions } from "./chat-pane-embedded-panels.ts";
 import { ChatPaneHeaderMemo } from "./chat-pane-header-memo.ts";
-import { ChatPaneNativeSessionActions } from "./chat-pane-native-session-actions.ts";
+import { ChatPaneHeaderSessionActions } from "./chat-pane-header-session-actions.ts";
 import { resolveChatPaneDesktopTarget, resolveChatPanePlacement } from "./chat-pane-placement.ts";
 import type { createChatPaneRails } from "./chat-pane-rails.ts";
+import { isChatPaneWorking } from "./chat-pane-state.ts";
 import { readChatSessionActionAccess } from "./chat-session-action-access.ts";
-import { isChatRunWorking } from "./components/chat-composer.ts";
 import "./components/chat-header-session-menu.ts";
 import type {
   HeaderMenuAction,
@@ -62,7 +63,6 @@ import {
   type ChatSessionSharingProps,
 } from "./components/chat-session-sharing.ts";
 import { renderContinueInTerminalDialog } from "./components/continue-in-terminal-dialog.ts";
-import { hasDirectSessionRun } from "./run-lifecycle.ts";
 import { isSidebarSlotVisible, type SidebarLayout } from "./sidebar-layout.ts";
 
 // The simple screen's chat menu keeps session actions only.
@@ -77,7 +77,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
   private headerBoardMenu?: BoardWidgetPageMenu;
   private readonly headerPanelsMemo = new ChatPaneHeaderMemo<HeaderMenuQuickAction[]>();
   private readonly headerLayoutMemo = new ChatPaneHeaderMemo<HeaderMenuQuickAction[]>();
-  private readonly headerSessionActions = new ChatPaneNativeSessionActions();
+  private readonly headerSessionActions = new ChatPaneHeaderSessionActions();
   private readonly headerReasonsMemo = new ChatPaneHeaderMemo<
     Partial<Record<HeaderMenuActionKind, string>>
   >();
@@ -141,6 +141,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
     sidebarLayout?: SidebarLayout,
     panelDefinitions = sidebarPanelDefinitions(),
     subagentStop: TemplateResult | typeof nothing = nothing,
+    commands?: ChatCommandControls,
   ) {
     this.headerMenuRow = row;
     this.headerWorkspace = sessionWorkspace;
@@ -171,15 +172,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
         isGatewayMethodAdvertised(this.context.gateway.snapshot, "sessions.files.reveal") === true,
       hasAdminAccess: hasOperatorAdminAccess(this.context.gateway.snapshot.hello?.auth ?? null),
     });
-    const branchSwitchWorking = this.state
-      ? this.state.chatSending ||
-        isChatRunWorking({
-          runActive: hasDirectSessionRun(this.state),
-          queue: this.state.chatQueue,
-          runStatus: this.state.chatRunStatus,
-          sessionKey: this.state.sessionKey,
-        })
-      : false;
+    const branchSwitchWorking = this.state ? isChatPaneWorking(this.state) : false;
     const branchSwitchAccess = readChatSessionActionAccess(
       this.context.gateway.snapshot,
       Boolean(this.state?.chatRunId),
@@ -645,6 +638,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
                 row,
                 placement.reclaimDisabledReason,
                 this.onHeaderAction,
+                commands,
               )}
               .sharing=${sharing}
               .groups=${knownGroups}

@@ -10,7 +10,12 @@ import {
 import { GatewayRequestError } from "../../api/gateway.ts";
 import { t } from "../../i18n/index.ts";
 import { registerChatGoalsEnglish } from "../../i18n/locales/en-chat-goals.ts";
-import type { ChatGoalAction, ChatGoalDraft, ChatGoalRecovery } from "../../lib/chat/chat-types.ts";
+import type {
+  ChatGoalAction,
+  ChatGoalDraft,
+  ChatGoalDraftMode,
+  ChatGoalRecovery,
+} from "../../lib/chat/chat-types.ts";
 import {
   goalOperationExpired,
   goalOperationScopePrefix,
@@ -42,6 +47,8 @@ type ChatGoalHost = ChatHost & {
     submissionAction?: Event,
   ) => Promise<boolean | void>;
 };
+
+export type ChatGoalPaneHost = ChatGoalHost & { handleChatDraftChange: (next: string) => void };
 
 type GoalParams = SessionsGoalUpdateParams | SessionsGoalClearParams;
 type GoalOperation = {
@@ -147,6 +154,12 @@ export function chatGoalRecovery(host: ChatHost): ChatGoalRecovery | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Enters or leaves goal drafting; the mode is saved with the draft so it survives reloads. */
+export function setChatGoalDraftMode(host: ChatGoalPaneHost, mode: ChatGoalDraftMode | null) {
+  host.chatGoalDraftMode = mode;
+  host.handleChatDraftChange(host.chatMessage);
 }
 
 export async function submitChatGoalDraft(

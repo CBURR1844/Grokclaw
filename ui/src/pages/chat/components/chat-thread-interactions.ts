@@ -34,6 +34,7 @@ import type {
 import type { EmbedSandboxMode } from "../../../lib/chat/tool-display.ts";
 import type { UiSessionDefaultsHost } from "../../../lib/sessions/session-key.ts";
 import type { PresentationValue } from "../../../lit/presentation-binding.ts";
+import type { ChatCommandControls } from "../chat-command-controls.ts";
 import type { TurnRecapWatch } from "../chat-progress.ts";
 import type { SubagentRoster } from "../chat-spawned-subagent.ts";
 import { resetChatThreadState } from "../chat-thread.ts";
@@ -52,6 +53,7 @@ import {
 } from "./chat-message-confirmation.ts";
 import type { MessageActionDetails, MessageReplyTarget } from "./chat-message-markdown.ts";
 import type { ArtifactDownloadResolver } from "./chat-message-media.ts";
+import { wholeMessageActions } from "./chat-message-menu-actions.ts";
 import type { ChatSendStatusActions } from "./chat-message-send-status.ts";
 import type { ReplyMessageStatus } from "./chat-reply-preview.ts";
 import {
@@ -204,6 +206,9 @@ export type ChatThreadProps = ChatSendStatusActions &
     commentsDisabled?: boolean;
     onAddToChat?: (selection: ChatSelectionSource, anchorRect: DOMRect) => void;
     onCompanionSelection?: (selection: ChatSelectionSource, anchorRect: DOMRect) => void;
+    /** Session commands for the message menu; absent where this pane cannot send. */
+    commands?: ChatCommandControls;
+    onReadAloud?: (text: string) => void;
     onOpenSession?: (sessionKey: string) => void;
     /** Shows one of the session's subagents. */
     onOpenSubagent?: (sessionKey: string) => void;
@@ -224,6 +229,8 @@ type TranscriptInteractionProps = Pick<
   | "onFocusComposer"
   | "onAddToChat"
   | "onCompanionSelection"
+  | "commands"
+  | "onReadAloud"
 >;
 
 const transcriptStates = new Map<string, ChatThreadState>();
@@ -665,6 +672,15 @@ export function handleTranscriptContextMenu(event: MouseEvent, props: Transcript
       onClick: () => {
         removeReplyContextMenu();
         void props.onForkMessage?.(entryId);
+      },
+    });
+  }
+  for (const action of wholeMessageActions(props, { text: copyMarkdown, bubble })) {
+    appendAction({
+      ...action,
+      onClick: () => {
+        removeReplyContextMenu();
+        action.run();
       },
     });
   }

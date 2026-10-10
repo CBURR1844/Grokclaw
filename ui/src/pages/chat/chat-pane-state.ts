@@ -10,6 +10,8 @@ import { getChatHistoryLoadState } from "./chat-history-state.ts";
 import { chatSendPendingReason } from "./chat-send-support.ts";
 import type { ChatState } from "./chat-state-contract.ts";
 import type { ChatPageHost } from "./chat-state-host.ts";
+import { isChatRunWorking } from "./components/chat-composer-state.ts";
+import { hasDirectSessionRun } from "./run-lifecycle.ts";
 
 type SelectedSessionProjectionState = {
   chatEffectiveQueueMode?: GatewaySessionRow["effectiveQueueMode"];
@@ -82,6 +84,19 @@ export class SessionParticipationTracker {
       this.lastBlocked.delete(oldest);
     }
   }
+}
+
+/** Sending, or the session's run is visibly working. Session-changing actions wait for it. */
+export function isChatPaneWorking(state: ChatPageHost): boolean {
+  return (
+    state.chatSending ||
+    isChatRunWorking({
+      runActive: hasDirectSessionRun(state),
+      queue: state.chatQueue,
+      runStatus: state.chatRunStatus,
+      sessionKey: state.sessionKey,
+    })
+  );
 }
 
 export function dismissChatError(state: { chatError?: string | null; lastError: string | null }) {

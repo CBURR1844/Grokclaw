@@ -13,6 +13,7 @@ import { personActivityRouting } from "../../components/person-activity-link.ts"
 import { isCloudWorkerPlacementState } from "../../components/session-row-badges.ts";
 import { t } from "../../i18n/index.ts";
 import { isModelIndependentChatCommand } from "../../lib/chat/commands.ts";
+import { readAloudAction } from "../../lib/chat/read-aloud.ts";
 import { canCallGatewayMethod, isGatewayMethodAdvertised } from "../../lib/gateway-methods.ts";
 import {
   pickFreshestObserverDigest,
@@ -26,12 +27,13 @@ import { GitHubPublicationController } from "../../lib/sessions/github-publicati
 import { scopedAgentParamsForSession } from "../../lib/sessions/index.ts";
 import { resolveUiConfiguredMainKey } from "../../lib/sessions/session-key.ts";
 import { navigateToModelProvider } from "../model-providers/navigation.ts";
-import { chatGoalRecovery, mutateChatGoal, submitChatGoalDraft } from "./chat-goals.ts";
+import { createChatCommandControls } from "./chat-command-controls.ts";
 import { isInitialChatHistoryUnavailable } from "./chat-history-state.ts";
 import { resolveChatModelSetup } from "./chat-model-setup.ts";
 import { ChatPaneLayoutRender } from "./chat-pane-layout-render.ts";
 import { createChatPaneRails } from "./chat-pane-rails.ts";
 import {
+  chatGoalProps,
   chatPaneComposerProps,
   createChatPaneQueuedEditProps,
   createChatPaneSessionActionCallbacks,
@@ -174,6 +176,7 @@ export class ChatPane extends ChatPaneLayoutRender {
     const canWriteProgressCard = state.connected && !sessionParticipationBlocked && hasWriteScope;
     this.providerReview.sync(canWriteProgressCard && !selectedSessionArchived);
     const restartRecoveryTombstoned = selectedSession?.restartRecoveryStatus === "tombstoned";
+    const sessionClosed = selectedSessionArchived || restartRecoveryTombstoned;
     const multiIdentity = this.hasMultipleIdentities();
     const suggestionViewer =
       multiIdentity &&
@@ -334,7 +337,7 @@ export class ChatPane extends ChatPaneLayoutRender {
       (catalogKey
         ? this.catalogSession?.canContinue === true
         : !disabledReason &&
-          !(selectedSessionArchived || restartRecoveryTombstoned || placementComposer.blocksSend) &&
+          !(sessionClosed || placementComposer.blocksSend) &&
           (!pendingReason || initialHistoryUnavailable));
     const composerAvailability = {
       canCompose: composerAccess && composerAvailable,
@@ -361,6 +364,11 @@ export class ChatPane extends ChatPaneLayoutRender {
       disabledBanner:
         sessionDisabledBanner ?? placementComposer.disabledBanner ?? modelUnavailableBanner,
     };
+    // Where your role, sharing or session policy denies sending, commands are hidden, not greyed.
+    const commands =
+      catalogKey || suggestionViewer || !composerAccess || sessionClosed || disabledReason
+        ? undefined
+        : createChatCommandControls(state, this.context.gateway, composerAvailability, this);
     const progressCardRefresh =
       canWriteProgressCard &&
       composerAvailability.canSend &&
@@ -501,8 +509,7 @@ export class ChatPane extends ChatPaneLayoutRender {
         ? (typing, preview) => this.sendTypingState(typing, preview)
         : undefined,
       ...composerAvailability,
-      modelSetupRequired:
-        modelSetupRequired && !selectedSessionArchived && !restartRecoveryTombstoned,
+      modelSetupRequired: modelSetupRequired && !sessionClosed,
       onModelSetup: () => this.context.navigate("model-setup"),
       error: providerPaused ? null : state.lastError,
       diskSpace: placementComposer.diskSpace,
@@ -634,18 +641,10 @@ export class ChatPane extends ChatPaneLayoutRender {
           : (id) => void state.steerQueuedChatMessage(id),
       onQueueMove: sessionParticipationBlocked ? undefined : state.moveQueuedChatMessage,
       queuedEdit: createChatPaneQueuedEditProps(state, sessionParticipationBlocked),
-      goalRecovery: chatGoalRecovery(state),
-      onGoalAction: (goalId, action) => void mutateChatGoal(state, { goalId, action }),
-      goalDraftMode: state.chatGoalDraftMode ?? null,
+      ...chatGoalProps(state, !suggestionViewer && !catalogKey),
       currentSessionId: state.currentSessionId,
-      onGoalDraftModeChange: (mode) => {
-        state.chatGoalDraftMode = mode;
-        state.handleChatDraftChange(state.chatMessage);
-      },
-      onGoalSubmit:
-        suggestionViewer || catalogKey
-          ? undefined
-          : (draft, submissionAction) => submitChatGoalDraft(state, draft, submissionAction),
+      commands,
+      onReadAloud: catalogKey ? undefined : readAloudAction(gatewaySnapshot),
       onCompanionStageAttachment: (attachment, sessionKey) =>
         this.state === state &&
         this.connectionGeneration === selectionConnectionGeneration &&

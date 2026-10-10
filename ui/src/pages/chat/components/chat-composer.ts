@@ -59,7 +59,7 @@ import {
   suppressStaleSubmittedDraftReplay,
 } from "./chat-composer-state.ts";
 import type { ChatComposerProps } from "./chat-composer-types.ts";
-import { renderChatComposerView } from "./chat-composer-view.ts";
+import { plusMenuCommandActions, renderChatComposerView } from "./chat-composer-view.ts";
 
 registerChatGoalsEnglish();
 
@@ -167,7 +167,11 @@ export function renderChatComposer(props: ChatComposerProps) {
             if (
               !canCompose ||
               props.suggestionComposer === true ||
-              !hasChatComposerPlusMenu({ capabilityMenu: props.capabilityMenu, attachments: props })
+              !hasChatComposerPlusMenu({
+                capabilityMenu: props.capabilityMenu,
+                attachments: props,
+                rootActions: plusMenuCommandActions(props.commands),
+              })
             ) {
               return false;
             }

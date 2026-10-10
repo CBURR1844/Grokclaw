@@ -869,6 +869,8 @@ describeControlUiE2e("Control UI chat message actions", () => {
         "Copy",
         "Reply",
         "Copy as markdown",
+        "Ask in side chat",
+        "Save as a skill",
       ]);
       await page.evaluate(
         () =>
@@ -901,6 +903,8 @@ describeControlUiE2e("Control UI chat message actions", () => {
       expect(await menu.getByRole("menuitem").allTextContents()).toEqual([
         "Reply",
         "Copy as markdown",
+        "Ask in side chat",
+        "Save as a skill",
       ]);
       expect(
         await menu.getByRole("menuitem", { name: "Reply to message" }).locator("svg").count(),

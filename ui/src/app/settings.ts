@@ -225,7 +225,7 @@ export type UiSettings = {
   sidebarLiveActivity?: boolean; // Latest activity under running sidebar sessions (default true)
   chatMessageMaxWidth?: string; // Browser-local centered chat transcript max width
   showAdvancedSettings?: boolean; // Expand advanced schema settings (default false)
-  pinnedAgentIds?: string[]; // Agents surfaced first in the agent-chip quick switcher
+  pinnedAgentIds?: string[]; // Agents listed first in the bot roster, new-chat menu and quick switcher
   textScale?: TextScaleStop; // Browser-local text scale percentage
   customTheme?: ImportedCustomTheme;
   locale?: string;
