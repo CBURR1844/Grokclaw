@@ -20,7 +20,10 @@ import {
 } from "../../plugins/provider-runtime.js";
 import {
   annotateInterSessionPromptText,
+  buildInterSessionPromptContext,
+  INTERNAL_PROVENANCE_SOURCE_CHANNEL,
   normalizeInputProvenance,
+  type InputProvenance,
 } from "../../sessions/input-provenance.js";
 import { hasPersistedMedia } from "../../sessions/user-turn-media.js";
 import { isTranscriptOnlyOpenClawAssistantMessage } from "../../shared/transcript-only-openclaw-assistant.js";
@@ -86,6 +89,7 @@ const MANAGED_DISPLAY_BLOCK_TYPES = new Set([
   "video",
 ]);
 type AssistantReplayMessage = Extract<AgentMessage, { role: "assistant" }>;
+type UserReplayMessage = Extract<AgentMessage, { role: "user" }>;
 
 type ProviderReplayHookParams = {
   config?: OpenClawConfig;
@@ -272,14 +276,73 @@ function isBareDeliveryMirrorDuplicate(out: AgentMessage[], next: AssistantRepla
   );
 }
 
+function readSingleLineField(value: unknown): string | undefined {
+  return typeof value === "string" ? value.replace(/\s+/gu, " ").trim() || undefined : undefined;
+}
+
+/**
+ * A Claw's result row (`sessions.delegate`) is another agent's output written into this chat.
+ * The stored row stays an assistant row for chat surfaces; the model reads it as attributed
+ * inter-session input built only from the row's bytes, so the replayed prefix stays stable.
+ */
+function presentClawResultForReplay(
+  message: AssistantReplayMessage,
+): (UserReplayMessage & { provenance: InputProvenance }) | undefined {
+  const source = asOptionalRecord(
+    "openclawAutomation" in message ? message.openclawAutomation : undefined,
+  );
+  const runId = readSingleLineField(source?.runId);
+  const sourceSessionKey = readSingleLineField(source?.childSessionKey);
+  if (source?.kind !== "subagent" || !runId || !sourceSessionKey) {
+    return undefined;
+  }
+  // Same provenance as a subagent completion handoff, so the existing marker names the source.
+  const provenance: InputProvenance = {
+    kind: "inter_session",
+    sourceSessionKey,
+    sourceChannel: INTERNAL_PROVENANCE_SOURCE_CHANNEL,
+    sourceTool: "subagent_announce",
+    runId,
+  };
+  const fields: Array<[string, unknown]> = [
+    ["agent", source.agentId],
+    ["label", source.label],
+    ["run_id", runId],
+    ["task", source.task],
+    ["status", source.status],
+  ];
+  const result = Array.isArray(message.content)
+    ? message.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("\n")
+    : "";
+  const text = [
+    buildInterSessionPromptContext(provenance).text,
+    ...fields.flatMap(([key, value]) => {
+      const field = readSingleLineField(value);
+      return field ? [`${key}: ${field}`] : [];
+    }),
+    "",
+    result,
+  ].join("\n");
+  return {
+    role: "user",
+    content: [{ type: "text", text }],
+    timestamp: message.timestamp,
+    provenance,
+  };
+}
+
 function normalizeAssistantReplayMessage(
   message: AssistantReplayMessage,
   out: AgentMessage[],
-): AssistantReplayMessage | null {
+): AssistantReplayMessage | UserReplayMessage | null {
   if (isTranscriptOnlyOpenClawAssistantMessage(message)) {
     // Drop from the in-memory replay copy; the persisted JSONL keeps the
     // entry so user-facing transcript surfaces are unchanged.
     return null;
+  }
+  const clawResult = presentClawResultForReplay(message);
+  if (clawResult) {
+    return clawResult;
   }
   // Failed attempts have no model content; discard the legacy placeholder too.
   // Keep billed silent replies and incomplete tool/length states unchanged.

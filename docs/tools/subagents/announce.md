@@ -123,10 +123,15 @@ The requester's model is not asked to relay it, and no requester turn starts:
   delivery retries until the normal delivery expiry. `sessions.delegate` refuses
   to start a run from a chat in one of those states.
 
-The row stays in the requester transcript, so the bot sees the result on later
-turns and users can follow up on it. Result presentation supports native,
-one-shot runs only; it cannot be combined with `thread: true`, `mode: "session"`,
-`collect: true`, `completionTarget`, or `expectsCompletionMessage: false`.
+The row stays in the requester transcript, so users can follow up on it. On later
+turns the bot's model reads it as input from the Claw, not as its own reply: the
+row is replayed as an `[Inter-session message]` turn from the Claw's session
+(`sourceTool=subagent_announce`), followed by the Claw's agent id, label, run id,
+task excerpt, and status, then the result text. The stored row is unchanged.
+
+Result presentation supports native, one-shot runs only; it cannot be combined
+with `thread: true`, `mode: "session"`, `collect: true`, `completionTarget`, or
+`expectsCompletionMessage: false`.
 
 ### Announce context
 

@@ -198,6 +198,14 @@ data.
 During context rebuild, OpenClaw applies the same marker to older persisted
 inter-session user turns that only have provenance metadata.
 
+A Claw result row (an `automation-result` assistant row with
+`openclawAutomation.kind: "subagent"`, written for a `sessions.delegate` run) is
+another agent's output. Context rebuild replays it as an inter-session user turn
+with the same marker (the Claw's session as source, `sourceTool=subagent_announce`),
+followed by the Claw's agent id, label, run id, task excerpt, and status, then the
+result text. The text is derived only from the stored row, so the replayed prefix
+stays stable, and the stored row keeps its bytes.
+
 ---
 
 ## Provider matrix (current behavior)
