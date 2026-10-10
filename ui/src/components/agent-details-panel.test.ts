@@ -20,7 +20,10 @@ import "./agent-details-panel.ts";
 const { showClawTaskDialog } = vi.hoisted(() => ({
   showClawTaskDialog: vi.fn<(options: ClawTaskDialogOptions) => Promise<boolean>>(),
 }));
-vi.mock("./claw-task-dialog.ts", () => ({ showClawTaskDialog }));
+vi.mock("./claw-task-dialog.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./claw-task-dialog.ts")>()),
+  showClawTaskDialog,
+}));
 
 const METHODS = [
   "config.get",

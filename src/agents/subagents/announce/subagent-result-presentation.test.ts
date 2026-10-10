@@ -7,7 +7,9 @@ const commitMocks = vi.hoisted(() => ({
     vi.fn<(input: Record<string, unknown>) => Promise<BackgroundSessionResultCommit>>(),
 }));
 
+// mock-isolation: Transcript commits write SQLite; the test checks only what would be committed.
 vi.mock("../../../sessions/background-session-result.js", () => commitMocks);
+// mock-isolation: The announce runtime barrel loads live config; the test pins a synthetic store.
 vi.mock("./subagent-announce.runtime.js", () => ({
   getRuntimeConfig: () => ({ session: { store: "/synthetic/sessions.json" } }),
   resolveAgentIdFromSessionKey: (key: string) => key.split(":")[1] ?? "main",

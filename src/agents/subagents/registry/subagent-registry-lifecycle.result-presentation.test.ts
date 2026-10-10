@@ -35,14 +35,19 @@ vi.mock("../completion/subagent-completion-admission.store.js", async (importOri
   blockSubagentCompletionDelivery: completionDeliveryMocks.blockSubagentCompletionDelivery,
   mutateRequesterCompletionBatch: completionDeliveryMocks.mutateRequesterCompletionBatch,
 }));
+// mock-isolation: Run-end side effects (browser, MCP, session effects, logging) stay outside this state test.
 vi.mock("../../../browser-lifecycle-cleanup.js", () => browserCleanup);
+// mock-isolation: See above; MCP runtimes are process-wide.
 vi.mock("../../agent-bundle-mcp-tools.js", () => ({
   retireSessionMcpRuntimeForSessionKey: vi.fn(async () => true),
 }));
+// mock-isolation: See above; session effects write shared state.
 vi.mock("../../internal-session-effects.js", () => ({
   removeInternalSessionEffectsSession: vi.fn(async () => {}),
 }));
+// mock-isolation: Silences the process logger.
 vi.mock("../../../runtime.js", () => ({ defaultRuntime: { log: vi.fn() } }));
+// mock-isolation: Each test supplies the announce outcome; the real flow has its own tests.
 vi.mock("../announce/subagent-announce.js", () => ({
   captureSubagentCompletionReply: vi.fn(async () => undefined),
   runSubagentAnnounceFlow: vi.fn(async () => "retryable" as const),

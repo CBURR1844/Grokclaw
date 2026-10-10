@@ -27,7 +27,10 @@ vi.mock("../../components/input-dialog.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../components/input-dialog.ts")>()),
   showInputDialog,
 }));
-vi.mock("../../components/claw-task-dialog.ts", () => ({ showClawTaskDialog }));
+vi.mock("../../components/claw-task-dialog.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../components/claw-task-dialog.ts")>()),
+  showClawTaskDialog,
+}));
 vi.mock("../../lib/toast.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/toast.ts")>()),
   showToast,

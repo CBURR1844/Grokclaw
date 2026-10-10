@@ -16,12 +16,14 @@ const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
 }));
 
-vi.mock("../operator-role-policy.js", () => ({
+vi.mock("../operator-role-policy.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../operator-role-policy.js")>()),
   authorizeGatewaySessionCreation: (params: unknown) => {
     mocks.calls.push("role-ceiling");
     return mocks.authorizeGatewaySessionCreation(params);
   },
 }));
+// mock-isolation: Session rows live in SQLite workers; the handler only consumes the entry it is given.
 vi.mock("../session-utils-store.js", () => ({
   withGatewaySessionEntry: async (
     key: string,
@@ -32,20 +34,25 @@ vi.mock("../session-utils-store.js", () => ({
     return consume({ entry: mocks.withGatewaySessionEntry(key, options) });
   },
 }));
-vi.mock("../session-utils-model-selection.js", () => ({
+vi.mock("../session-utils-model-selection.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../session-utils-model-selection.js")>()),
   resolveSessionSelectedModelRef: () => ({ provider: "test-provider", model: "test-model" }),
 }));
-vi.mock("../../agents/identity.js", () => ({
+vi.mock("../../agents/identity.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../agents/identity.js")>()),
   resolveAgentIdentity: (_cfg: unknown, agentId: string) =>
     agentId === "claw" ? { name: "Researcher" } : undefined,
 }));
+// mock-isolation: The real tool factory loads plugins and every tool; tool resolution is faked below.
 vi.mock("../../agents/openclaw-tools.js", () => ({ createOpenClawToolsAsync: vi.fn() }));
+// mock-isolation: Tool-policy layering has its own tests; this file checks the handler's order and mapping.
 vi.mock("../../skills/runtime/tool-dispatch.js", () => ({
   resolveSkillDispatchTools: async (params: unknown) => {
     mocks.calls.push("tools");
     return mocks.resolveSkillDispatchTools(params);
   },
 }));
+// mock-isolation: The real authority binds process-wide Gateway state; the fake only records the call order.
 vi.mock("../server-plugin-in-process-authority.js", () => ({
   withOperatorToolGatewayAuthority: async (
     authority: { assertCurrent: () => void },
