@@ -57,6 +57,11 @@ that work independently. A PR or report, a long run, or an isolated worktree alo
 does not make a worker a separate user-facing task. Asking for subagents does not
 ask for new sidebar sessions or categories.
 
+An operator can also start a run from a bot's chat without a bot turn: the
+Gateway's `sessions.delegate` method spawns through the bot's own
+`sessions_spawn` policy and shows the child's reply as a result row in that chat.
+See [Result presentation](/tools/subagents/announce#result-presentation).
+
 This page is an index. Sub-agents are documented on seven pages, one per
 reader job. Open the page that matches your task.
 

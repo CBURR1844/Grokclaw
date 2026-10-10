@@ -268,6 +268,32 @@ function hasForwardedMessageProvenance(message: Record<string, unknown>): boolea
   const provenance = normalizeInputProvenance(message.provenance);
   return (
     (provenance?.kind === "inter_session" && provenance.sourceTool === "sessions_send") ||
-    isCronRunMessage(message)
+    isCronRunMessage(message) ||
+    readSubagentResultSender(message) !== undefined
   );
+}
+
+/** A Claw run's result row names its sender in host-written `openclawAutomation`, not `provenance`. */
+export function readSubagentResultSender(
+  message: Record<string, unknown>,
+): { sessionKey: string; agentId: string; label?: string } | undefined {
+  const automation =
+    message.role === "assistant" ? readObjectRecord(message.openclawAutomation) : undefined;
+  if (automation?.kind !== "subagent") {
+    return undefined;
+  }
+  const { childSessionKey, agentId, label } = automation;
+  if (
+    typeof childSessionKey !== "string" ||
+    !childSessionKey ||
+    typeof agentId !== "string" ||
+    !agentId
+  ) {
+    return undefined;
+  }
+  return {
+    sessionKey: childSessionKey,
+    agentId,
+    ...(typeof label === "string" && label ? { label } : {}),
+  };
 }

@@ -178,6 +178,28 @@ describe("resolveSkillDispatchTools", () => {
     );
   });
 
+  it("reads the sandbox requirement from the prepared session entry", async () => {
+    const storePath = path.join(sessionDirs.make(), "sessions.json");
+    const tools = await resolveSkillDispatchTools(
+      {
+        ...dispatchDefaults,
+        cfg: {
+          session: { store: storePath },
+          agents: { entries: { main: { tools: { sandbox: { tools: { allow: ["read"] } } } } } },
+        },
+        // The caller already holds the row; the seam must not reread an empty store for it.
+        sessionEntry: { sessionId: "prepared", updatedAt: 1, sandbox: "required" },
+        completionPresentation: "result",
+      },
+      dependencies,
+    );
+
+    expect(tools.map((tool) => tool.name)).toEqual(["read"]);
+    expect(createOpenClawToolsAsyncMock.mock.calls.at(-1)?.[0]?.completionPresentation).toBe(
+      "result",
+    );
+  });
+
   it("uses persisted delegated policy instead of a sender wildcard", async () => {
     const tempDir = sessionDirs.make();
     const storePath = path.join(tempDir, "sessions.json");

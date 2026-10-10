@@ -74,6 +74,8 @@ export async function resolveSkillDispatchTools(
       toolName?: string;
     };
     groupId?: string;
+    /** Host-selected display for runs this tool set spawns; never a model-facing argument. */
+    completionPresentation?: "result";
   },
   dependencies: SkillToolDispatchDependencies,
 ): Promise<AnyAgentTool[]> {
@@ -128,6 +130,7 @@ export async function resolveSkillDispatchTools(
     cfg: params.cfg,
     agentId: resolvedAgentId,
     sessionKey: params.sessionKey,
+    preparedSessionEntry: params.sessionEntry,
   });
   const sandboxPolicy = sandboxRuntime.sandboxed ? sandboxRuntime.toolPolicy : undefined;
   const ownerOnlyCoreToolPolicy = !params.senderIsOwner
@@ -199,6 +202,7 @@ export async function resolveSkillDispatchTools(
     inheritedToolAllowlist,
     inheritedToolDenylist: explicitDenylist,
     inheritedToolPolicySource: requesterPolicies.inheritedToolPolicySource,
+    completionPresentation: params.completionPresentation,
   });
   const policyFiltered = applyToolPolicyPipeline({
     tools,

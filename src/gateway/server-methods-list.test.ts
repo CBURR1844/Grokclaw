@@ -284,6 +284,7 @@ describe("listGatewayMethods", () => {
       "skills.workshop.changes",
       "skills.workshop.archive",
       "skills.workshop.restore",
+      "sessions.delegate",
     ];
     expect(listGatewayMethods().slice(-expectedSuffix.length)).toEqual(expectedSuffix);
     const methods = listGatewayMethods();
@@ -374,6 +375,7 @@ describe("listGatewayMethods", () => {
       "skills.workshop.changes",
       "skills.workshop.archive",
       "skills.workshop.restore",
+      "sessions.delegate",
     ]);
   });
 
@@ -599,6 +601,7 @@ describe("listGatewayMethods", () => {
       "skills.workshop.changes",
       "skills.workshop.archive",
       "skills.workshop.restore",
+      "sessions.delegate",
     ];
     expect(coreMethods.slice(-expectedCoreSuffix.length)).toEqual(expectedCoreSuffix);
     expect(methods.indexOf("approval.get")).toBeGreaterThan(methods.indexOf("tts.speak"));
