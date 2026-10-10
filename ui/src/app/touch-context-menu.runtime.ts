@@ -3,7 +3,9 @@
  * `contextmenu`, so a hold inside a `[data-touch-contextmenu]` region sends the
  * same event a right-click would; each region's own handler still decides
  * whether that spot gets a menu. Android fires `contextmenu` itself, and that
- * native event then wins over the timer.
+ * native event then wins over the timer. A pan needs no scroll listener: the
+ * browser sends `pointercancel` when it takes the touch over, while a scroll
+ * the page makes itself (a transcript following a reply) leaves the hold alone.
  */
 const HOLD_MS = 500;
 // Below the nav drawer swipe's 7px lock, so a drag cancels the hold before the drawer moves.
@@ -24,6 +26,7 @@ type Press = {
   timer: ReturnType<typeof setTimeout> | undefined;
   userSelect: string;
   webkitUserSelect: string;
+  /** A menu is open for this press, ours or the browser's. */
   opened: boolean;
 };
 
@@ -94,7 +97,6 @@ export function connectTouchContextMenu(signal: AbortSignal): void {
     if (hasSelection()) {
       globalThis.getSelection?.()?.removeAllRanges();
     }
-    current.opened = true;
     synthetic = new MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,
@@ -105,20 +107,25 @@ export function connectTouchContextMenu(signal: AbortSignal): void {
       screenX: current.screenX,
       screenY: current.screenY,
     });
-    const handled = !current.target.dispatchEvent(synthetic);
-    if (handled) {
+    // A spot that declines (a link or an image) leaves room for the browser's own menu.
+    current.opened = !current.target.dispatchEvent(synthetic);
+    if (current.opened) {
       swallowRelease(current.pointerId);
     }
   };
 
   const handleDown = (event: PointerEvent) => {
-    stopSwallowing();
     if (press) {
       // A second finger is a pinch or a scroll, not a hold.
       release();
       return;
     }
-    if (event.pointerType !== "touch" || !event.isPrimary || event.button !== 0 || hasSelection()) {
+    if (!event.isPrimary) {
+      // The finger that opened a menu may still be down, and its lift stays swallowed.
+      return;
+    }
+    stopSwallowing();
+    if (event.pointerType !== "touch" || event.button !== 0 || hasSelection()) {
       return;
     }
     const found = pressTarget(event);
@@ -197,8 +204,8 @@ export function connectTouchContextMenu(signal: AbortSignal): void {
   window.addEventListener("pointercancel", handleUp, capture);
   window.addEventListener("click", handleClick, capture);
   window.addEventListener("contextmenu", handleContextMenu, capture);
-  window.addEventListener("scroll", cancel, passive);
-  window.addEventListener("blur", cancel, passive);
+  // Not capture: only the window losing focus, not every element's blur.
+  window.addEventListener("blur", cancel, { signal, passive: true });
   document.addEventListener("visibilitychange", cancel, passive);
   signal.addEventListener(
     "abort",

@@ -6,6 +6,7 @@ let connection: AbortController;
 let region: HTMLElement;
 let word: HTMLElement;
 let field: HTMLInputElement;
+let outside: HTMLElement;
 let menus: MouseEvent[];
 let lifted: number;
 let clicked: number;
@@ -47,13 +48,13 @@ describe("touch long press", () => {
     region.setAttribute("data-touch-contextmenu", "");
     word = Object.assign(document.createElement("span"), { textContent: "Hello" });
     field = document.createElement("input");
+    outside = document.createElement("p");
     region.append(word, field);
-    document.body.append(region);
+    document.body.append(region, outside);
     menus = [];
     lifted = 0;
     clicked = 0;
     region.addEventListener("contextmenu", (event) => {
-      menus.push(event);
       if (!(event.target instanceof Element && event.target.closest(".open-native"))) {
         event.preventDefault();
       }
@@ -61,12 +62,17 @@ describe("touch long press", () => {
     region.addEventListener("pointerup", () => (lifted += 1));
     region.addEventListener("click", () => (clicked += 1));
     connection = new AbortController();
+    // Counted page-wide, so a menu sent outside the region would show up too.
+    document.addEventListener("contextmenu", (event) => menus.push(event), {
+      signal: connection.signal,
+    });
     connectTouchContextMenu(connection.signal);
   });
 
   afterEach(() => {
     connection.abort();
     region.remove();
+    outside.remove();
     window.getSelection()?.removeAllRanges();
     vi.useRealTimers();
   });
@@ -103,8 +109,8 @@ describe("touch long press", () => {
     ],
     ["a drag", () => pointer("pointermove", word, { x: 27 })],
     ["a cancel", () => pointer("pointercancel", word)],
-    ["a scroll", () => window.dispatchEvent(new Event("scroll"))],
     ["a second finger", () => pointer("pointerdown", word, { id: 2, primary: false })],
+    ["the window losing focus", () => window.dispatchEvent(new Event("blur"))],
   ])("does not open after %s", (_name, interrupt) => {
     pointer("pointerdown", word);
     interrupt();
@@ -112,17 +118,31 @@ describe("touch long press", () => {
     expect(menus).toHaveLength(0);
   });
 
-  it("ignores mouse presses, unmarked regions, fields and presses over a selection", () => {
-    const outside = document.createElement("p");
-    document.body.append(outside);
-    pointer("pointerdown", word, { kind: "mouse" });
+  it("keeps holding while the page scrolls itself or another element loses focus", () => {
+    pointer("pointerdown", word);
+    // A transcript following a streaming reply scrolls without the finger moving.
+    region.dispatchEvent(new Event("scroll"));
+    document.dispatchEvent(new Event("scroll", { bubbles: true }));
+    field.dispatchEvent(new FocusEvent("blur"));
     vi.advanceTimersByTime(500);
-    hold(outside);
-    hold(field);
-    window.getSelection()?.selectAllChildren(word);
-    hold(word);
-    outside.remove();
-    expect(menus).toHaveLength(0);
+    expect(menus).toHaveLength(1);
+  });
+
+  it.each([
+    ["a mouse press", () => pointer("pointerdown", word, { kind: "mouse" })],
+    ["an unmarked spot", () => pointer("pointerdown", outside)],
+    ["a field", () => pointer("pointerdown", field)],
+    [
+      "a press over a selection",
+      () => {
+        window.getSelection()?.selectAllChildren(word);
+        pointer("pointerdown", word);
+      },
+    ],
+  ])("ignores %s", (_name, press) => {
+    press();
+    vi.advanceTimersByTime(1_000);
+    expect([menus.length, region.style.userSelect]).toEqual([0, ""]);
   });
 
   it("clears a selection the hold started and blocks selection only while pressed", () => {
@@ -152,6 +172,23 @@ describe("touch long press", () => {
     const late = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
     word.dispatchEvent(late);
     expect([menus.length, late.defaultPrevented]).toEqual([1, true]);
+  });
+
+  it("leaves the browser's own menu to a spot that declined its menu", () => {
+    word.classList.add("open-native");
+    hold(word);
+    const late = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    word.dispatchEvent(late);
+    expect([menus.length, late.defaultPrevented]).toEqual([2, false]);
+  });
+
+  it("keeps swallowing the lift when a second finger taps while the menu is open", () => {
+    hold(word);
+    pointer("pointerdown", word, { id: 2, primary: false });
+    pointer("pointerup", word, { id: 2, primary: false });
+    pointer("pointerup", word);
+    // Only the second finger's lift reaches the page.
+    expect([menus.length, lifted, tap(word).defaultPrevented]).toEqual([1, 1, true]);
   });
 
   it("stops after disconnect", () => {
