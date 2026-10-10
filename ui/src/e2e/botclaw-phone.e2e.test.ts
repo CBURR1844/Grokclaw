@@ -88,13 +88,16 @@ async function openPhone(page: Page, context: BrowserContext) {
   };
 }
 
-function expectSheet(box: { x: number; width: number; y: number; height: number } | null) {
-  if (!box) {
-    throw new Error("expected an open menu");
-  }
-  expect(box.x).toBeCloseTo(0, 0);
-  expect(box.width).toBeCloseTo(390, 0);
-  expect(box.y + box.height).toBeCloseTo(844, 0);
+/** Waits out the opening animation, then checks the menu spans the bottom of the screen. */
+async function expectSheet(
+  read: () => Promise<{ x: number; width: number; y: number; height: number } | null>,
+) {
+  await expect
+    .poll(async () => {
+      const box = await read();
+      return box && [box.x, box.width, box.y + box.height].map(Math.round);
+    })
+    .toEqual([0, 390, 844]);
 }
 
 suite.define(() => {
@@ -111,12 +114,13 @@ suite.define(() => {
           return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null;
         });
 
+      const pathname = new URL(page.url()).pathname;
       const lift = await hold(forge.locator(".sidebar-agent-roster__row"));
       await forge.getByRole("menuitem", { name: "Show details", exact: true }).waitFor();
-      expectSheet(await menuBox());
+      await expectSheet(menuBox);
       // Lifting the finger neither follows the row's link nor closes the menu.
       await lift();
-      expect(new URL(page.url()).pathname).toBe("/chat");
+      expect(new URL(page.url()).pathname).toBe(pathname);
       expect(
         await dropdown.evaluate((element: HTMLElement & { open: boolean }) => element.open),
       ).toBe(true);
@@ -148,7 +152,7 @@ suite.define(() => {
       const lift = await hold(bubble);
       const menu = page.locator(".chat-reply-context-menu");
       await menu.waitFor({ state: "visible" });
-      expectSheet(await menu.boundingBox());
+      await expectSheet(() => menu.boundingBox());
       await lift();
       await page.clock.runFor(1_000);
       expect(await menu.isVisible()).toBe(true);
