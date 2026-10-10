@@ -101,6 +101,11 @@ export type ControlUiMockGateway = {
   setMethodResponse: (method: string, payload: unknown) => void;
   setSessionsListResponse: (payload: MockSessionsListResponse) => void;
   setRequestHandler: (method: string, handler: ControlUiMockRequestHandler) => void;
+  /** Commits a row to a session's transcript and publishes it, as the Gateway does. */
+  commitHistoryMessage: (
+    sessionKey: string,
+    message: Record<string, unknown> & { __openclaw?: Record<string, unknown> },
+  ) => void;
   setSessionSharingPolicy: (policy: {
     allowedSessionVisibilities: Array<"shared" | "read-only" | "suggest" | "draft">;
     hasMultipleSessionSharingIdentities: boolean;

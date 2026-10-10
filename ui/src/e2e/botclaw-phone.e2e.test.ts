@@ -1,8 +1,10 @@
 import type { BrowserContext, Locator, Page } from "playwright";
 import { expect, it } from "vitest";
 import type { AgentsListResult, GatewaySessionRow, SessionsListResult } from "../api/types.ts";
+import { clawDelegationMockInitScript } from "../test-helpers/control-ui-e2e-claws.ts";
 import {
   controlUiBundledSettingsStorageKey,
+  defaultControlUiFeatureMethods,
   installMockGateway,
   waitForControlUiRoute,
 } from "../test-helpers/control-ui-e2e.ts";
@@ -25,6 +27,7 @@ const agentsList: AgentsListResult = {
   agents: [
     { id: "main", name: "Harbor" },
     { id: "forge", name: "Forge" },
+    { id: "sorter", name: "Inbox Sorter", claw: { requesterAgentIds: ["main"] } },
   ],
 };
 const rows = [
@@ -52,7 +55,8 @@ async function openPhone(page: Page, context: BrowserContext) {
     },
     { key: controlUiBundledSettingsStorageKey(suite.server.baseUrl) },
   );
-  await installMockGateway(page, {
+  const gateway = await installMockGateway(page, {
+    featureMethods: [...defaultControlUiFeatureMethods, "sessions.delegate"],
     sessions: rows,
     historyMessages: [
       { role: "user", content: [{ type: "text", text: "Sort my inbox" }] },
@@ -69,10 +73,16 @@ async function openPhone(page: Page, context: BrowserContext) {
       } satisfies SessionsListResult,
     },
   });
+  await page.addInitScript({
+    content: clawDelegationMockInitScript({
+      sorter: { label: "Inbox Sorter", reply: "Sorted 46 emails into 4 folders." },
+    }),
+  });
   await page.goto(`${suite.server.baseUrl}chat`);
   await waitForControlUiRoute(page, { routeId: "chat" });
   const touch = await context.newCDPSession(page);
   return {
+    gateway,
     /** Holds a finger on the element for the long-press time and returns the lift. */
     async hold(target: Locator) {
       const box = await target.boundingBox();
@@ -161,6 +171,36 @@ suite.define(() => {
       );
       expect(await page.evaluate(() => getSelection()?.isCollapsed ?? true)).toBe(true);
       expect(await trustedMenus()).toBe(0);
+    });
+  });
+
+  it("sends a message to a Claw from the long-press sheet and shows the Claw's result", async () => {
+    await suite.withPage(phone, async ({ page, context }) => {
+      const { gateway, hold } = await openPhone(page, context);
+      const pane = page.locator(".chat-pane-cache__pane--active");
+      const request = pane.locator(".chat-bubble").filter({ hasText: "Sort my inbox" });
+      await request.waitFor({ state: "visible" });
+
+      const lift = await hold(request);
+      const send = page
+        .locator(".chat-reply-context-menu")
+        .getByRole("menuitem", { name: "Send to Inbox Sorter", exact: true });
+      await send.waitFor({ state: "visible" });
+      await lift();
+      await send.tap();
+
+      const card = pane.locator('.chat-group--forwarded[data-result-status="ok"]');
+      await card.waitFor({ state: "visible" });
+      expect(await card.locator(".chat-reply-attribution__task").textContent()).toBe(
+        "Task: Sort my inbox",
+      );
+      expect(await card.textContent()).toContain("Sorted 46 emails into 4 folders.");
+      const [delegated] = await gateway.getRequests("sessions.delegate");
+      expect(delegated?.params).toMatchObject({
+        sessionKey: "agent:main:main",
+        targetAgentId: "sorter",
+        task: "Sort my inbox",
+      });
     });
   });
 });
