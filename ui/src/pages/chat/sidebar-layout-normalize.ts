@@ -18,7 +18,8 @@ function normalizeSlotId(value: unknown): SidebarSlotId | null {
   if (value === "chat") {
     return "dashboard";
   }
-  return value === "browser" ||
+  return value === "agent" ||
+    value === "browser" ||
     value === "link-reader" ||
     value === "companion" ||
     value === "conversation" ||

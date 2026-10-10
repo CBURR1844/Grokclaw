@@ -369,4 +369,15 @@ describe("gateway settings and layout persistence", () => {
     writeStored({ sidebarAgentsMode: "invalid" });
     expect(loadSettings().sidebarAgentsMode).toBe("chip");
   });
+
+  it("opens the roster unless storage or the host default chooses the chip", () => {
+    vi.stubGlobal("openclawDefaultSidebarAgentsMode", undefined);
+    try {
+      expect(loadSettings().sidebarAgentsMode).toBe("roster");
+      writeStored({ sidebarAgentsMode: "chip" });
+      expect(loadSettings().sidebarAgentsMode).toBe("chip");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

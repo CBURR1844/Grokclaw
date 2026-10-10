@@ -55,6 +55,7 @@ type SidebarPanelDefinitionParams = {
   subagentsInputRegion: "page" | "dock";
   subagentsPresented: PresentationValue;
   processesPresented?: PresentationValue;
+  agentPresented?: PresentationValue;
   onRefreshProcesses?: () => void;
   subagentsAvailable: boolean;
   subagentsShowRequest?: () => string | null | undefined;
@@ -162,13 +163,15 @@ export function sidebarPanelDefinitions(
           )
         : slot === "subagents" || slot === "processes"
           ? panelContext.subagentsAvailable
-          : SIDEBAR_PANEL_SHORTCUTS[slot]?.available(panelContext)),
+          : slot === "agent"
+            ? Boolean(panelContext.agentId)
+            : SIDEBAR_PANEL_SHORTCUTS[slot]?.available(panelContext)),
     ),
     content,
     loading: renderPanelLoadingSkeleton(
       textKey === "conversation" || textKey === "companion"
         ? "chat"
-        : textKey === "subagents" || textKey === "processes"
+        : textKey === "subagents" || textKey === "processes" || textKey === "agent"
           ? "file-list"
           : textKey === "portal"
             ? "browser"
@@ -358,6 +361,17 @@ export function sidebarPanelDefinitions(
                 params.renderDetail(detailContent),
               )}`
             : null,
+    ),
+    definePanel(
+      "agent",
+      "agent",
+      icons.bot,
+      params?.agentId
+        ? html`<openclaw-agent-details-panel
+            .agentId=${params.agentId}
+            .presented=${livePresentation(params.agentPresented ?? false)}
+          ></openclaw-agent-details-panel>`
+        : null,
     ),
     definePanel("terminal", "terminal", icons.terminal, terminal),
     definePanel("browser", "browser", icons.globe, browser),

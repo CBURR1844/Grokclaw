@@ -318,6 +318,15 @@ export function buildCronMocks(
   return {
     "cron.status": status,
     "cron.list": cronListResponseFixture([
+      // An agent's details panel reads that agent's routines by name.
+      ...[...new Set(jobs.map((job) => job.agentId ?? "main"))].map((agentId) => ({
+        match: { agentId, sortBy: "name" },
+        response: listResult(
+          jobs
+            .filter((job) => (job.agentId ?? "main") === agentId)
+            .toSorted((left, right) => left.name.localeCompare(right.name)),
+        ),
+      })),
       // Cases mirror the concrete queries today's Cron UI issues. Unknown combinations fall back
       // to the full fixture list; dynamic evaluation is intentionally out of scope because the
       // scenario is JSON-serialized into the page rather than installed as a live responder.
