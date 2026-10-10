@@ -1758,6 +1758,7 @@
   "ui/src/pages/chat/chat-abort-request.ts",
   "ui/src/pages/chat/chat-agent-id.ts",
   "ui/src/pages/chat/chat-avatar.ts",
+  "ui/src/pages/chat/chat-claw-result.ts",
   "ui/src/pages/chat/chat-command-executor.ts",
   "ui/src/pages/chat/chat-commands.ts",
   "ui/src/pages/chat/chat-composer-memory-fallback.ts",

@@ -1368,6 +1368,20 @@ button.chat-reply-attribution__target:disabled {
   --chat-sender-name-color: hsl(var(--chat-sender-hue) 60% 36%);
 }
 
+/* A Claw's result reads as a framed card, tinted as a failure when the run didn't finish.
+   The :root prefix outranks the quiet forwarded edge and both themes' hover skins. */
+:root .chat-group.assistant.chat-group--forwarded[data-result-status] .chat-bubble {
+  border-color: var(--border-strong);
+}
+
+:root
+  .chat-group.assistant.chat-group--forwarded[data-result-status]:not([data-result-status="ok"])
+  .chat-bubble {
+  --chat-bubble-background: var(--danger-subtle);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: var(--chat-bubble-background);
+}
+
 /* Ephemeral drafts share sent-turn geometry, typography, and identity tint. */
 .agent-chat__typing-indicator {
   display: grid;
