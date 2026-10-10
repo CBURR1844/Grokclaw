@@ -102,8 +102,11 @@ function presentClawTaskDialog(options: ClawTaskDialogOptions): Promise<boolean>
           aria-invalid=${failure ? "true" : nothing}
           autofocus
           @input=${(event: InputEvent) => {
+            if (!(event.currentTarget instanceof HTMLTextAreaElement)) {
+              return;
+            }
             const wasBlocked = blocked();
-            task = (event.target as HTMLTextAreaElement).value;
+            task = event.currentTarget.value;
             if (blocked() !== wasBlocked) {
               paint();
             }
