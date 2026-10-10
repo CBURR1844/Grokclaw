@@ -21,7 +21,7 @@ export function readClawDelegationAccess(
 }
 
 /** The most text one Claw task carries: the limit sessions.delegate admits. */
-export const CLAW_TASK_MAX_CHARS = 16_000;
+const CLAW_TASK_MAX_CHARS = 16_000;
 
 /** Whether text is longer than one Claw task can be, counted the way sessions.delegate counts. */
 export function isClawTaskTooLong(task: string): boolean {

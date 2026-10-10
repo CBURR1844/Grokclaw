@@ -83,6 +83,29 @@ describe("Claw task dialog", () => {
     expect(keys[1]).toBe(keys[0]);
   });
 
+  it("counts a task the way the Gateway does and blocks one that is too long", async () => {
+    const { userEvent } = await import("vitest/browser");
+    const submit = vi.fn(async (_request: ClawTaskRequest) => null);
+    const result = showClawTaskDialog({ claw: CLAWS[1]!, submit });
+    await getRenderedModalDialog(document.body);
+    const task = form()?.querySelector("textarea");
+    const alert = () => form()?.querySelector("[role='alert']")?.textContent?.trim();
+
+    // 16,000 emoji are 32,000 UTF-16 units but 16,000 characters, which the Gateway admits.
+    await userEvent.fill(task!, "😊".repeat(16_001));
+    await vi.waitFor(() =>
+      expect(alert()).toBe("Too long for a Claw: a task can be up to 16,000 characters."),
+    );
+    expect(button("Run")?.disabled).toBe(true);
+    expect(task?.getAttribute("aria-invalid")).toBe("true");
+
+    await userEvent.fill(task!, "😊".repeat(16_000));
+    await vi.waitFor(() => expect(alert()).toBeUndefined());
+    await userEvent.click(button("Run")!);
+    await expect(result).resolves.toBe(true);
+    expect(submit.mock.calls[0]?.[0].task).toBe("😊".repeat(16_000));
+  });
+
   it("starts a new key when the task changes after an unconfirmed attempt", async () => {
     const { userEvent } = await import("vitest/browser");
     const answers = ["Couldn't confirm Morning Brief started.", null];

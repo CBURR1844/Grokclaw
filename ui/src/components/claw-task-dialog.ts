@@ -1,7 +1,7 @@
 import { html, nothing } from "lit";
 import { t } from "../i18n/index.ts";
 import { registerAgentDetailsClawsEnglish } from "../i18n/locales/en-agent-details-claws.ts";
-import { CLAW_TASK_MAX_CHARS } from "../lib/agents/claw-delegation.ts";
+import { isClawTaskTooLong } from "../lib/agents/claw-delegation.ts";
 import { formatUiError } from "../lib/format-error.ts";
 import { generateUUID } from "../lib/uuid.ts";
 import { withPromiseModalHost } from "./promise-modal-host.ts";
@@ -37,7 +37,9 @@ function presentClawTaskDialog(options: ClawTaskDialogOptions): Promise<boolean>
     // A retry of the same Claw and text reuses its key, so the Gateway can answer with the
     // run an unconfirmed attempt may have started instead of starting a second one.
     let sent: { identity: string; key: string } | null = null;
-    const blocked = () => !clawId || !task.trim();
+    // Counted as the Gateway counts it; a textarea maxlength would count UTF-16 units instead.
+    const tooLong = () => isClawTaskTooLong(task.trim());
+    const blocked = () => !clawId || !task.trim() || tooLong();
 
     async function handleSubmit(event: Event) {
       event.preventDefault();
@@ -96,19 +98,18 @@ function presentClawTaskDialog(options: ClawTaskDialogOptions): Promise<boolean>
         <textarea
           name="task"
           rows="4"
-          maxlength=${CLAW_TASK_MAX_CHARS}
           placeholder=${t("agentDetails.claws.runPlaceholder")}
           .value=${task}
           ?disabled=${submitting}
-          aria-invalid=${failure ? "true" : nothing}
+          aria-invalid=${failure || tooLong() ? "true" : nothing}
           autofocus
           @input=${(event: InputEvent) => {
             if (!(event.currentTarget instanceof HTMLTextAreaElement)) {
               return;
             }
-            const wasBlocked = blocked();
+            const [wasBlocked, wasTooLong] = [blocked(), tooLong()];
             task = event.currentTarget.value;
-            if (blocked() !== wasBlocked) {
+            if (blocked() !== wasBlocked || tooLong() !== wasTooLong) {
               paint();
             }
           }}
@@ -123,6 +124,7 @@ function presentClawTaskDialog(options: ClawTaskDialogOptions): Promise<boolean>
     `;
 
     function paint() {
+      const error = failure ?? (tooLong() ? t("chat.commandControls.clawTaskTooLong") : null);
       render(
         () => html`
           <openclaw-modal-dialog label=${title} @modal-cancel=${handleCancel}>
@@ -131,11 +133,7 @@ function presentClawTaskDialog(options: ClawTaskDialogOptions): Promise<boolean>
                 <div class="exec-approval-title">${title}</div>
               </div>
               ${fixedClaw ? renderTask(fixedClaw.name) : renderChoices(choices)}
-              ${
-                failure
-                  ? html`<div class="exec-approval-error" role="alert">${failure}</div>`
-                  : nothing
-              }
+              ${error ? html`<div class="exec-approval-error" role="alert">${error}</div>` : nothing}
               <div class="exec-approval-actions">
                 <button type="submit" class="btn primary" ?disabled=${submitting || blocked()}>
                   ${fixedClaw ? t("agentDetails.claws.runSubmit") : t("agentDetails.claws.send")}
