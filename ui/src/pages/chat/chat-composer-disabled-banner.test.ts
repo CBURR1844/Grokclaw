@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderComposerFixture, resetComposerFixture } from "./chat-composer.test-support.ts";
+import { createChatModelSetupBanner } from "./chat-model-setup.ts";
 
 afterEach(async () => {
   await resetComposerFixture();
@@ -66,5 +67,21 @@ describe("archived session composer banner", () => {
     expect(action?.getAttribute("aria-busy")).toBe("true");
     expect(action?.textContent).toContain("Resuming…");
     expect(action?.querySelector(".btn__spinner")).not.toBeNull();
+  });
+});
+
+describe("model setup composer banner", () => {
+  it.each([
+    [undefined, "Connect a provider. Try /models or /help."],
+    [false, "Connect a provider."],
+  ])("shows the typed-command tip only where typing commands works (%s)", (slashCommands, text) => {
+    const { container } = renderComposerFixture({
+      canSend: true,
+      slashCommands,
+      disabledBanner: createChatModelSetupBanner(vi.fn(), "Connect a provider."),
+    });
+
+    const detail = container.querySelector(".agent-chat__disabled-banner-detail");
+    expect(detail?.textContent?.replace(/\s+/g, " ").trim()).toBe(text);
   });
 });
