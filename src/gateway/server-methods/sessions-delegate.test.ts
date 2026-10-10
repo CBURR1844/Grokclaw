@@ -349,6 +349,23 @@ describe("sessions.delegate", () => {
     expect(mocks.execute).toHaveBeenCalledTimes(2);
   });
 
+  it("replays an error from after spawn dispatched the child instead of starting a second", async () => {
+    const f = fixture();
+    const failed = {
+      status: "error",
+      error: "Failed to register subagent run: Child termination is not confirmed.",
+      childSessionKey: CHILD_KEY,
+      runId: "run-1",
+    };
+    mocks.execute.mockResolvedValueOnce({ details: failed });
+    const error = errorShape(ErrorCodes.UNAVAILABLE, failed.error);
+    expect((await f.invoke())[0]?.[2]).toEqual(error);
+
+    // The child may still be running, so the unchanged retry gets the same answer.
+    expect(await f.invoke()).toEqual([[false, undefined, error, { cached: true }]]);
+    expect(mocks.execute).toHaveBeenCalledOnce();
+  });
+
   it("joins a concurrent duplicate and replays the cached result", async () => {
     const f = fixture();
     const spawn = createDeferred<ReturnType<typeof accepted>>();

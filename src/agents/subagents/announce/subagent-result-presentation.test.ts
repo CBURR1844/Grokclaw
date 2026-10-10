@@ -38,13 +38,20 @@ function committedInput() {
   return call[0];
 }
 
+/** What people see: the row's display content. */
+async function shownText() {
+  const prepare = committedInput().prepareDisplayContent as () => Promise<{ text: string }[]>;
+  const blocks = await prepare();
+  return blocks.map((block) => block.text).join("");
+}
+
 describe("presentSubagentResult", () => {
   beforeEach(() => {
     commitMocks.commitBackgroundResultToSession.mockReset();
     commitMocks.commitBackgroundResultToSession.mockResolvedValue({ ok: true, messageId: "m1" });
   });
 
-  it("commits the Claw's own reply to the generation admitted at spawn", async () => {
+  it("commits the Claw's own reply to the generation admitted at spawn, named for the bot's model", async () => {
     await expect(presentSubagentResult(base)).resolves.toBe("delivered");
     expect(committedInput()).toMatchObject({
       agentId: "main",
@@ -53,7 +60,10 @@ describe("presentSubagentResult", () => {
         sessionId: "requester-session",
         lifecycleRevision: "requester-revision",
       },
-      text: "Here is the summary.",
+      text:
+        '[Result from the Claw Researcher (agent claw, run run-claw), status ok. Task: "Summarize the thread". ' +
+        "The user sees it as a card from Researcher. It is Researcher's report, not your reply.]" +
+        "\n\nHere is the summary.",
       idempotencyKey: "subagent-result:run-claw",
       provenance: {
         kind: "subagent",
@@ -65,6 +75,7 @@ describe("presentSubagentResult", () => {
         task: "Summarize the thread",
       },
     });
+    expect(await shownText()).toBe("Here is the summary.");
   });
 
   it.each([
@@ -77,15 +88,23 @@ describe("presentSubagentResult", () => {
     ["unknown", "stopped", "Researcher didn't finish (stopped). Open the run to see what it did."],
   ] as const)("writes a host line for a %s run", async (status, recorded, text) => {
     await presentSubagentResult({ ...base, status, reply: "partial progress" });
-    expect(committedInput()).toMatchObject({ text, provenance: { status: recorded } });
+    expect(committedInput()).toMatchObject({ provenance: { status: recorded } });
+    expect(committedInput().text).toContain(`, status ${recorded}.`);
+    expect(committedInput().text).toContain(`.]\n\n${text}`);
+    expect(await shownText()).toBe(text);
   });
 
   it("names an unlabeled empty success by agent and bounds the task excerpt", async () => {
     await presentSubagentResult({ ...base, label: undefined, reply: "  ", task: "x".repeat(400) });
     const input = committedInput();
-    expect(input.text).toBe("claw finished without a reply. Open the run to see what it did.");
+    const task = (input.provenance as { task: string }).task;
+    expect(await shownText()).toBe(
+      "claw finished without a reply. Open the run to see what it did.",
+    );
+    expect(input.text).toContain(`[Result from the Claw claw (agent claw, run run-claw)`);
+    expect(input.text).toContain(`Task: "${task}".`);
     expect(input.provenance).not.toHaveProperty("label");
-    expect((input.provenance as { task: string }).task).toHaveLength(120);
+    expect(task).toHaveLength(120);
   });
 
   it.each([

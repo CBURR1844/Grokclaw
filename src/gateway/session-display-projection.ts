@@ -1,6 +1,7 @@
 import { flattenMarkdownToPlainText } from "@openclaw/normalization-core/markdown-plain-text";
 import { asOptionalRecord as readRecord } from "@openclaw/normalization-core/record-coerce";
 import { truncateUtf16Safe } from "@openclaw/normalization-core/utf16-slice";
+import { projectAssistantDisplayContent } from "../shared/assistant-display-content.js";
 import { extractAssistantPhaseText } from "../shared/chat-message-content.js";
 import { stripEnvelope } from "./chat-sanitize.js";
 import { isSuppressedControlReplyText } from "./control-reply-text.js";
@@ -47,10 +48,12 @@ export function projectSessionDisplayMessage(
   message: unknown,
   options: SessionDisplayProjectionOptions = {},
 ): SessionDisplayProjection | null {
-  const entry = readRecord(message);
-  if (!entry || (options.view !== "model-context" && entry.display === false)) {
+  const record = readRecord(message);
+  if (!record || (options.view !== "model-context" && record.display === false)) {
     return null;
   }
+  // People see an assistant row's display content where it has one; the model sees its content.
+  const entry = options.view === "model-context" ? record : projectAssistantDisplayContent(record);
   const role = typeof entry.role === "string" ? entry.role.toLowerCase() : "";
   if (role !== "user" && role !== "assistant") {
     return null;

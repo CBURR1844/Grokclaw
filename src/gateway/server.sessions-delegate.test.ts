@@ -195,10 +195,12 @@ describe("sessions.delegate through the Gateway", () => {
   });
 
   it("shows two concurrent Claw results as forwarded rows without a bot turn", async () => {
+    const stored = new Map<string, unknown>();
     const stop = onSessionTranscriptUpdate((update) => {
       const automation = (update.message as { openclawAutomation?: { runId?: unknown } })
         ?.openclawAutomation;
       if (update.sessionKey === BOT_KEY && typeof automation?.runId === "string") {
+        stored.set(automation.runId, update.message);
         resultRow(automation.runId).resolve();
       }
     });
@@ -257,9 +259,30 @@ describe("sessions.delegate through the Gateway", () => {
           },
           __openclaw: expect.objectContaining({ turnBoundary: true }),
         });
-        expect(JSON.stringify(row?.content)).toContain(
-          `Findings for ${index === 0 ? "first task" : "second task"}`,
-        );
+        const task = index === 0 ? "first task" : "second task";
+        // People see the Claw's reply; the bot's model reads it under a header naming the Claw.
+        expect(row?.content).toEqual([
+          {
+            type: "text",
+            text: expect.stringMatching(
+              new RegExp(`^(?!\\[Result from).*Findings for ${task}$`, "s"),
+            ),
+          },
+        ]);
+        expect(stored.get(run.runId)).toMatchObject({
+          content: [
+            {
+              type: "text",
+              text: expect.stringMatching(
+                new RegExp(
+                  `^\\[Result from the Claw Researcher \\(agent claw, run ${run.runId}\\), status ok\\. ` +
+                    `Task: "${task}"\\.[^\\n]*\\]\\n\\n.*Findings for ${task}$`,
+                  "s",
+                ),
+              ),
+            },
+          ],
+        });
         const entry = subagentRuns.get(run.runId);
         expect(entry?.delivery?.status).toBe("delivered");
         expect(entry?.requesterSettleWake).toBeUndefined();

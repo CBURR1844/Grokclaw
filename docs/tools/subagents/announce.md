@@ -104,9 +104,9 @@ The requester's model is not asked to relay it, and no requester turn starts:
 - The run never arms the requester settle wake, so a batch of finished results
   does not wake the bot. A result that cannot be written by the delivery expiry
   ends as failed; it is never suspended into a blocked-delivery notice.
-- The run never registers a pause notice. A `sessions_yield` with
-  `waitFor: "message"` from the run does not pause it, so it finishes with its
-  final reply.
+- The run never registers a pause notice, so a `sessions_yield` with
+  `waitFor: "message"` from the run never wakes the bot. Unless it is waiting on
+  helpers of its own, the run does not pause and finishes with its final reply.
 - The run is invisible to the bot's own helper waves: a running result run does
   not hold up their wake, and the bot's `sessions_yield` does not list it as a
   child whose completion will arrive as a later turn.
@@ -119,15 +119,17 @@ The requester's model is not asked to relay it, and no requester turn starts:
   reset, replaced, or deleted, or can never accept results again (an expired
   Incognito chat, or one closed by restart recovery), delivery ends as a terminal
   non-delivery with no retry and no wake. While the chat is archived, still
-  initializing, or waiting for workspace setup, and after other commit failures,
-  delivery retries until the normal delivery expiry. `sessions.delegate` refuses
-  to start a run from a chat in one of those states.
+  initializing, paused for provider review, or waiting for workspace setup, and
+  after other commit failures, delivery retries until the normal delivery expiry.
+  `sessions.delegate` refuses to start a run from a chat in one of those states.
 
-The row stays in the requester transcript, so users can follow up on it. On later
-turns the bot's model reads it as input from the Claw, not as its own reply: the
-row is replayed as an `[Inter-session message]` turn from the Claw's session
-(`sourceTool=subagent_announce`), followed by the Claw's agent id, label, run id,
-task excerpt, and status, then the result text. The stored row is unchanged.
+The row stays in the requester transcript, so the bot sees the result on later
+turns and users can follow up on it. The row's model content opens with a header
+naming the Claw, its agent id, run id, status, and task excerpt, and saying that
+the text is the Claw's report rather than the bot's own reply. Every harness
+replays the row from that stored content. Its display content
+(`openclawDisplayContent`) holds only the result, which is what `chat.history`
+and session previews show.
 
 Result presentation supports native, one-shot runs only; it cannot be combined
 with `thread: true`, `mode: "session"`, `collect: true`, `completionTarget`, or

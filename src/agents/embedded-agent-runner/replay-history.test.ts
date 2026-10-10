@@ -3,7 +3,6 @@ import type { AgentMessage } from "openclaw/plugin-sdk/agent-core";
 import { describe, expect, it, vi } from "vitest";
 import { markInboundContextLabel } from "../../auto-reply/reply/inbound-context-marker.js";
 import { createAssistantMessageEventStream } from "../../llm/utils/event-stream.js";
-import { buildInterSessionPromptContext } from "../../sessions/input-provenance.js";
 import { OPENCLAW_TRANSCRIPT_ARTIFACT_API } from "../../shared/transcript-only-openclaw-assistant.js";
 import {
   INTERNAL_RUNTIME_CONTEXT_BEGIN,
@@ -541,76 +540,6 @@ describe("normalizeAssistantReplayContent", () => {
       ).toEqual([expect.objectContaining({ role: "user" }), realReply]);
     },
   );
-
-  it("presents a Claw's result row to the model as attributed inter-session input", () => {
-    const automationRow = (openclawAutomation: Record<string, string>) =>
-      ({
-        role: "assistant",
-        content: [{ type: "text", text: "Found three sources.\nSee the summary." }],
-        api: OPENCLAW_TRANSCRIPT_ARTIFACT_API,
-        provider: "openclaw",
-        model: "automation-result",
-        usage: createZeroUsageFixture(),
-        stopReason: "stop",
-        timestamp: 1_700_000_000_000,
-        openclawAutomation,
-      }) satisfies Extract<AgentMessage, { role: "assistant" }> & {
-        openclawAutomation: Record<string, string>;
-      };
-    const clawRow = automationRow({
-      kind: "subagent",
-      runId: "run-claw-1",
-      childSessionKey: "agent:researcher:subagent:abc",
-      agentId: "researcher",
-      label: "Researcher",
-      status: "ok",
-      task: "Find sources\nfor the brief",
-    });
-    const storedBytes = JSON.stringify(clawRow);
-    const explanation = buildInterSessionPromptContext({ kind: "inter_session" }).text.split(
-      "\n",
-    )[1];
-
-    const out = normalizeAssistantReplayContent([userMessage("Look into it"), clawRow]);
-
-    expect(out[1]).toEqual({
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: [
-            "[Inter-session message] sourceSession=agent:researcher:subagent:abc sourceChannel=internal sourceTool=subagent_announce isUser=false",
-            explanation,
-            "agent: researcher",
-            "label: Researcher",
-            "run_id: run-claw-1",
-            "task: Find sources for the brief",
-            "status: ok",
-            "",
-            "Found three sources.",
-            "See the summary.",
-          ].join("\n"),
-        },
-      ],
-      timestamp: 1_700_000_000_000,
-      provenance: {
-        kind: "inter_session",
-        sourceSessionKey: "agent:researcher:subagent:abc",
-        sourceChannel: "internal",
-        sourceTool: "subagent_announce",
-        runId: "run-claw-1",
-      },
-    });
-    // The stored row keeps its bytes, and a later replay pass leaves the presented turn as is.
-    expect(JSON.stringify(clawRow)).toBe(storedBytes);
-    expect(normalizeAssistantReplayContent(out)).toBe(out);
-    // A routine's own result stays the bot's assistant output.
-    const cronHistory = [
-      userMessage("Look into it"),
-      automationRow({ kind: "cron", jobId: "job-1", runId: "run-1" }),
-    ];
-    expect(normalizeAssistantReplayContent(cronHistory)).toBe(cronHistory);
-  });
 
   it("preserves an assistant carrying an invalid delivery-mirror marker", () => {
     const assistant = {
