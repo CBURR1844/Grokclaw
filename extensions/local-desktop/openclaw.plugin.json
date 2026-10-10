@@ -1,0 +1,22 @@
+{
+  "id": "local-desktop",
+  "categories": ["computer-use"],
+  "name": "Local Desktop",
+  "description": "Gives each bot its own Linux desktop in a Docker container on this machine.",
+  "activation": {
+    "onStartup": true
+  },
+  "enabledByDefault": true,
+  "contracts": {
+    "workerProviders": ["local-desktop"],
+    "tools": ["my_computer"]
+  },
+  "toolMetadata": {
+    "my_computer": { "profiles": ["coding", "messaging"] }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

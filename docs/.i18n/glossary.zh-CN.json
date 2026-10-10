@@ -840,6 +840,10 @@
     "target": "Cloudflare 插件参考"
   },
   {
+    "source": "Local Desktop plugin reference",
+    "target": "Local Desktop 插件参考"
+  },
+  {
     "source": "cloudflare",
     "target": "cloudflare"
   },

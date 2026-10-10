@@ -605,9 +605,8 @@ async function runGatewayCommandOnce(opts: GatewayRunOpts, hooks: GatewayRunRunt
   // default is deferred until after Tailscale mode is known (see below)
   // so that Tailscale's loopback constraint is respected.
   const VALID_BIND_MODES = new Set<string>(["loopback", "lan", "auto", "custom", "tailnet"]);
-  const bindExplicitRawStr = normalizeOptionalString(
-    toOptionString(opts.bind) ?? cfg.gateway?.bind,
-  );
+  const bindFlag = normalizeOptionalString(toOptionString(opts.bind));
+  const bindExplicitRawStr = bindFlag ?? normalizeOptionalString(cfg.gateway?.bind);
   if (bindExplicitRawStr !== undefined && !VALID_BIND_MODES.has(bindExplicitRawStr)) {
     defaultRuntime.error('Invalid --bind. Use "loopback", "lan", "tailnet", "auto", or "custom".');
     defaultRuntime.exit(1);
@@ -953,7 +952,9 @@ async function runGatewayCommandOnce(opts: GatewayRunOpts, hooks: GatewayRunRunt
         const startupConfigSnapshotReadForThisStart = startupConfigSnapshotReadForNextStart;
         startupConfigSnapshotReadForNextStart = undefined;
         return await startGatewayServer(port, {
-          bind,
+          // Only --bind pins the listener. The server reads gateway.bind from the config of
+          // each start, so an in-process restart applies a changed bind.
+          ...(bindFlag ? { bind: bindFlag as GatewayBindMode } : {}),
           ...(opts.updateCanary ? { updateCanary: true } : {}),
           ...(activeBootId ? { bootId: activeBootId } : {}),
           auth: authOverride,

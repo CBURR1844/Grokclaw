@@ -1228,6 +1228,32 @@ describe("gateway run option collisions", () => {
     expect(options.auth?.token).toBe("tok_run");
   });
 
+  it("leaves a configured bind to each start so in-process restarts apply bind changes", async () => {
+    configState.cfg = {
+      gateway: {
+        bind: "custom",
+        customBindHost: "172.17.0.1",
+        auth: { mode: "token", token: "tok_cfg" },
+      },
+    };
+    configState.snapshot = {
+      exists: true,
+      valid: true,
+      config: configState.cfg,
+      parsed: configState.cfg,
+    };
+    runGatewayLoop.mockImplementationOnce(async ({ start }: GatewayLoopParams) => {
+      await start();
+      await start();
+    });
+
+    await runGatewayCli(["gateway", "run", "--allow-unconfigured"]);
+
+    expect(startGatewayServer).toHaveBeenCalledTimes(2);
+    expect(gatewayStartOptions(0)).not.toHaveProperty("bind");
+    expect(gatewayStartOptions(1)).not.toHaveProperty("bind");
+  });
+
   it("leaves service environment unchanged until Doctor repairs invalid config", async () => {
     detectRespawnSupervisor.mockReturnValue("systemd");
     const { createConfigResolutionFacts, setConfigResolutionFacts } =
@@ -1641,7 +1667,7 @@ describe("gateway run option collisions", () => {
         expect(ensureDevGatewayConfig).toHaveBeenCalledWith({ reset: true });
       } else {
         const options = gatewayStartOptions();
-        expect(options.bind).toBe("loopback");
+        expect(options.bind).toBeUndefined();
         expect(options.startupConfigSnapshotRead?.snapshot?.valid).toBe(false);
       }
     },
@@ -1694,7 +1720,7 @@ describe("gateway run option collisions", () => {
 
     await runGatewayCli(["gateway", "run", "--allow-unconfigured"]);
 
-    expect(gatewayStartOptions().bind).toBe("loopback");
+    expect(gatewayStartOptions().bind).toBeUndefined();
   });
 
   it("reads gateway password from --password-file", async () => {

@@ -87,6 +87,46 @@ Crabbox setup uses an environment-owned one-use pairing credential and the confi
   AWS admission requires `providerMetadata.instanceProfileAttached` to be false.
 </Note>
 
+### Local desktop profile
+
+The bundled `local-desktop` provider gives one agent its own Linux desktop in a Docker container on the Gateway host. Each lease is a fresh container running XFCE on a private VNC display and an ephemeral OpenClaw node that installs the Gateway's exact build. The agent's home directory is a Docker volume that outlives leases, so files and installed software persist between chats. Nothing is published to the host network: the node connects out to the Gateway and relays the desktop.
+
+Set it up with one admin call instead of editing config:
+
+```bash
+openclaw gateway call localDesktop.setup --params '{"agentId":"main"}'
+```
+
+Setup refuses with a next step when Docker is unavailable, the agent does not exist, Gateway auth is `none`, or the host cannot listen on Docker's network. Otherwise it:
+
+- binds the Gateway to Docker's bridge address (`gateway.bind: "custom"`, `gateway.customBindHost`) unless the Gateway already advertises a non-loopback address, and the Gateway restarts to listen there. The Gateway keeps listening on `127.0.0.1`;
+- turns on `cloudWorkers.desktop`, so the chat's Desktop panel can show and hand over the computer;
+- adds a profile named `computer-<agentId>`;
+- adds `computer` and `my_computer` to the agent's `tools.allow` (when it has one) or `tools.alsoAllow`.
+
+```json5
+{
+  cloudWorkers: {
+    desktop: true,
+    profiles: {
+      "computer-main": {
+        provider: "local-desktop",
+        install: "bundle",
+        suspendAfter: "30m",
+        settings: { agentId: "main" },
+      },
+    },
+  },
+}
+```
+
+- `settings.agentId` (required, the only setting): the agent whose disk the computer uses. Unknown settings are rejected.
+- The agent opens its computer with the `my_computer` tool (`open`, `status`, `close`) and passes the returned `environmentId` to `computer`. Both tools are owner-only and are not offered in sandboxed runs.
+- One open computer per agent disk: opening it from a second chat fails until the first chat closes it.
+- The first open builds the image (tagged by a hash of the plugin's image files) and installs OpenClaw on the agent's disk; later opens reuse both. The image trusts the Gateway's `NODE_EXTRA_CA_CERTS`, so downloads work behind a TLS-inspecting proxy the host already trusts.
+- Containers drop all capabilities, run with `no-new-privileges`, and are limited to 2 GiB of memory. Expect about 1 GiB per open computer.
+- Requires Docker Engine on Linux. Docker Desktop on macOS and Windows has no host bridge address and is refused by setup.
+
 ### Static SSH development profile
 
 ```json5

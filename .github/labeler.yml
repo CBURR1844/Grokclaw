@@ -635,6 +635,10 @@
   - changed-files:
       - any-glob-to-any-file:
           - "extensions/lmstudio/**"
+"extensions: local-desktop":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "extensions/local-desktop/**"
 "extensions: litellm":
   - changed-files:
       - any-glob-to-any-file:

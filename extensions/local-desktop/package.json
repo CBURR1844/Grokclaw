@@ -1,0 +1,27 @@
+{
+  "name": "@openclaw/local-desktop",
+  "version": "2026.9.9",
+  "private": true,
+  "description": "OpenClaw worker provider that runs each bot's computer in a local Docker container",
+  "type": "module",
+  "devDependencies": {
+    "@openclaw/plugin-sdk": "workspace:*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "build": {
+      "staticAssets": [
+        {
+          "source": "./assets/Dockerfile",
+          "output": "assets/Dockerfile"
+        },
+        {
+          "source": "./assets/desktop-start.sh",
+          "output": "assets/desktop-start.sh"
+        }
+      ]
+    }
+  }
+}
