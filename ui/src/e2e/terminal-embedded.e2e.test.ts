@@ -310,9 +310,15 @@ suite.define(() => {
       await expect.poll(async () => (await gateway.getRequests("terminal.input")).length).toBe(3);
       const themeColors = await page.evaluate(() => {
         const styles = getComputedStyle(document.documentElement);
-        return ["--text", "--bg", "--accent"].map((property) =>
-          styles.getPropertyValue(property).trim(),
-        );
+        const canvas = document.createElement("canvas").getContext("2d");
+        if (!canvas) {
+          throw new Error("expected a 2D canvas");
+        }
+        // Built CSS may shorten #ffffff to #fff; a canvas reads back the six-digit form.
+        return ["--text", "--bg", "--accent"].map((property) => {
+          canvas.fillStyle = styles.getPropertyValue(property).trim();
+          return String(canvas.fillStyle);
+        });
       });
       expect((await gateway.getRequests("terminal.input")).map(({ params }) => params)).toEqual(
         themeColors.map((color, index) => ({
