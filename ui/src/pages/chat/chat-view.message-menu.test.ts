@@ -28,7 +28,7 @@ describe("right-click whole-message actions", () => {
     const onReadAloud = vi.fn();
     const { bubble } = renderChatBubble(
       {
-        commands: { read, run },
+        commands: { read, claws: () => [], run },
         onReadAloud,
         onCompanionStageAttachment: vi.fn(() => true),
         onSetReply: vi.fn(),
@@ -60,7 +60,11 @@ describe("right-click whole-message actions", () => {
   it("disables Save as a skill with the command's reason and omits absent actions", () => {
     const { bubble } = renderChatBubble(
       {
-        commands: { read: () => ({ disabledReason: "Reconnect first" }), run: vi.fn() },
+        commands: {
+          read: () => ({ disabledReason: "Reconnect first" }),
+          claws: () => [],
+          run: vi.fn(),
+        },
         onSetReply: vi.fn(),
       },
       { messageId: "message-1", text: "deploy the site" },

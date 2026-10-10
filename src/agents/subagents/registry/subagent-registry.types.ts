@@ -205,6 +205,8 @@ export type SubagentRunRecord = Omit<SubagentRunReadRecord, "execution" | "colle
   suppressCompletionDelivery?: boolean;
   expectsCompletionMessage?: boolean;
   completionTarget?: "parent";
+  /** Commits the final reply as a result row; the requester's model is never woken. */
+  completionPresentation?: "result";
   completionRequesterSessionId?: string;
   completionRequesterLifecycleRevision?: string;
   wakeOnDescendantSettle?: boolean;

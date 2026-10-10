@@ -134,3 +134,60 @@ it("routes forwarded cron runs with primary and keyboard activation, preserving 
   expect(onNavigate).not.toHaveBeenCalled();
   expect(onOpenSessionLink).not.toHaveBeenCalled();
 });
+
+it.each([
+  ["ok", null],
+  ["timeout", "Didn't finish"],
+] as const)("frames a Claw's %s result with its task", (status, failure) => {
+  container = document.createElement("div");
+  const childSessionKey = "agent:sorter:subagent:run-1";
+  const group: MessageGroup = {
+    kind: "group",
+    key: "claw-result",
+    role: "assistant",
+    timestamp: 0,
+    visibleContent: "text",
+    isStreaming: false,
+    messages: [
+      {
+        key: "claw-result-message",
+        hasVisibleContent: true,
+        message: {
+          role: "assistant",
+          content: "46 emails sorted.",
+          openclawAutomation: {
+            kind: "subagent",
+            runId: "run-1",
+            childSessionKey,
+            agentId: "sorter",
+            label: "Inbox Sorter",
+            status,
+            task: "Sort my inbox",
+          },
+        },
+      },
+    ],
+    senderSession: { sessionKey: childSessionKey, agentId: "sorter", label: "Inbox Sorter" },
+  };
+  render(
+    renderMessageGroup(group, {
+      showReasoning: false,
+      showToolCalls: false,
+      avatarPlacement: "none",
+      agentId: "main",
+      agents: [{ id: "main" }, { id: "sorter", name: "Inbox Sorter" }],
+      mainKey: "main",
+    }),
+    container,
+  );
+
+  expect(
+    container.querySelector(".chat-group--forwarded")?.getAttribute("data-result-status"),
+  ).toBe(status);
+  expect(container.querySelector(".chat-reply-attribution__task")?.textContent).toBe(
+    "Task: Sort my inbox",
+  );
+  expect(
+    container.querySelector(".chat-reply-attribution__result-failed")?.textContent ?? null,
+  ).toBe(failure);
+});

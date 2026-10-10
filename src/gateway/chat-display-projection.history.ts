@@ -30,6 +30,7 @@ import {
   isEmptyTextOnlyContent,
   isProjectedForwardedMessage,
   isForwardedUserMessage,
+  readSubagentResultSender,
   isCronRunMessage,
   type RoleContentMessage,
 } from "./chat-display-projection.helpers.js";
@@ -561,6 +562,10 @@ function resolveForwardedSenderSession(
   message: Record<string, unknown>,
   resolveCronJobName: (jobId: string) => string | undefined,
 ): { sessionKey?: string; agentId?: string; label?: string } | undefined {
+  const resultSender = readSubagentResultSender(message);
+  if (resultSender) {
+    return resultSender;
+  }
   const { sourceSessionKey, agentId, jobId } = readForwardedSender(message);
   const label = jobId ? (resolveCronJobName(jobId) ?? "Automation") : undefined;
   return sourceSessionKey
@@ -610,12 +615,19 @@ export function projectForwardedMessages(
     const senderSession = resolveForwardedSenderSession(message, resolveName);
     if (message.role === "assistant") {
       const previous = readRecord(message.senderSession);
-      if (previous?.label === senderSession?.label) {
+      if (
+        previous?.sessionKey === senderSession?.sessionKey &&
+        previous?.label === senderSession?.label
+      ) {
         return message;
       }
       changed = true;
       return {
         ...message,
+        // A Claw result arrives after the turn that requested it; it never continues that reply.
+        ...(readSubagentResultSender(message)
+          ? { __openclaw: { ...readRecord(message["__openclaw"]), turnBoundary: true } }
+          : {}),
         senderSession,
         senderLabel: `Forwarded from ${senderSession?.label ?? senderSession?.agentId}`,
       };

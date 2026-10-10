@@ -654,8 +654,10 @@ function planTerminalCompletion(
     completion.capturedAt = endedAt;
   }
 
+  // A result run still owes the chat a visible row, so its empty success is presented.
   const closesAsIntentionalNonDelivery =
     entry.expectsCompletionMessage === true &&
+    entry.completionPresentation !== "result" &&
     executionOutcome.status === "ok" &&
     terminalReply?.disposition === "empty" &&
     terminalReply.code !== "message-tool-not-called" &&

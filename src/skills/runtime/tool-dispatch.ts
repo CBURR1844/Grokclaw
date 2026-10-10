@@ -5,6 +5,7 @@ import type { createOpenClawToolsAsync } from "../../agents/openclaw-tools.js";
 import { filterRequesterYieldTools } from "../../agents/openclaw-tools.requester-yield.js";
 import { resolveRequesterToolPolicies } from "../../agents/requester-tool-policy.js";
 import { resolveSandboxRuntimeStatus } from "../../agents/sandbox/runtime-status.js";
+import { resolveStoredSessionPermissionPolicy } from "../../agents/tool-fs-policy.js";
 import { buildDeclaredToolAllowlistContext } from "../../agents/tool-policy-declared-context.js";
 import {
   applyToolPolicyPipeline,
@@ -74,6 +75,8 @@ export async function resolveSkillDispatchTools(
       toolName?: string;
     };
     groupId?: string;
+    /** Host-selected display for runs this tool set spawns; never a model-facing argument. */
+    completionPresentation?: "result";
   },
   dependencies: SkillToolDispatchDependencies,
 ): Promise<AnyAgentTool[]> {
@@ -128,6 +131,7 @@ export async function resolveSkillDispatchTools(
     cfg: params.cfg,
     agentId: resolvedAgentId,
     sessionKey: params.sessionKey,
+    preparedSessionEntry: params.sessionEntry,
   });
   const sandboxPolicy = sandboxRuntime.sandboxed ? sandboxRuntime.toolPolicy : undefined;
   const ownerOnlyCoreToolPolicy = !params.senderIsOwner
@@ -185,6 +189,11 @@ export async function resolveSkillDispatchTools(
     sessionConfigSource: "runtime",
     allowGatewaySubagentBinding: true,
     sandboxed: sandboxRuntime.sandboxed,
+    // Helpers spawned here keep the chat's permission mode, as on the model's own turn.
+    sessionPermissionPolicy: resolveStoredSessionPermissionPolicy(
+      params.sessionEntry,
+      params.workspaceDir,
+    ),
     requesterAgentIdOverride: params.agentId,
     requesterSenderId: params.senderId,
     senderIsOwner: params.senderIsOwner,
@@ -199,6 +208,7 @@ export async function resolveSkillDispatchTools(
     inheritedToolAllowlist,
     inheritedToolDenylist: explicitDenylist,
     inheritedToolPolicySource: requesterPolicies.inheritedToolPolicySource,
+    completionPresentation: params.completionPresentation,
   });
   const policyFiltered = applyToolPolicyPipeline({
     tools,

@@ -17,6 +17,7 @@ export type PendingFinalDeliveryPayload = {
   outcome?: SubagentRunOutcome;
   expectsCompletionMessage?: boolean;
   completionTarget?: "parent";
+  completionPresentation?: "result";
   completionRequesterSessionId?: string;
   spawnMode?: SpawnSubagentMode;
   wakeOnDescendantSettle?: boolean;

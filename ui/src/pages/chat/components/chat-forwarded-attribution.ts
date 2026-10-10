@@ -7,6 +7,7 @@ import { registerChatMessageMetadataEnglish } from "../../../i18n/locales/en-cha
 import type { MessageGroup } from "../../../lib/chat/chat-types.ts";
 import { isSubagentSessionKey, parseAgentSessionKey } from "../../../lib/sessions/session-key.ts";
 import { renderForwardedAvatar } from "../chat-avatar.ts";
+import { readClawResult } from "../chat-claw-result.ts";
 
 registerChatMessageMetadataEnglish();
 
@@ -26,9 +27,11 @@ type ForwardedAttributionOptions = Parameters<typeof renderForwardedAvatar>[1] &
  * sessions keep their session identity instead of presenting as another agent.
  */
 export function renderForwardedAttribution(
-  group: Pick<MessageGroup, "senderSession">,
+  group: Pick<MessageGroup, "senderSession"> & Partial<Pick<MessageGroup, "messages">>,
   opts: ForwardedAttributionOptions,
 ) {
+  // A Claw's result names its task and says when the run didn't finish.
+  const result = group.messages ? readClawResult(group.messages) : null;
   const sourceSessionKey = group.senderSession?.sessionKey;
   const sourceParsed = sourceSessionKey ? parseAgentSessionKey(sourceSessionKey) : null;
   const sourceCronRun = /^cron:([^:]+):run:([^:]+)$/u.exec(sourceParsed?.rest ?? "");
@@ -149,6 +152,20 @@ export function renderForwardedAttribution(
                 }</span
               >`
       }
+      ${
+        result && result.status !== "ok"
+          ? html`<span class="chat-reply-attribution__result-failed"
+              >${t("chat.messages.resultFailed")}</span
+            >`
+          : nothing
+      }
     </span>
+    ${
+      result?.task
+        ? html`<span class="chat-reply-attribution__task"
+            >${t("chat.messages.resultTask", { excerpt: result.task })}</span
+          >`
+        : nothing
+    }
   `;
 }

@@ -56,6 +56,8 @@ export async function adoptSubagentRunForRequesterTurnInRuns(params: {
           (!entry.requesterTurnRunId || entry.requesterTurnRunId === requesterTurnRunId) &&
           entry.expectsCompletionMessage === true &&
           entry.collect !== true &&
+          // The host owns a result run's completion; the requester's turns never adopt it.
+          entry.completionPresentation !== "result" &&
           !entry.killIntent &&
           !entry.killReconciliation &&
           entry.suppressCompletionDelivery !== true &&
@@ -165,6 +167,8 @@ export function listUnsettledRequesterChildrenInRuns(params: {
     if (
       entry.collect === true ||
       entry.expectsCompletionMessage !== true ||
+      // A result run's reply lands as a host card, never as a later turn of this session.
+      entry.completionPresentation === "result" ||
       (excludedTurnRunId !== undefined &&
         (entry.requesterTurnRunId === excludedTurnRunId ||
           isRequesterSettleWakeForRun({

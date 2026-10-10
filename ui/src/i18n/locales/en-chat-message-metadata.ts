@@ -79,6 +79,8 @@ const enChatMessageMetadata = {
       forwardedAutomation: "Automation",
       forwardedFromAgent: "Forwarded from {agentId}",
       forwardedMessage: "Forwarded message",
+      resultTask: "Task: {excerpt}",
+      resultFailed: "Didn't finish",
       fullContentLoadExhausted: "Could not load the full message.",
       voiceNote: "Voice note",
       duplicatesCollapsed: "{count} consecutive identical messages collapsed",

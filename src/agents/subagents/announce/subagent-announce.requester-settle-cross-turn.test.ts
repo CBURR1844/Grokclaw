@@ -11,6 +11,7 @@ import {
 import { maybeWakeRequesterAfterAllChildrenSettled } from "./subagent-announce.requester-settle-wake.js";
 import {
   REQUESTER,
+  deliveredCallArg,
   deliverSpy,
   makeSettledChild,
 } from "./subagent-announce.requester-settle-wake.test-support.js";
@@ -112,3 +113,58 @@ it.each(["older batch", "cross-agent descendant", "paused member", "pending clea
     expect(deliverSpy).toHaveBeenCalledTimes(early ? 2 : 1);
   },
 );
+
+it("wakes for ordinary helpers while a result run is still running", async () => {
+  const now = Date.now();
+  // The bot's own helpers settled; the delegated Claw runs on and is presented as a card.
+  const helper = (runId: string, endedAt: number) =>
+    makeSettledChild({
+      runId,
+      requesterAgentId: "main",
+      createdAt: now - 300,
+      startedAt: now - 300,
+      endedAt,
+      outcome: { status: "ok" },
+      cleanupCompletedAt: now,
+    });
+  const last = helper("helper-b", now - 10);
+  const claw = makeSettledChild({
+    runId: "claw",
+    requesterAgentId: "main",
+    completionPresentation: "result",
+    createdAt: now - 200,
+    execution: { status: "running", startedAt: now - 200 },
+    delivery: { status: "pending" },
+    requesterSettleWake: undefined,
+  });
+  const runs = new Map(
+    [helper("helper-a", now - 20), last, claw].map((entry) => [entry.runId, entry]),
+  );
+  registryRuntimeMock.listSubagentRunsForRequester.mockImplementation((key) =>
+    [...runs.values()].filter((entry) => entry.requesterSessionKey === key),
+  );
+  readDescendantFacts.mockImplementation(async (params) => ({
+    unsettled: hasDescendantRunAwaitingSettleFromRuns(
+      runs,
+      params.requesterSessionKey,
+      params.settledEntry.runId,
+      params.requesterAgentId,
+      params.requesterStorePath,
+      params.settledBefore,
+      params.rootRunIds,
+    ),
+    active: countActiveDescendantRunsFromRuns(
+      runs,
+      params.requesterSessionKey,
+      params.requesterAgentId,
+      params.requesterStorePath,
+      params.rootRunIds,
+    ),
+  }));
+
+  expect(await maybeWakeRequesterAfterAllChildrenSettled(wakeParams({ settledEntry: last }))).toBe(
+    true,
+  );
+  expect(deliverSpy).toHaveBeenCalledOnce();
+  expect(String(deliveredCallArg().directIdempotencyKey)).toContain("helper-a,helper-b");
+});

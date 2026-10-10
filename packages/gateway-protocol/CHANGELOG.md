@@ -14,6 +14,14 @@ authoring dates (2026), not package publication dates.
   agents whose `sessions_spawn` target policy admits that agent; operator roles narrow it to
   agents they may see. Spawn admission stays the authority. Unrelated to
   `createdVia: "claw"`.
+- Add `sessions.delegate` (`operator.write`, since `2026.9`), additive inside v4 with no
+  version bump; clients detect it through the method list. Params are the closed object
+  `{ sessionKey, sessionId?, targetAgentId, task (1..16000), idempotencyKey (1..128) }`;
+  the result is `{ status: "accepted", runId, childSessionKey }`. The run's final reply is
+  written to the chat as an `automation-result` assistant row whose `openclawAutomation`
+  gains the `kind: "subagent"` shape `{ runId, childSessionKey, agentId, label?, status,
+  task? }`. `chat.history` projects that row with `senderSession`, `senderLabel`, and
+  `__openclaw.turnBoundary`, keeping the raw `openclawAutomation`.
 
 ## Deferred to the next wire version
 

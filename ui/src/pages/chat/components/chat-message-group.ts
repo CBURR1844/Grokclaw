@@ -23,6 +23,7 @@ import { resolveIdentityHue } from "../../../lib/identity-avatar.ts";
 import { DEFAULT_AGENT_ID } from "../../../lib/sessions/session-key.ts";
 import { resolveAssistantReplyPhase } from "../chat-assistant-reply.ts";
 import { renderChatAvatar, renderForwardedAvatar } from "../chat-avatar.ts";
+import { readClawResult } from "../chat-claw-result.ts";
 import { ownSessionLaunchCalls } from "../chat-spawned-subagent.ts";
 import { transcriptRunId } from "../chat-thread-run-identity.ts";
 import { persistedMessageEntryId, readPendingSendStatus } from "../chat-thread.ts";
@@ -572,6 +573,7 @@ export function renderMessageGroup(group: MessageGroup, options: RenderMessageGr
         isForwarded ? " chat-group--forwarded" : ""
       }${senderHue === null ? "" : " chat-group--sender-tint"}${holdsReplyRow ? " chat-group--reply" : ""}"
       style=${senderHue === null ? nothing : `--chat-sender-hue: ${senderHue}`}
+      data-result-status=${(isForwarded && readClawResult(group.messages)?.status) || nothing}
       data-chat-row-key=${group.key}
       data-file-session-key=${sourceSessionKey ?? nothing}
     >

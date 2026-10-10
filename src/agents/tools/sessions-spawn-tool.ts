@@ -581,6 +581,7 @@ export function createSessionsSpawnTool(
           inheritedToolAllowlist: opts?.inheritedToolAllowlist,
           inheritedToolDenylist: opts?.inheritedToolDenylist,
           inheritedToolPolicySource: opts?.inheritedToolPolicySource,
+          completionPresentation: opts?.completionPresentation,
           workspaceDir: opts?.workspaceDir,
           sessionPermissionPolicy: opts?.sessionPermissionPolicy,
         });

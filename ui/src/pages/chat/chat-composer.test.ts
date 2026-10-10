@@ -116,7 +116,7 @@ describe("composer with typed commands off", () => {
     const commandsOnly = renderComposer({
       slashCommands: false,
       uploadConfig,
-      commands: { read: () => ({ disabledReason: null }), run: vi.fn() },
+      commands: { read: () => ({ disabledReason: null }), claws: () => [], run: vi.fn() },
     });
     expect(
       typeSlash(commandsOnly.container.querySelector<HTMLTextAreaElement>("textarea")!)

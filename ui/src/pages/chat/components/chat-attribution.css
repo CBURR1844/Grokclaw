@@ -13,3 +13,23 @@
   width: 14px;
   height: 14px;
 }
+
+/* A Claw's result: its task under the source line, and a mark when the run didn't finish. */
+.chat-reply-attribution__task {
+  display: block;
+  max-width: var(--chat-message-max-width, 760px);
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-reply-attribution__result-failed {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--danger-subtle);
+  color: var(--danger);
+  font-weight: 600;
+}

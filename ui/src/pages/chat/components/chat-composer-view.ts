@@ -110,7 +110,7 @@ export function plusMenuCommandActions(commands: ChatCommandControls | undefined
             icon,
             disabled: state.disabledReason !== null,
             title: state.disabledReason,
-            onSelect: () => commands?.run(command),
+            onSelect: () => void commands?.run(command),
           },
         ]
       : [];

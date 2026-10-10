@@ -131,8 +131,10 @@ export const finalizeSubagentCleanup = async (
   if (announceOutcome === "delivered" || announceOutcome === "intentional_non_delivery") {
     let terminalNonDelivery = false;
     await commit((draft) => {
+      // A dropped result has no requester turn to hand off to.
       terminalNonDelivery =
-        announceOutcome === "intentional_non_delivery" && draft.delivery?.status === "failed";
+        announceOutcome === "intentional_non_delivery" &&
+        (draft.delivery?.status === "failed" || draft.completionPresentation === "result");
       const delivery = ensureDeliveryState(draft);
       const shouldCreditDelivery =
         announceOutcome === "delivered" || delivery.status === "delivered";
@@ -401,7 +403,10 @@ async function finishSubagentCleanup(
     entry,
     cleanup,
     completedAt: args.completedAt ?? Date.now(),
-    skipRequesterSettleWake: args.skipRequesterSettleWake,
+    // Every cleanup arming path passes here; a result run must never start a requester turn.
+    // Result runs also never suspend (shouldSuspendPendingFinalDelivery) or pause on a notice.
+    skipRequesterSettleWake:
+      args.skipRequesterSettleWake || entry.completionPresentation === "result",
     stateContext,
     isCurrent: cleanupOwnerCurrent,
   });

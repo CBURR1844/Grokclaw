@@ -1,8 +1,10 @@
 import { SUBAGENT_ENDED_REASON_COMPLETE } from "./subagent-lifecycle-events.js";
 import type { SubagentRunRecord } from "./subagent-registry.types.js";
 
+/** Suspension hands an undelivered success to a requester wake; a result run never wakes it. */
 export const shouldSuspendPendingFinalDelivery = (entry: SubagentRunRecord) =>
   entry.expectsCompletionMessage === true &&
+  entry.completionPresentation !== "result" &&
   entry.endedReason === SUBAGENT_ENDED_REASON_COMPLETE &&
   entry.execution.outcome?.status === "ok";
 

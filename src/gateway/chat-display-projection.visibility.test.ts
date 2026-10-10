@@ -262,3 +262,73 @@ it.each(["state_contention", "unknown"])(
     expect(JSON.stringify(result)).not.toContain("PRIVATE_");
   },
 );
+
+describe("Claw result rows", () => {
+  const automation = {
+    kind: "subagent",
+    runId: "run-claw",
+    childSessionKey: "agent:claw:subagent:child",
+    agentId: "claw",
+    label: "Researcher",
+    status: "ok",
+    task: "Summarize the thread",
+  };
+  const resultRow = (openclawAutomation: Record<string, unknown>, seq: number) => ({
+    ...assistantTextMessage("Here is the summary.", seq),
+    model: "automation-result",
+    openclawAutomation,
+  });
+
+  it("projects the host-written sender as a forwarded message that starts a new turn", () => {
+    const projected = projectChatDisplayMessages([
+      userTextMessage("Look into this."),
+      assistantTextMessage("Sent it to Researcher.", 2),
+      resultRow(automation, 3),
+      resultRow({ ...automation, label: undefined }, 4),
+    ]);
+
+    expect(projected.slice(2)).toEqual([
+      {
+        ...resultRow(automation, 3),
+        __openclaw: { seq: 3, turnBoundary: true },
+        senderLabel: "Forwarded from Researcher",
+        senderSession: {
+          sessionKey: "agent:claw:subagent:child",
+          agentId: "claw",
+          label: "Researcher",
+        },
+      },
+      {
+        ...resultRow({ ...automation, label: undefined }, 4),
+        __openclaw: { seq: 4, turnBoundary: true },
+        senderLabel: "Forwarded from claw",
+        senderSession: { sessionKey: "agent:claw:subagent:child", agentId: "claw" },
+      },
+    ]);
+    expect(projectChatDisplayMessages(projected)).toEqual(projected);
+  });
+
+  it("ignores automation rows without a complete subagent sender", () => {
+    const cron = resultRow({ kind: "cron", jobId: "job", runId: "run" }, 1);
+    const partial = resultRow({ ...automation, childSessionKey: "" }, 2);
+    expect(projectChatDisplayMessages([cron, partial])).toEqual([cron, partial]);
+  });
+});
+
+it("projects an unlabeled forwarded assistant row from its source session", () => {
+  const message = {
+    ...assistantTextMessage("Peer update.", 1),
+    provenance: {
+      kind: "inter_session",
+      sourceTool: "sessions_send",
+      sourceSessionKey: "agent:main:main",
+    },
+  };
+  expect(projectChatDisplayMessages([message])).toEqual([
+    {
+      ...message,
+      senderLabel: "Forwarded from main",
+      senderSession: { sessionKey: "agent:main:main", agentId: "main" },
+    },
+  ]);
+});

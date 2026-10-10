@@ -1,10 +1,9 @@
 // Commits detached background results into an existing conversation generation.
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
 import { makeZeroUsageSnapshot } from "../agents/usage.js";
-import { resolveSessionWorkStartError } from "../config/sessions/lifecycle.js";
 import { resolveSessionStorePathCore } from "../config/sessions/paths.js";
+import { readResolvedSessionEntryInWorker } from "../config/sessions/session-accessor.entry.js";
 import {
-  loadSessionEntryReadOnly,
   persistSessionTranscriptTurn,
   type SessionTranscriptTurnPersistOptions,
 } from "../config/sessions/session-accessor.js";
@@ -13,6 +12,7 @@ import {
   readTranscriptEventMessage,
 } from "../config/sessions/session-accessor.sqlite-read.js";
 import { findTranscriptEvent } from "../config/sessions/session-transcript-match.js";
+import { resolveSessionWorkStartBlock } from "../config/sessions/session-work-start.js";
 import type { SessionTranscriptAssistantMessage } from "../config/sessions/transcript.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { racePromiseWithAbortSignal } from "../infra/abort-signal.js";
@@ -30,15 +30,26 @@ import {
 // must stay outside the transcript-only delivery-mirror model set.
 const AUTOMATION_RESULT_MODEL = "automation-result" as const;
 
-type BackgroundSessionResultCommit =
+/**
+ * "rebound" (replaced or deleted) and "unavailable" (expired incognito, restart tombstone) are
+ * final for the pinned generation. "not_committed" may commit on retry, including while the
+ * chat is initializing, archived, paused for review, or waiting for workspace setup.
+ */
+export type BackgroundSessionResultCommit =
   | { ok: true; messageId: string }
-  | { ok: false; reason: string };
+  | { ok: false; kind: "rebound" | "unavailable" | "not_committed"; reason: string };
 
-type BackgroundSessionResultProvenance = {
-  kind: "cron";
-  jobId: string;
-  runId: string;
-};
+type BackgroundSessionResultProvenance =
+  | { kind: "cron"; jobId: string; runId: string }
+  | {
+      kind: "subagent";
+      runId: string;
+      childSessionKey: string;
+      agentId: string;
+      label?: string;
+      status: "ok" | "error" | "timeout" | "stopped";
+      task?: string;
+    };
 
 /** Serializes a background assistant result behind active work on its target conversation. */
 export async function commitBackgroundResultToSession(params: {
@@ -60,7 +71,11 @@ export async function commitBackgroundResultToSession(params: {
   const text = normalizeOptionalString(params.text);
   const idempotencyKey = normalizeOptionalString(params.idempotencyKey);
   if (!sessionKey || !text || !idempotencyKey) {
-    return { ok: false, reason: "background session result is missing required data" };
+    return {
+      ok: false,
+      kind: "not_committed",
+      reason: "background session result is missing required data",
+    };
   }
 
   const storePath = resolveSessionStorePathCore(params.config.session?.store, {
@@ -68,7 +83,11 @@ export async function commitBackgroundResultToSession(params: {
   });
   const expectedSessionId = normalizeOptionalString(params.expectedGeneration.sessionId);
   if (!expectedSessionId) {
-    return { ok: false, reason: "background session result has an invalid expected generation" };
+    return {
+      ok: false,
+      kind: "rebound",
+      reason: "background session result has an invalid expected generation",
+    };
   }
   const expectedLifecycleRevision = normalizeOptionalString(
     params.expectedGeneration.lifecycleRevision,
@@ -88,24 +107,32 @@ export async function commitBackgroundResultToSession(params: {
     },
     run: async () => {
       params.assertCurrent?.();
-      const current = loadSessionEntryReadOnly({
+      const current = await readResolvedSessionEntryInWorker({
         agentId: params.agentId,
+        cfg: params.config,
         sessionKey,
-        storePath,
-        readConsistency: "latest",
       });
+      params.assertCurrent?.();
       if (
         current?.sessionId !== expectedSessionId ||
         normalizeOptionalString(current.lifecycleRevision) !== expectedLifecycleRevision
       ) {
-        return { ok: false, reason: `session rebound for sessionKey: ${sessionKey}` };
+        return {
+          ok: false,
+          kind: "rebound",
+          reason: `session rebound for sessionKey: ${sessionKey}`,
+        };
       }
-      const unavailable = resolveSessionWorkStartError(sessionKey, current, {
+      const blocked = resolveSessionWorkStartBlock(sessionKey, current, {
         expectedSessionId,
         purpose: "accepted-result-settlement",
       });
-      if (unavailable) {
-        return { ok: false, reason: unavailable };
+      if (blocked) {
+        return {
+          ok: false,
+          kind: blocked.recoverable ? "not_committed" : "unavailable",
+          reason: blocked.message,
+        };
       }
       const scope = {
         agentId: params.agentId,
@@ -119,7 +146,11 @@ export async function commitBackgroundResultToSession(params: {
       const priorMessage = prior && readTranscriptEventMessage(prior.event);
       const priorId = prior && readTranscriptEventId(prior.event);
       if (prior && (!priorMessage || !priorId)) {
-        return { ok: false, reason: "background result transcript identity is unavailable" };
+        return {
+          ok: false,
+          kind: "not_committed",
+          reason: "background result transcript identity is unavailable",
+        };
       }
       const displayContent = priorMessage
         ? undefined
@@ -177,7 +208,11 @@ export async function commitBackgroundResultToSession(params: {
       const appended = committed.messages[0];
       return appended
         ? { ok: true, messageId: appended.messageId }
-        : { ok: false, reason: committed.rejectedReason ?? "background result was not committed" };
+        : {
+            ok: false,
+            kind: "not_committed",
+            reason: committed.rejectedReason ?? "background result was not committed",
+          };
     },
   });
 }

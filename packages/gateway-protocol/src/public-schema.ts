@@ -667,6 +667,11 @@ export {
   SessionsActivitySummaryEnsureResultSchema,
 } from "./schema/sessions-activity-summary.js";
 
+export {
+  SessionsDelegateParamsSchema,
+  SessionsDelegateResultSchema,
+} from "./schema/sessions-delegate.js";
+
 export * from "./schema/sessions-involvement.js";
 
 export * from "./schema/catalog.js";

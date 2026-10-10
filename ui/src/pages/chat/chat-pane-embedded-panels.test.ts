@@ -17,6 +17,7 @@ import {
 } from "../../test-helpers/chat-pane-embedded-panels.ts";
 import { gatewayHelloForMethods } from "../../test-helpers/gateway-methods.ts";
 import { resolveChatAgentId } from "./chat-agent-id.ts";
+import type { ChatCommandControls } from "./chat-command-controls.ts";
 import { sidebarPanelDefinitions } from "./chat-pane-embedded-panels.ts";
 import { createSidebarFullMessageLoader } from "./chat-pane-sidebar-layout.ts";
 import { createGatewayBrowserClientFixture } from "./chat-pane.test-support.ts";
@@ -614,6 +615,37 @@ describe("chat pane embedded panels", () => {
 
   it("offers Discussion after the provider reports it available", () => {
     expect(discussionSlots(true)).toContain("discussion");
+  });
+
+  it("lets the bot's details run its Claws only while the chat can start one", () => {
+    const { state } = createReviewFixture();
+    state.sessionKey = "agent:forge:main";
+    state.currentSessionId = "session-1";
+    const panelChat = (commands?: ChatCommandControls) => {
+      const mount = document.createElement("div");
+      // SAFETY: the agent panel reads only the chat, its bot and its commands from the pane.
+      const params = { state, agentId: "forge", commands } as Parameters<
+        typeof sidebarPanelDefinitions
+      >[0];
+      render(
+        sidebarPanelDefinitions(params).find((definition) => definition.slot === "agent")?.content,
+        mount,
+      );
+      const panel = mount.querySelector("openclaw-agent-details-panel");
+      return panel && "sessionKey" in panel ? panel.sessionKey : undefined;
+    };
+    const commands = (claw: { disabledReason: string | null } | null): ChatCommandControls => ({
+      read: (command) => (command === "claw" ? claw : { disabledReason: null }),
+      claws: () => [],
+      run: vi.fn(),
+    });
+
+    // Archived, catalog, view-only and unsendable chats get no commands at all.
+    expect(panelChat()).toBeNull();
+    expect(panelChat(commands(null))).toBeNull();
+    // A chat that can't start work right now (paused for review, disconnected) can't either.
+    expect(panelChat(commands({ disabledReason: "Unavailable right now." }))).toBeNull();
+    expect(panelChat(commands({ disabledReason: null }))).toBe("agent:forge:main");
   });
 
   it("builds default Review content only once a Review tab exists", () => {

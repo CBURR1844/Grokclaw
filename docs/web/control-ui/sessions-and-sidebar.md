@@ -174,6 +174,30 @@ in its settings. Details shows up to 12 Claws and links to the rest; a Claw's
 own Details names the bots it works for. These Claws are unrelated to the
 experimental [`openclaw claws`](/cli/claws) agent packages.
 
+You can also give a Claw one task from a bot's chat:
+
+- A message's menu has **Send to {Claw}** for each of the bot's Claws, up to
+  three. With more, **Send to a Claw…** asks which one. The message text is the
+  task, so a message over 16,000 characters can't be sent and its items say so.
+- In the chat's **Details**, a Claw without a schedule has **Run…**, and every
+  Claw's menu has **Run with a task…**. Both ask what the Claw should do.
+
+The bot starts the Claw through its own `sessions_spawn` tool, so the bot's
+tool settings, `subagents.allowAgents`, sandbox rules and tool hooks still
+decide whether it may. The chat shows the Claw working while it runs. When it
+finishes, its reply appears in the chat as a card from the Claw with the task
+it was given, and **Didn't finish** when the run failed, timed out or was
+stopped. The bot does not reply to the card, but it sees the result on its
+next turn. Sending to a Claw needs `operator.write`. The message menu and
+Details offer Claws only where the chat can start one: not in archived,
+view-only or catalog chats, chats you can't send to, incognito chats, a
+helper's or routine's chat, or the shared chat of global session scope. If
+the Control UI cannot confirm that the Claw started, it says so instead of
+sending again; check the chat before you retry. In the task dialog, pressing
+**Send** or **Run** again with the same Claw and task reuses the request, so it
+joins a run the first attempt started rather than starting a second one. A new
+**Send to {Claw}** from the message menu is a new request.
+
 ### Phones and touch screens
 
 On a touch screen, press and hold a message, a bot, or a chat in the sidebar to

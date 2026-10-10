@@ -214,10 +214,15 @@ describe("adoptSubagentRunForRequesterTurnInRuns", () => {
     "ordinary-cohort",
     "missing-cohort",
     "retrying-cohort",
+    "host-presented result",
   ] as const)("does not take a %s child completion", async (reason) => {
     const child = pendingChild();
     const params = adoption(child);
-    if (reason === "replaced execution") {
+    if (reason === "host-presented result") {
+      // A Claw result never arms a requester wake; the host commits its row instead.
+      child.completionPresentation = "result";
+      child.requesterSettleWake = undefined;
+    } else if (reason === "replaced execution") {
       params.runs.set(child.runId, { ...child, generation: 2 });
     } else if (reason === "cancelled") {
       child.killIntent = { requestedAt: 2_000, reason: "operator stop" };
@@ -708,6 +713,8 @@ describe("listUnsettledRequesterChildrenInRuns", () => {
       { requesterTurnRunId: "run-turn-2" },
       { execution: { status: "terminal", endedAt: NOW - 1 }, delivery: { status: "delivered" } },
       { collect: true },
+      // A result run's reply lands as a host card, never as a later turn here.
+      { completionPresentation: "result" },
       { expectsCompletionMessage: false },
       { killIntent: { requestedAt: NOW, reason: "stop" } },
       { requesterSessionKey: "agent:main:other" },

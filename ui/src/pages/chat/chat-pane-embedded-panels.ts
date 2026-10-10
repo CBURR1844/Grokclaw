@@ -25,6 +25,7 @@ import {
 } from "../../lit/presentation-binding.ts";
 import type { ControlUiRegistration } from "../../plugins/control-ui-capability.ts";
 import { renderPluginContribution } from "../../plugins/control-ui-view.ts";
+import type { ChatCommandControls } from "./chat-command-controls.ts";
 import { SIDEBAR_PANEL_SHORTCUTS } from "./chat-pane-panel-shortcuts.ts";
 import type { PaneSessionChangeOptions } from "./chat-pane-shared.ts";
 import type {
@@ -56,6 +57,8 @@ type SidebarPanelDefinitionParams = {
   subagentsPresented: PresentationValue;
   processesPresented?: PresentationValue;
   agentPresented?: PresentationValue;
+  /** The chat's own commands; the agent panel runs Claws only where these offer them. */
+  commands?: ChatCommandControls;
   onRefreshProcesses?: () => void;
   subagentsAvailable: boolean;
   subagentsShowRequest?: () => string | null | undefined;
@@ -370,6 +373,15 @@ export function sidebarPanelDefinitions(
         ? html`<openclaw-agent-details-panel
             .agentId=${params.agentId}
             .presented=${livePresentation(params.agentPresented ?? false)}
+            .sessionKey=${
+              // The panel shows this chat's bot, so its Claws report back to this chat, and only
+              // while the chat itself can start one: not archived, view-only, unsendable, paused
+              // or disconnected chats.
+              state && params.commands?.read("claw")?.disabledReason === null
+                ? state.sessionKey
+                : null
+            }
+            .sessionId=${state?.currentSessionId ?? null}
           ></openclaw-agent-details-panel>`
         : null,
     ),

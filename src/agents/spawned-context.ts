@@ -34,6 +34,8 @@ export type SpawnedToolContext = {
   inheritedToolDenylist?: string[];
   /** Restrictive requester policy originated at trusted sender/channel ingress. */
   inheritedToolPolicySource?: "sender";
+  /** Host-selected display of the child's final reply; never a model-facing spawn argument. */
+  completionPresentation?: "result";
 };
 
 type NormalizedSpawnedRunMetadata = {

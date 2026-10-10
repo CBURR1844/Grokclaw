@@ -368,7 +368,7 @@ export class ChatPane extends ChatPaneLayoutRender {
     const commands =
       catalogKey || suggestionViewer || !composerAccess || sessionClosed || disabledReason
         ? undefined
-        : createChatCommandControls(state, this.context.gateway, composerAvailability, this);
+        : createChatCommandControls(state, this.context, composerAvailability, this);
     const progressCardRefresh =
       canWriteProgressCard &&
       composerAvailability.canSend &&

@@ -93,6 +93,49 @@ Use a build that supports this option throughout the run. Older builds cannot
 resume private completion handoffs and may discard them after a downgrade;
 existing session transcripts remain separate.
 
+### Result presentation
+
+A run started with the Gateway's `sessions.delegate` method (for example, **Send
+to a Claw** in the Control UI) presents its result instead of announcing it. When
+the child ends, OpenClaw writes the child's final reply into the requester chat as
+an `automation-result` assistant row with `openclawAutomation.kind: "subagent"`.
+The requester's model is not asked to relay it, and no requester turn starts:
+
+- The run never arms the requester settle wake, so a batch of finished results
+  does not wake the bot. A result that cannot be written by the delivery expiry
+  ends as failed; it is never suspended into a blocked-delivery notice.
+- The run never registers a pause notice, so a `sessions_yield` with
+  `waitFor: "message"` from the run never wakes the bot. Unless it is waiting on
+  helpers of its own, the run does not pause and finishes with its final reply.
+- The run is invisible to the bot's own helper waves: a running result run does
+  not hold up their wake, and the bot's `sessions_yield` does not list it as a
+  child whose completion will arrive as a later turn.
+- A requester turn never adopts the run, including through a later
+  `sessions_send` follow-up from the bot.
+- A failed, timed-out, or stopped run writes a host line such as "Researcher
+  didn't finish (timed out). Open the run to see what it did." An empty success
+  writes "Researcher finished without a reply. Open the run to see what it did."
+- The row is bound to the chat generation that started the run. If that chat was
+  reset, replaced, or deleted, or can never accept results again (an expired
+  Incognito chat, or one closed by restart recovery), delivery ends as a terminal
+  non-delivery with no retry and no wake. While the chat is archived, still
+  initializing, or waiting for workspace setup, and after other commit failures,
+  delivery retries until the normal delivery expiry. `sessions.delegate` refuses
+  to start a run from a chat in one of those states or paused for provider
+  review; a result still lands in a chat paused after the run started.
+
+The row stays in the requester transcript, so the bot sees the result on later
+turns and users can follow up on it. The row's model content opens with a header
+naming the Claw, its agent id, run id, status, and task excerpt, and saying that
+the text is the Claw's report rather than the bot's own reply. Every harness
+replays the row from that stored content. Its display content
+(`openclawDisplayContent`) holds only the result, which is what `chat.history`
+and session previews show.
+
+Result presentation supports native, one-shot runs only; it cannot be combined
+with `thread: true`, `mode: "session"`, `collect: true`, `completionTarget`, or
+`expectsCompletionMessage: false`.
+
 ### Announce context
 
 Announce context is normalized to a stable internal event block:

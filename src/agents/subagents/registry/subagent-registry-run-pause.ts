@@ -106,6 +106,8 @@ export async function claimSubagentYieldInRuns(params: {
       isSameSubagentRunOwner(entry, expected) &&
       matchesSubagentChildSessionOwner(entry, params.sessionKey, params.agentId) &&
       !entry.collect &&
+      // A result run's final reply is the host's card; a pause notice would wake the requester.
+      entry.completionPresentation !== "result" &&
       entry.execution.status === "running" &&
       !entry.killIntent &&
       !entry.killReconciliation &&

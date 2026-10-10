@@ -36,6 +36,22 @@ describe("projectSessionDisplayMessage", () => {
     ]);
   });
 
+  test("previews what people see of an assistant row and reads its model content for the model", () => {
+    const message = {
+      role: "assistant",
+      content: [{ type: "text", text: "[Result from the Claw Researcher.]\n\nThree sources." }],
+      openclawDisplayContent: [{ type: "text", text: "Three sources." }],
+    };
+
+    expect(projectSessionDisplayMessage(message)).toEqual({
+      role: "assistant",
+      text: "Three sources.",
+    });
+    expect(projectSessionDisplayMessage(message, { view: "model-context" })?.text).toBe(
+      "[Result from the Claw Researcher.]\n\nThree sources.",
+    );
+  });
+
   test("bounds previews without splitting surrogate pairs", () => {
     const longReply = `${"a".repeat(SESSION_LAST_MESSAGE_PREVIEW_DEFAULT_CHARS - 2)}😊tail`;
     const preview = projectSessionDisplayMessage({ role: "assistant", content: longReply });

@@ -139,6 +139,7 @@ export function normalizeSubagentRunState(entry: SubagentRunRecord): SubagentRun
     ? entry.deleteCleanupDispatchedAt
     : undefined;
   entry.suppressCompletionDelivery = entry.suppressCompletionDelivery === true ? true : undefined;
+  entry.completionPresentation = entry.completionPresentation === "result" ? "result" : undefined;
   entry.terminalOwner =
     entry.terminalOwner === "interrupted-recovery" &&
     Number.isFinite(entry.execution.endedAt) &&
@@ -319,6 +320,7 @@ export const loadPendingFinalDeliveryPayload = (
     expectsCompletionMessage:
       entry.delivery?.payload?.expectsCompletionMessage ?? entry.expectsCompletionMessage,
     completionTarget: entry.completionTarget,
+    completionPresentation: entry.completionPresentation,
     completionRequesterSessionId: entry.completionRequesterSessionId,
     spawnMode: entry.delivery?.payload?.spawnMode ?? entry.spawnMode,
     wakeOnDescendantSettle:

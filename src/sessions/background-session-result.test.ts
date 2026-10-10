@@ -1,5 +1,6 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { observeHostDataSql } from "../../test/helpers/sqlite-statement-execution-counter.js";
 import { useAutoCleanupTempDirTracker } from "../../test/helpers/temp-dir.js";
 import {
   loadSessionEntryReadOnly,
@@ -350,7 +351,88 @@ describe("commitBackgroundResultToSession", () => {
     },
   );
 
-  it("refuses an archived target conversation", async () => {
+  it("reads the target generation off the Gateway thread and keeps subagent provenance", async () => {
+    const target = await createTarget();
+    const provenance = {
+      kind: "subagent",
+      runId: "run-claw",
+      childSessionKey: "agent:claw:subagent:child",
+      agentId: "claw",
+      label: "Researcher",
+      status: "ok",
+      task: "Summarize the thread",
+    } as const;
+    // Display preparation runs after the generation read and before the transcript write.
+    const readPhaseSql = observeHostDataSql();
+    let committed: Awaited<ReturnType<typeof commitBackgroundResultToSession>>;
+    try {
+      committed = await commitBackgroundResultToSession({
+        agentId: "main",
+        sessionKey: target.sessionKey,
+        expectedGeneration: target.generation,
+        text: "Here is the summary.",
+        prepareDisplayContent: async () => {
+          readPhaseSql.restore();
+          return undefined;
+        },
+        idempotencyKey: "subagent-result:run-claw",
+        provenance,
+        config: target.config,
+      });
+    } finally {
+      readPhaseSql.restore();
+    }
+
+    expect(committed).toMatchObject({ ok: true });
+    expect(
+      readPhaseSql.queries.filter((sql) => /\bsession_(?:nodes|entry_snapshots)\b/u.test(sql)),
+    ).toEqual([]);
+    const events = await loadTranscriptEvents({
+      agentId: "main",
+      sessionId: target.sessionId,
+      sessionKey: target.sessionKey,
+      storePath: target.storePath,
+    });
+    expect(events.at(-1)).toMatchObject({
+      message: { model: "automation-result", openclawAutomation: provenance },
+    });
+  });
+
+  it.each([
+    { name: "an archived", patch: { archivedAt: 2 }, reason: "archived" },
+    { name: "an initializing", patch: { initializationPending: true }, reason: "initializing" },
+    {
+      name: "a workspace-pending",
+      patch: { pendingProjectGitUrl: "https://example.com/repo.git" },
+      reason: "workspace is not ready",
+    },
+  ] as const)("holds a result for $name chat until it can take it", async ({ patch, reason }) => {
+    const target = await createTarget();
+    const scope = { agentId: "main", sessionKey: target.sessionKey, storePath: target.storePath };
+    const entry = { sessionId: target.sessionId, lifecycleRevision: "source-revision" };
+    await replaceSessionEntry(scope, { ...entry, updatedAt: 2, ...patch });
+    const commit = () =>
+      commitBackgroundResultToSession({
+        agentId: "main",
+        sessionKey: target.sessionKey,
+        expectedGeneration: target.generation,
+        text: "Held report.",
+        idempotencyKey: "cron-current-completion:cron:job-2:2000",
+        provenance: { kind: "cron", jobId: "job-2", runId: "cron:job-2:2000" },
+        config: target.config,
+      });
+
+    // The same generation can still take the result, so the producer retries it.
+    await expect(commit()).resolves.toMatchObject({
+      ok: false,
+      kind: "not_committed",
+      reason: expect.stringContaining(reason),
+    });
+    await replaceSessionEntry(scope, { ...entry, updatedAt: 3 });
+    await expect(commit()).resolves.toMatchObject({ ok: true });
+  });
+
+  it("ends a result for a chat closed by restart recovery", async () => {
     const target = await createTarget();
     await replaceSessionEntry(
       { agentId: "main", sessionKey: target.sessionKey, storePath: target.storePath },
@@ -358,7 +440,12 @@ describe("commitBackgroundResultToSession", () => {
         sessionId: target.sessionId,
         lifecycleRevision: "source-revision",
         updatedAt: 2,
-        archivedAt: 2,
+        mainRestartRecovery: {
+          cycleId: "cycle-1",
+          revision: 1,
+          chargedAttempts: 1,
+          tombstone: { reason: "recovery gave up" },
+        },
       },
     );
 
@@ -368,11 +455,15 @@ describe("commitBackgroundResultToSession", () => {
         sessionKey: target.sessionKey,
         expectedGeneration: target.generation,
         text: "Do not append this.",
-        idempotencyKey: "cron-current-completion:cron:job-2:2000",
-        provenance: { kind: "cron", jobId: "job-2", runId: "cron:job-2:2000" },
+        idempotencyKey: "cron-current-completion:cron:job-3:2000",
+        provenance: { kind: "cron", jobId: "job-3", runId: "cron:job-3:2000" },
         config: target.config,
       }),
-    ).resolves.toMatchObject({ ok: false, reason: expect.stringContaining("archived") });
+    ).resolves.toMatchObject({
+      ok: false,
+      kind: "unavailable",
+      reason: expect.stringContaining("restart recovery"),
+    });
   });
 
   it("does not commit when cancelled during display preparation", async () => {
@@ -436,7 +527,11 @@ describe("commitBackgroundResultToSession", () => {
         provenance: { kind: "cron", jobId: "job-stale", runId: "cron:job-stale:3000" },
         config: target.config,
       }),
-    ).resolves.toMatchObject({ ok: false, reason: expect.stringContaining("session rebound") });
+    ).resolves.toMatchObject({
+      ok: false,
+      kind: "rebound",
+      reason: expect.stringContaining("session rebound"),
+    });
 
     await expect(
       loadTranscriptEvents({

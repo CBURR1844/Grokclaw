@@ -30,7 +30,7 @@ describe("whole-message actions", () => {
 
   it("offers nothing for a row without a text body, such as tool output", () => {
     const { bubble } = renderBubble('<pre class="chat-tool-output">exit 0</pre>');
-    const commands = { read: () => ({ disabledReason: null }), run: vi.fn() };
+    const commands = { read: () => ({ disabledReason: null }), claws: () => [], run: vi.fn() };
 
     const actions = wholeMessageActions(
       { onCompanionSelection: vi.fn(), onReadAloud: vi.fn(), commands },
@@ -38,5 +38,57 @@ describe("whole-message actions", () => {
     );
 
     expect(actions).toEqual([]);
+  });
+
+  it.each([
+    ["names each of up to three Claws", 3, ["Send to Claw 1", "Send to Claw 2", "Send to Claw 3"]],
+    ["asks which of more than three Claws", 4, ["Send to a Claw…"]],
+  ])("%s", (_name, count, labels) => {
+    const { bubble } = renderBubble('<div class="chat-text">Sort my inbox</div>');
+    const claws = Array.from({ length: count }, (_, index) => ({
+      id: `claw-${index + 1}`,
+      name: `Claw ${index + 1}`,
+    }));
+    const commands = {
+      read: (command: string) => (command === "claw" ? { disabledReason: null } : null),
+      claws: () => claws,
+      run: vi.fn(),
+    };
+
+    const actions = wholeMessageActions({ commands }, { text: "Sort my inbox", bubble });
+    actions[0]?.run();
+
+    expect(actions.map((action) => action.label)).toEqual(labels);
+    expect(commands.run).toHaveBeenCalledWith(
+      "claw",
+      count > 3 ? { message: "Sort my inbox" } : { message: "Sort my inbox", clawId: "claw-1" },
+    );
+  });
+
+  it.each([
+    ["Send to Claw 1", 1],
+    ["Send to a Claw…", 4],
+  ])("disables %s for a message longer than a Claw's task, saying why", (label, count) => {
+    const { bubble } = renderBubble('<div class="chat-text">Build log</div>');
+    const commands = {
+      read: (command: string) => (command === "claw" ? { disabledReason: null } : null),
+      claws: () =>
+        Array.from({ length: count }, (_, index) => ({
+          id: `claw-${index + 1}`,
+          name: `Claw ${index + 1}`,
+        })),
+      run: vi.fn(),
+    };
+    const claw = (text: string) => wholeMessageActions({ commands }, { text, bubble })[0];
+
+    // Surrounding space is trimmed from the task, so it doesn't count.
+    expect(claw(` ${"x".repeat(16_000)}\n`)).toMatchObject({ label, disabled: false });
+    // The Gateway counts characters, not UTF-16 units: 16,000 emoji still fit.
+    expect(claw("😊".repeat(16_000))).toMatchObject({ label, disabled: false });
+    expect(claw("😊".repeat(16_001))).toMatchObject({
+      label,
+      disabled: true,
+      tooltip: "Too long for a Claw: a task can be up to 16,000 characters.",
+    });
   });
 });
