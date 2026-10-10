@@ -1,4 +1,4 @@
-// Control UI tests cover the global Ask OpenClaw panel toggle and persisted session identity.
+// Control UI tests cover the global Ask BotClaw panel toggle and persisted session identity.
 import path from "node:path";
 import { chromium, type Browser } from "playwright";
 import { beforeEach, afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -44,9 +44,9 @@ function custodianGatewayScenario(): ControlUiMockGatewayScenario {
     methodResponses: {
       "sessions.list": {
         cases: [
-          // The work session does not match the Ask OpenClaw palette query.
+          // The work session does not match the Ask BotClaw palette query.
           {
-            match: { search: "Ask OpenClaw" },
+            match: { search: "Ask BotClaw" },
             response: { count: 0, sessions: [] },
           },
         ],
@@ -66,7 +66,7 @@ function custodianGatewayScenario(): ControlUiMockGatewayScenario {
   };
 }
 
-describeControlUiE2e("Control UI Ask OpenClaw panel toggle mocked Gateway E2E", () => {
+describeControlUiE2e("Control UI Ask BotClaw panel toggle mocked Gateway E2E", () => {
   beforeAll(async () => {
     if (!chromiumAvailable) {
       throw new Error(`Playwright Chromium is unavailable at ${chromiumExecutablePath}`);
@@ -101,9 +101,7 @@ describeControlUiE2e("Control UI Ask OpenClaw panel toggle mocked Gateway E2E", 
       await page.locator(".sidebar-footer-bar__home").click();
       const panel = page.locator("openclaw-assistant-panel");
       await panel.getByRole("button", { name: "Home", exact: true }).waitFor();
-      expect(await panel.getByRole("button", { name: "Ask OpenClaw", exact: true }).count()).toBe(
-        0,
-      );
+      expect(await panel.getByRole("button", { name: "Ask BotClaw", exact: true }).count()).toBe(0);
       expect(await gateway.getRequests("openclaw.chat")).toHaveLength(0);
       await page.screenshot({
         animations: "disabled",
@@ -131,7 +129,7 @@ describeControlUiE2e("Control UI Ask OpenClaw panel toggle mocked Gateway E2E", 
 
       await page.locator(".sidebar-footer-bar__home").click();
       const panel = page.locator("openclaw-assistant-panel");
-      const openClawTab = panel.getByRole("button", { name: "Ask OpenClaw", exact: true });
+      const openClawTab = panel.getByRole("button", { name: "Ask BotClaw", exact: true });
       await openClawTab.waitFor();
       await page.screenshot({
         animations: "disabled",
@@ -157,8 +155,8 @@ describeControlUiE2e("Control UI Ask OpenClaw panel toggle mocked Gateway E2E", 
       await page
         .locator("openclaw-command-palette")
         .getByPlaceholder("Search or start a task…")
-        .fill("Ask OpenClaw");
-      const paletteItem = page.getByRole("option", { name: "Ask OpenClaw", exact: true });
+        .fill("Ask BotClaw");
+      const paletteItem = page.getByRole("option", { name: "Ask BotClaw", exact: true });
       await paletteItem.waitFor();
       await page.screenshot({
         animations: "disabled",

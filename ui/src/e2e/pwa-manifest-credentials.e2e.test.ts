@@ -153,7 +153,7 @@ suite.define(() => {
       expect(manifest.url).toBe(manifestUrl.href);
       expect(manifest.errors).toEqual([]);
       expect(JSON.parse(manifest.data ?? "null")).toEqual(
-        expect.objectContaining({ display: "standalone", name: "OpenClaw Control" }),
+        expect.objectContaining({ display: "standalone", name: "BotClaw" }),
       );
       expect(
         await page.locator('link[rel="manifest"]').evaluate((link) => ({

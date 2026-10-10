@@ -962,7 +962,7 @@ describe("CommandPalette search", () => {
     expect(events[0]?.detail).toEqual({ open: true });
   });
 
-  it("hides Ask OpenClaw when unavailable", async () => {
+  it("hides Ask BotClaw when unavailable", async () => {
     const { gateway } = createGateway(true);
     const { palette } = await mountPalette(
       createContext(
@@ -971,14 +971,14 @@ describe("CommandPalette search", () => {
       ),
     );
     palette.custodianAvailable = false;
-    await enterQuery(palette, "openclaw");
+    await enterQuery(palette, "botclaw");
     await vi.advanceTimersByTimeAsync(200);
     await palette.updateComplete;
 
-    expect(findPaletteOption(palette, "Ask OpenClaw", true)).toBeUndefined();
+    expect(findPaletteOption(palette, "Ask BotClaw", true)).toBeUndefined();
   });
 
-  it("opens Ask OpenClaw from its palette action", async () => {
+  it("opens Ask BotClaw from its palette action", async () => {
     const { gateway } = createGateway(true);
     const { palette } = await mountPalette(
       createContext(
@@ -987,7 +987,7 @@ describe("CommandPalette search", () => {
       ),
     );
     palette.custodianAvailable = true;
-    await enterQuery(palette, "openclaw");
+    await enterQuery(palette, "botclaw");
     await vi.advanceTimersByTimeAsync(200);
     await palette.updateComplete;
     const events: CustomEvent<CustodianPanelToggleDetail>[] = [];
@@ -995,7 +995,7 @@ describe("CommandPalette search", () => {
       events.push(event as CustomEvent<CustodianPanelToggleDetail>);
     window.addEventListener(CUSTODIAN_PANEL_TOGGLE_EVENT, listener);
     try {
-      findPaletteOption(palette, "Ask OpenClaw", true)?.click();
+      findPaletteOption(palette, "Ask BotClaw", true)?.click();
     } finally {
       window.removeEventListener(CUSTODIAN_PANEL_TOGGLE_EVENT, listener);
     }

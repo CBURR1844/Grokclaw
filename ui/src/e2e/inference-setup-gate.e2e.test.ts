@@ -235,7 +235,7 @@ suite.define(() => {
           await page.locator(".sidebar-footer-bar__home").click();
           await page
             .locator("openclaw-assistant-panel")
-            .getByRole("button", { name: "Ask OpenClaw", exact: true })
+            .getByRole("button", { name: "Ask BotClaw", exact: true })
             .click();
         }
         const chat = page.locator("openclaw-custodian-surface");

@@ -466,7 +466,7 @@ export class ApprovalPage extends OpenClawLightDomElement {
         />
         <div>
           <div class="approval-page__eyebrow">${t("approvalPage.eyebrow")}</div>
-          <div class="approval-page__brand-name">${t("approvalPage.brandName")}</div>
+          <div class="approval-page__brand-name">${t("common.productName")}</div>
         </div>
       </header>
     `;
@@ -669,7 +669,7 @@ export class ApprovalPage extends OpenClawLightDomElement {
             : this.approval
               ? approvalTitle(this.approval, this.resolutionOrigin)
               : t("approvalPage.loadingTitle");
-    const title = `${pageTitle} — ${t("approvalPage.brandName")}`;
+    const title = `${pageTitle} — ${t("common.productName")}`;
     document.title = title;
     this.activeDocumentTitle = title;
   }

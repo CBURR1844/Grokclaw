@@ -356,7 +356,7 @@ const NAVIGATION_PRESENTATION: Record<NavigationRouteId, NavigationPresentation>
   terminal: ["terminal", "terminal.title", "terminal.open"],
   dashboard: navigationPresentation("layoutDashboard", "chat"),
   dashboards: navigationPresentation("layoutDashboard", "dashboards"),
-  custodian: navigationPresentation("lobster", "custodian"),
+  custodian: navigationPresentation("mark", "custodian"),
   config: ["settings", "nav.settings", "subtitles.config"],
   profile: navigationPresentation("circleUser", "profile"),
   communications: navigationPresentation("send", "communications"),
@@ -456,16 +456,17 @@ export function titleForRoute(routeId: NavigationRouteId): string {
 
 /** Window/tab title, markers leftmost because tabs truncate from the right.
  * A disconnected Gateway replaces the approval count (a stale queue is not
- * actionable); titles already ending in the brand
- * ("Ask OpenClaw") skip the suffix so it never reads "… OpenClaw — OpenClaw". */
+ * actionable); titles already ending in the product name
+ * ("Ask BotClaw") skip the suffix so it never reads "… BotClaw — BotClaw". */
 export function formatDocumentTitle(options: {
   context: string;
   attentionCount?: number;
   gatewayDisconnected?: boolean;
 }): string {
-  const base = options.context.endsWith("OpenClaw")
+  const productName = t("common.productName");
+  const base = options.context.endsWith(productName)
     ? options.context
-    : `${options.context} — OpenClaw`;
+    : `${options.context} — ${productName}`;
   if (options.gatewayDisconnected) {
     return `(${t("connection.disconnectedTitle")}) ${base}`;
   }

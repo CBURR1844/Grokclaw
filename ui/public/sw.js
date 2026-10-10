@@ -375,10 +375,10 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: "OpenClaw", body: event.data.text() };
+    data = { title: "BotClaw", body: event.data.text() };
   }
 
-  const title = data.title || "OpenClaw";
+  const title = data.title || "BotClaw";
   const options = {
     body: data.body || "",
     icon: "./apple-touch-icon.png",

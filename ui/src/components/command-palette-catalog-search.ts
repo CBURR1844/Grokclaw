@@ -120,7 +120,7 @@ function getCommandPaletteBaseItems(
     ...(
       [
         [desktopAvailable, "desktop", "palette.items.desktop", "monitor"],
-        [custodianAvailable, "custodian", "nav.askOpenClaw", "lobster"],
+        [custodianAvailable, "custodian", "nav.askOpenClaw", "mark"],
       ] as const
     ).flatMap(([available, panel, labelKey, icon]) =>
       available

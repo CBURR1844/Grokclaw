@@ -329,7 +329,7 @@ suite.define(() => {
         expectStandaloneApprovalPage(desktop.page),
       ]);
       await expectMobilePendingLayout(mobile.page);
-      expect(await mobile.page.title()).toBe("Command approval — OpenClaw");
+      expect(await mobile.page.title()).toBe("Command approval — BotClaw");
       expect(await mobile.page.locator(".approval-page__card").getAttribute("class")).toContain(
         "approval-page__card--severity-warning",
       );
@@ -399,7 +399,7 @@ suite.define(() => {
       expect(terminalFocus.id).toBe("approval-page-title");
       expect(terminalFocus.top).toBeGreaterThanOrEqual(0);
       expect(terminalFocus.bottom).toBeLessThanOrEqual(terminalFocus.viewportHeight);
-      expect(await mobile.page.title()).toBe("Approved here — OpenClaw");
+      expect(await mobile.page.title()).toBe("Approved here — BotClaw");
       await captureProof(mobile.page, "after-competing-answer-terminal.png");
       await captureProof(desktop.page, "after-competing-answer-loser-desktop.png");
 
@@ -407,7 +407,7 @@ suite.define(() => {
       expect(terminalReload?.status()).toBe(200);
       await mobile.gateway.waitForRequest("approval.get");
       await mobile.page.getByRole("heading", { name: "Approved", exact: true }).waitFor();
-      expect(await mobile.page.title()).toBe("Approved — OpenClaw");
+      expect(await mobile.page.title()).toBe("Approved — BotClaw");
       expect(new URL(mobile.page.url()).pathname).toBe(approvalPath(""));
       await expectStandaloneApprovalPage(mobile.page);
       await expectNoDecisionButtons(mobile.page);

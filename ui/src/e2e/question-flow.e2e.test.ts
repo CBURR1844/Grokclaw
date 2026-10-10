@@ -644,7 +644,7 @@ suite.define(() => {
     expect(await document.getByRole("heading", { level: 1 }).textContent()).toContain(
       "Waiting for your answer",
     );
-    expect(await page.title()).toBe("Waiting for your answer — OpenClaw");
+    expect(await page.title()).toBe("Waiting for your answer — BotClaw");
     await screenshot(page, "11-secret-store-ask-pending.png");
     const secretInput = panel.locator('input[type="password"]');
     await secretInput.fill(fakeSecret);
@@ -666,7 +666,7 @@ suite.define(() => {
     expect(
       await outcomeHeading.evaluate((element) => element === element.ownerDocument.activeElement),
     ).toBe(true);
-    expect(await page.title()).toBe("Answered — OpenClaw");
+    expect(await page.title()).toBe("Answered — BotClaw");
     expect(await document.textContent()).not.toContain(fakeSecret);
     expect(await document.textContent()).not.toContain("stored");
     expect(new URL(page.url()).pathname).toBe(`/operator/ask/${request.id}`);

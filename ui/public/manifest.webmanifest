@@ -1,7 +1,7 @@
 {
-  "name": "OpenClaw Control",
-  "short_name": "OpenClaw",
-  "description": "Multi-channel AI gateway control panel",
+  "name": "BotClaw",
+  "short_name": "BotClaw",
+  "description": "Your personal AI bots, running on your own devices.",
   "start_url": "./",
   "display": "standalone",
   "theme_color": "#0a0a0a",

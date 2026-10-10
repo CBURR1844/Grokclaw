@@ -88,7 +88,7 @@ suite.define(() => {
 
         const response = await page.goto(`${suite.server.baseUrl}custodian`);
         expect(response?.status()).toBe(200);
-        await page.getByRole("heading", { name: "OpenClaw", exact: true }).waitFor();
+        await page.getByRole("heading", { name: "BotClaw", exact: true }).waitFor();
         await expect.poll(async () => (await gateway.getRequests("openclaw.chat")).length).toBe(1);
 
         if (captureUiProofEnabled) {

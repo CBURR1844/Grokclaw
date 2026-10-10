@@ -233,7 +233,7 @@ export function dashboardHtmlMarkerStatus(html: string): {
   ready: boolean;
   title: boolean;
 } {
-  const title = html.includes("<title>OpenClaw Control</title>");
+  const title = html.includes("<title>BotClaw</title>");
   const app = html.includes("<openclaw-app></openclaw-app>");
   return { app, ready: title && app, title };
 }
