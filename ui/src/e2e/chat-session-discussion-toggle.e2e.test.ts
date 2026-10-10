@@ -236,7 +236,7 @@ describeControlUiE2e("session discussion toggle", () => {
         ]);
         return { hostSurface, embeddedSurface };
       })
-      .toEqual({ hostSurface: "#0e1015", embeddedSurface: "#0e1015" });
+      .toEqual({ hostSurface: "#111318", embeddedSurface: "#111318" });
     expect(new URL(frame!.url()).searchParams.get("theme")).toBe("light");
     if (captureUiProof) {
       await page.screenshot({ path: path.join(proofDir, "discussion-theme-dark.png") });

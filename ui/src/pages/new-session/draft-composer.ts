@@ -88,7 +88,8 @@ export function renderNewSessionDraftComposer(
     context: ApplicationContext | undefined;
     draftOwnerKey: string;
     isCatalogTarget: boolean;
-    modelControl: NewSessionModelControl;
+    /** Null leaves the model to the bot's default and shows no model chip. */
+    modelControl: NewSessionModelControl | null;
     permissionControl?: TemplateResult;
   },
 ) {
@@ -126,14 +127,15 @@ export function renderNewSessionDraftComposer(
       return options.message;
     },
     mentionDirectory,
-    modelControl: options.isCatalogTarget
-      ? nothing
-      : options.modelControl.render({
-          agent: options.agent,
-          agentId: options.agentId,
-          context: options.context,
-          sending: options.submitting,
-        }),
+    modelControl:
+      options.isCatalogTarget || !options.modelControl
+        ? nothing
+        : options.modelControl.render({
+            agent: options.agent,
+            agentId: options.agentId,
+            context: options.context,
+            sending: options.submitting,
+          }),
     pendingAttachmentReads: options.attachmentDraft.reads.pendingReads,
     attachmentReads: options.attachmentDraft.reads,
     readSignal,

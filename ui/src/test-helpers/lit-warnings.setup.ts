@@ -107,7 +107,7 @@ if (
   installSafeLocalStorageForTesting(window);
 }
 
-// BotClaw opens the bot roster by default. OpenClaw's UI suites were written for
-// the agent chip; roster cases opt in through stored settings.
-(globalThis as { openclawDefaultSidebarAgentsMode?: string }).openclawDefaultSidebarAgentsMode =
-  "chip";
+// BotClaw opens the simple screen with the bot roster. OpenClaw's UI suites were
+// written for the full screen and the agent chip; BotClaw cases opt in through
+// stored settings.
+(globalThis as { openclawUpstreamUiDefaults?: boolean }).openclawUpstreamUiDefaults = true;

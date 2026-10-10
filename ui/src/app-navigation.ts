@@ -240,11 +240,31 @@ const NON_ADMIN_SETTINGS_ROUTES: ReadonlySet<NavigationRouteId> = new Set([
   "about",
 ]);
 
+// The simple screen's settings: the person, this device, bots, and safety.
+// Advanced shows the rest; hidden pages stay reachable by link.
+const SIMPLE_SETTINGS_ROUTES: ReadonlySet<NavigationRouteId> = new Set([
+  "custodian",
+  "profile",
+  "appearance",
+  "notifications",
+  "device",
+  "device-permissions",
+  "devices",
+  "agents",
+  "model-providers",
+  "approvals",
+  "about",
+]);
+
 export function isSettingsNavigationRouteVisible(
   routeId: NavigationRouteId,
   canAdmin: boolean,
   nativeDeviceSettings: NativeDeviceSettingsCapability | null = null,
+  advanced = true,
 ): boolean {
+  if (!advanced && !SIMPLE_SETTINGS_ROUTES.has(routeId)) {
+    return false;
+  }
   if (routeId === "device") {
     return nativeDeviceSettings !== null;
   }
@@ -287,6 +307,7 @@ export function deviceSettingsGroupLabelKey(
 export function visibleSettingsNavigationGroups(
   canAdmin: boolean,
   nativeDeviceSettings: NativeDeviceSettingsCapability | null = null,
+  advanced = true,
 ): readonly SettingsNavigationGroup[] {
   return SETTINGS_NAVIGATION_GROUPS.map((group) => ({
     labelKey:
@@ -294,7 +315,7 @@ export function visibleSettingsNavigationGroups(
         ? deviceSettingsGroupLabelKey(nativeDeviceSettings?.snapshot)
         : group.labelKey,
     routes: group.routes.filter((route) =>
-      isSettingsNavigationRouteVisible(route, canAdmin, nativeDeviceSettings),
+      isSettingsNavigationRouteVisible(route, canAdmin, nativeDeviceSettings, advanced),
     ),
   })).filter((group) => group.routes.length > 0);
 }

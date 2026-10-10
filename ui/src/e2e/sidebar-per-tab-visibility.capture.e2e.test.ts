@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { CONTROL_UI_BOOTSTRAP_CONFIG_PATH } from "../../../src/gateway/control-ui-bootstrap-contract.js";
+import { pinUpstreamUiDefaults } from "../test-helpers/control-ui-e2e-ui-defaults.ts";
 import {
   createControlUiMockBootstrapConfig,
   createControlUiMockGatewayInitScript,
@@ -138,6 +139,7 @@ suite.define(() => {
       await context.route("**" + CONTROL_UI_BOOTSTRAP_CONFIG_PATH, (route) =>
         route.fulfill({ json: createControlUiMockBootstrapConfig(scenario) }),
       );
+      await pinUpstreamUiDefaults(context);
       await context.addInitScript({ content: createControlUiMockGatewayInitScript(scenario) });
       const page = await context.newPage();
       try {

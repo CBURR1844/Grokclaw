@@ -39,6 +39,12 @@ export type SkillMenuHost = {
   commitDraft: (next: string) => void;
   getTextarea: () => HTMLTextAreaElement | null;
   refreshCommands?: () => void | Promise<void>;
+  /**
+   * Set when the + menu replaces typed commands: the "/" and "$" lists never
+   * open, and "/" typed into an empty box calls this instead. Returning false
+   * lets the "/" be typed.
+   */
+  openAddMenu?: () => boolean;
 };
 
 export function createSkillMenuState(): SkillMenuState {
@@ -147,7 +153,10 @@ export function updateSkillMenu(
   requestUpdate: () => void,
   opts: { skipRefresh?: boolean } = {},
 ): void {
-  const target = value.trimStart().startsWith("/") ? null : findSkillMentionTarget(value, caret);
+  const target =
+    host.openAddMenu || value.trimStart().startsWith("/")
+      ? null
+      : findSkillMentionTarget(value, caret);
   if (!target) {
     closeSkillMenuIfNeeded(state, requestUpdate);
     return;

@@ -206,6 +206,23 @@ describe("agent selection", () => {
     expect(selection.state.scopeId).toBe("research");
   });
 
+  it("follows the simple screen's roster without changing the stored chip mode", () => {
+    const preferences = createPreferences("chip");
+    const selection = createAgentSelectionCapability(
+      createGateway().gateway,
+      createRoster().roster,
+      undefined,
+      preferences,
+    );
+    selection.setScope("research");
+    preferences.patch({ advancedUi: false });
+    expect(selection.state.scopeId).toBeNull();
+    expect(preferences.settings.sidebarAgentsMode).toBe("chip");
+    preferences.patch({ advancedUi: true });
+    expect(selection.state.scopeId).toBe("research");
+    selection.dispose();
+  });
+
   it("keeps persisted team mode global through roster fallback and clears removed filters", () => {
     const preferences = createPreferences("roster");
     const roster = createRoster();

@@ -60,6 +60,8 @@ export type ChatComposerDisabledBanner = {
   presentation?: "compact" | "hidden";
   title?: string;
   text: string;
+  /** A typed-command tip, shown only where the composer takes typed commands. */
+  commandHint?: string;
   tone?: "info" | "neutral";
   icon?: "warning" | "archive" | "eye";
   actionStyle?: "primary";
@@ -148,6 +150,10 @@ export type ChatComposerProps = ChatAttachmentControlsProps & {
   onOpenTalkSettings?: () => void;
   onOpenDictationSettings?: () => void;
   suggestionComposer?: boolean;
+  /** False replaces the typed "/" and "$" lists with the + menu (default true). */
+  slashCommands?: boolean;
+  /** False hides the context-usage ring (default true). */
+  contextUsage?: boolean;
   onTypingChange?: (typing: boolean, preview?: string) => void;
   composerControls?: TemplateResult | typeof nothing;
   footerContent?: TemplateResult | typeof nothing;

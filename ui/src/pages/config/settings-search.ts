@@ -101,6 +101,7 @@ export function findSettingsSearchBlocks(params: {
   basePath?: string;
   canAdmin?: boolean;
   nativeDeviceSettings?: NativeDeviceSettingsCapability | null;
+  advanced?: boolean;
 }): SettingsSearchBlock[] {
   if (!params.query.trim()) {
     return [];
@@ -117,6 +118,7 @@ export function findSettingsSearchBlocks(params: {
               block.routeId,
               params.canAdmin !== false,
               params.nativeDeviceSettings,
+              params.advanced !== false,
             ),
         )
           .map((block) =>
@@ -143,6 +145,7 @@ export function findSettingsSearchBlocks(params: {
         routeId,
         params.canAdmin !== false,
         params.nativeDeviceSettings,
+        params.advanced !== false,
       )
     ) {
       continue;

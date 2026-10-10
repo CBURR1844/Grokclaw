@@ -2,6 +2,8 @@ import { html } from "lit";
 import type { GatewaySessionRow } from "../../api/types.ts";
 import type { ApplicationGatewaySnapshot } from "../../app/gateway.ts";
 import { hasOperatorWriteAccess } from "../../app/operator-access.ts";
+import type { UiSettings } from "../../app/settings.ts";
+import { resolveUiPreset } from "../../app/ui-preset.ts";
 import { t } from "../../i18n/index.ts";
 import { registerModelControlsEnglish } from "../../i18n/locales/en-model-controls.ts";
 import { storedChatOutboxScopeKey } from "../../lib/chat/outbox-store.ts";
@@ -127,6 +129,20 @@ export function readChatPublicationAccess(
       }).allowed,
     canPublishPersonal: canMutate && hasOperatorWriteAccess(snapshot.hello?.auth ?? null),
   };
+}
+
+/**
+ * The composer's controls for the UI preset. The simple screen keeps +, the
+ * message box, mic and send: no pickers, typed commands or context ring.
+ */
+export function chatPaneComposerProps(
+  settings: UiSettings,
+  controls: Parameters<typeof renderChatPaneComposerControls>[0] | undefined,
+): Pick<ChatProps, "composerControls" | "permissionPicker" | "slashCommands" | "contextUsage"> {
+  if (!resolveUiPreset(settings).advanced) {
+    return { slashCommands: false, contextUsage: false };
+  }
+  return controls ? renderChatPaneComposerControls(controls) : {};
 }
 
 export function renderChatPaneComposerControls(params: {

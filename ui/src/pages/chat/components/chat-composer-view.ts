@@ -146,11 +146,13 @@ export function renderChatComposerView(context: ChatComposerViewContext) {
     menuListboxId: slashMenuListboxId,
   } = menus;
   const activeSession = props.selectedSession;
-  const contextNotice = renderContextNotice(
-    activeSession,
-    props.sessions?.defaults?.contextTokens ?? null,
-    { messages: props.messages, providerUsage: props.providerUsage },
-  );
+  const contextNotice =
+    props.contextUsage === false
+      ? nothing
+      : renderContextNotice(activeSession, props.sessions?.defaults?.contextTokens ?? null, {
+          messages: props.messages,
+          providerUsage: props.providerUsage,
+        });
   const composerControls = props.composerControls ?? nothing;
   const composerLeadControl = props.permissionPicker
     ? renderChatPermissionPicker(props.permissionPicker)
@@ -204,7 +206,10 @@ export function renderChatComposerView(context: ChatComposerViewContext) {
                     </div>`
                   : nothing
               }
-              <div class="agent-chat__disabled-banner-detail">${props.disabledBanner.text}</div>
+              <div class="agent-chat__disabled-banner-detail">
+                ${props.disabledBanner.text}
+                ${props.slashCommands === false ? nothing : (props.disabledBanner.commandHint ?? nothing)}
+              </div>
             </div>
             ${
               props.disabledBanner.onAction

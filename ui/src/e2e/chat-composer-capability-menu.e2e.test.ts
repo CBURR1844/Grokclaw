@@ -346,6 +346,8 @@ suite.define(() => {
       for (const mode of ["dark", "light"] as const) {
         themeBackgrounds.push(
           await menu.evaluate((node, nextMode) => {
+            // bootstrap-theme sets both; the default family's theme is the mode.
+            document.documentElement.dataset.theme = nextMode;
             document.documentElement.dataset.themeMode = nextMode;
             const surface = node.shadowRoot?.querySelector('[part="menu"]');
             return surface ? getComputedStyle(surface).backgroundColor : "";

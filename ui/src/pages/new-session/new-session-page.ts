@@ -4,6 +4,7 @@ import { property, state } from "lit/decorators.js";
 import { selectApplicationSession } from "../../app/agent-selection.ts";
 import { applicationContext, type ApplicationContext } from "../../app/context.ts";
 import { LazyCustomElementRequestController } from "../../app/lazy-custom-element.ts";
+import { resolveUiPreset } from "../../app/ui-preset.ts";
 import type { ImageLightboxItem } from "../../components/image-lightbox.types.ts";
 import "../../styles/new-session-attachment-panel.css";
 import { renderLazyViewError } from "../../components/lazy-view-error.ts";
@@ -358,6 +359,11 @@ export class NewSessionPage extends OpenClawLightDomElement {
     }
   }
 
+  /** BotClaw's simple screen starts chats on the bot's defaults: no place, model or permission pickers. */
+  private get advanced(): boolean {
+    return !this.context || resolveUiPreset(this.context.theme.settings).advanced;
+  }
+
   private renderTargetBar() {
     const agents = this.place.agents();
     const sessions = this.context?.sessions;
@@ -378,19 +384,21 @@ export class NewSessionPage extends OpenClawLightDomElement {
               },
             })
           : nothing,
-      placeSelect: renderNewSessionPlaceControls({
-        context: this.context,
-        data: this.data,
-        gateway: this.gateway,
-        place: this.place,
-        submitting: this.submission.submitting,
-        pendingPlacement: Boolean(this.submission.pendingPlacement.sessionKey),
-        onConnectMachine: () => this.openConnectMachine(),
-        onNavigate: (route, options) => this.context?.navigate(route, options),
-        onFocusComposer: () =>
-          this.submission.composerTextarea.getTextarea()?.focus({ preventScroll: true }),
-        requestUpdate: () => this.requestUpdate(),
-      }),
+      placeSelect: !this.advanced
+        ? nothing
+        : renderNewSessionPlaceControls({
+            context: this.context,
+            data: this.data,
+            gateway: this.gateway,
+            place: this.place,
+            submitting: this.submission.submitting,
+            pendingPlacement: Boolean(this.submission.pendingPlacement.sessionKey),
+            onConnectMachine: () => this.openConnectMachine(),
+            onNavigate: (route, options) => this.context?.navigate(route, options),
+            onFocusComposer: () =>
+              this.submission.composerTextarea.getTextarea()?.focus({ preventScroll: true }),
+            requestUpdate: () => this.requestUpdate(),
+          }),
       retrying:
         this.gateway.catalogRetrying ||
         Boolean(this.data?.group && sessions?.groupsStatus() === "loading"),
@@ -414,6 +422,7 @@ export class NewSessionPage extends OpenClawLightDomElement {
     const preferences = context?.theme.settings;
     const voiceControl = dictation.render(draftOwnerKey, preferences?.realtimeTalkInputDeviceId);
     const dictationLocked = dictation.active;
+    const advanced = this.advanced;
     return html`
       <div
         class="new-session-page__draft"
@@ -452,20 +461,23 @@ export class NewSessionPage extends OpenClawLightDomElement {
           mentions: submission.mentions,
           getMentions: () => submission.mentions,
           visibility: submission.visibility,
-          draftAvailable: capabilities.canStartAsDraft(context),
+          draftAvailable: advanced && capabilities.canStartAsDraft(context),
           ...capabilities.composerProps(context, gateway, place.agentId),
-          modelControl: place.modelControl,
-          permissionControl: isCatalogTarget
-            ? undefined
-            : renderChatPermissionPicker({
-                canSelectFull: place.isAdmin(),
-                defaultMode: place.selectedAgent()?.defaultPermissionMode,
-                disabled: submission.submitting || Boolean(submission.pendingPlacement.sessionKey),
-                disabledReason: submission.submitting ? t("newSession.starting") : undefined,
-                mode: submission.permissionMode,
-                onSelect: (permissionMode) =>
-                  submission.setPermissionMode(permissionMode ?? undefined),
-              }),
+          modelControl: advanced ? place.modelControl : null,
+          slashCommands: advanced,
+          permissionControl:
+            isCatalogTarget || !advanced
+              ? undefined
+              : renderChatPermissionPicker({
+                  canSelectFull: place.isAdmin(),
+                  defaultMode: place.selectedAgent()?.defaultPermissionMode,
+                  disabled:
+                    submission.submitting || Boolean(submission.pendingPlacement.sessionKey),
+                  disabledReason: submission.submitting ? t("newSession.starting") : undefined,
+                  mode: submission.permissionMode,
+                  onSelect: (permissionMode) =>
+                    submission.setPermissionMode(permissionMode ?? undefined),
+                }),
           requiresModifier: preferences?.chatSendShortcut === "modifier-enter",
           requestUpdate: () => this.requestUpdate(),
           get submitting() {
@@ -511,7 +523,13 @@ export class NewSessionPage extends OpenClawLightDomElement {
       assistantName: agent ? normalizeAgentTargetLabel(agent, identity) : "",
       assistantAvatar: resolveAgentTextAvatar(agent ?? {}, identity),
       assistantAvatarUrl: resolveAgentAvatarUrl(agent ?? {}, identity),
-      hint: t(catalog.isTarget(this.data) ? "newSession.nativeTerminalHint" : "newSession.hint"),
+      hint: t(
+        catalog.isTarget(this.data)
+          ? "newSession.nativeTerminalHint"
+          : this.advanced
+            ? "newSession.hint"
+            : "newSession.simpleHint",
+      ),
       composer: this.renderDraftBlock(),
       hideSecondaryContent: this.submission.visibility === "incognito",
       fadeSecondaryContent: this.submission.message.trim().length > 0,

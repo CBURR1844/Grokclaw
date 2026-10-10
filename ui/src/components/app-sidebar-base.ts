@@ -47,6 +47,8 @@ export abstract class AppSidebarBase extends OpenClawLightDomContentsElement {
   @property({ attribute: false }) sessionKey = "";
   @property({ attribute: false }) sidebarEntries: readonly string[] = DEFAULT_SIDEBAR_ENTRIES;
   @property({ attribute: false }) navigationVisible = true;
+  /** False on BotClaw's simple screen: page links, customization and extras stay hidden. */
+  @property({ attribute: false }) advanced = true;
   @property({ attribute: false }) sidebarAgentsMode: "chip" | "roster" = "chip";
   @property({ attribute: false }) sidebarLiveActivity = true;
   /** Agents surfaced first in the chip quick switcher when many exist. */

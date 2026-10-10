@@ -13,6 +13,7 @@ import { runQaGatewayFixture } from "../../../test/helpers/qa-gateway-cleanup.ts
 import { stopChildProcess } from "../../../test/helpers/stop-child-process.ts";
 import type { ApplicationRuntime } from "../app/bootstrap.ts";
 import { createControlUiE2eArtifactDir } from "../test-helpers/control-ui-e2e-artifacts.ts";
+import { pinUpstreamUiDefaults } from "../test-helpers/control-ui-e2e-ui-defaults.ts";
 import {
   canRunPlaywrightChromium,
   controlUiSessionUrl,
@@ -894,6 +895,8 @@ describeStandaloneMockServer("standalone Control UI mock server", () => {
   it("opens a visible catalog session with its transcript in chronological order", async () => {
     const page = await browser.newPage();
     try {
+      // Host catalog sessions list in the full screen's session sidebar.
+      await pinUpstreamUiDefaults(page);
       await page.goto(new URL("/chat", fixtureServer.url).toString(), { waitUntil: "networkidle" });
       await page.getByText("Release checklist sweep", { exact: true }).click();
 

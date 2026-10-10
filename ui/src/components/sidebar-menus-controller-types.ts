@@ -22,6 +22,7 @@ import type { SessionOwnerOption } from "./session-owner-chip.ts";
 export interface SidebarMenusControllerHost extends SessionOrganizerControllerHost {
   readonly querySelector: HTMLElement["querySelector"];
   readonly activeRouteId?: NavigationRouteId;
+  readonly advanced: boolean;
   readonly basePath: string;
   readonly canPairDevice: boolean;
   readonly connected: boolean;

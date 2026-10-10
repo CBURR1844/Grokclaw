@@ -314,8 +314,16 @@ class SidebarNewSessionMenu extends AgentRosterElement {
             return;
           }
           const id = item.value;
+          const dropdown = this.querySelector("wa-dropdown");
+          // The simple screen has no workspace menu, so new bots start here.
+          if (id === "command:new-agent") {
+            if (dropdown) {
+              dropdown.open = false;
+            }
+            this.host.onNavigate?.("custodian", { search: "?intent=new-agent" });
+            return;
+          }
           if (access.allowed && id && cards.some((card) => card.id === id)) {
-            const dropdown = this.querySelector("wa-dropdown");
             if (dropdown) {
               dropdown.open = false;
             }
@@ -353,6 +361,13 @@ class SidebarNewSessionMenu extends AgentRosterElement {
             >
           </wa-dropdown-item>`,
         )}
+        <div class="sidebar-customize-menu__separator" role="separator"></div>
+        <wa-dropdown-item value="command:new-agent"
+          ><span class="sidebar-agent-roster__link"
+            ><span class="sidebar-agent-roster__avatar" aria-hidden="true">${icons.userPlus}</span
+            ><span>${t("custodian.newAgent")}</span></span
+          ></wa-dropdown-item
+        >
       </wa-dropdown>`;
     });
   }

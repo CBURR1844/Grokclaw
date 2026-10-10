@@ -1,12 +1,13 @@
 /* Each palette owns a light/dark artwork pair. Vite resolves local URLs for
    root/subpath installs; separate assets keep inactive artwork out of startup
    CSS. Imported palettes use quiet neutral artwork. */
+/* BotClaw keeps the claw family quiet: the neutral edge pattern, no claw art. */
 :root {
-  --app-background-image: url("../assets/themes/claw-dark.webp?no-inline");
+  --app-background-image: url("../assets/themes/custom-dark.webp?no-inline");
 }
 
 :root[data-theme-mode="light"] {
-  --app-background-image: url("../assets/themes/claw-light.webp?no-inline");
+  --app-background-image: url("../assets/themes/custom-light.webp?no-inline");
 }
 
 :root[data-theme="openknot"] {

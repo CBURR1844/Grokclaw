@@ -46,6 +46,7 @@ import {
   waitForControlUiInitialRoster,
 } from "./control-ui-e2e-readiness.ts";
 import { getSharedControlUiE2ePreview } from "./control-ui-e2e-shared-preview.ts";
+import { pinUpstreamUiDefaults } from "./control-ui-e2e-ui-defaults.ts";
 import { createControlUiMockPresence } from "./control-ui-mock-presence.ts";
 import { createControlUiMockReactions } from "./control-ui-mock-reactions.ts";
 import { createControlUiMockResponses } from "./control-ui-mock-responses.ts";
@@ -1081,10 +1082,6 @@ function installControlUiMockGateway(
   };
 
   const scenario = input.scenario;
-  // BotClaw opens the bot roster by default. These scenarios were written for
-  // OpenClaw's agent chip; roster scenarios opt in through stored settings.
-  (globalThis as { openclawDefaultSidebarAgentsMode?: string }).openclawDefaultSidebarAgentsMode =
-    "chip";
   if (scenario.communityInviteDismissed) {
     try {
       // Same persisted preference as community-invite-state.ts, before the first sidebar render.
@@ -2847,6 +2844,7 @@ export async function installMockGateway(
     }),
   );
   await installControlUiE2eUnhandledRejectionRing(page);
+  await pinUpstreamUiDefaults(page);
   await page.addInitScript({ content: createControlUiMockGatewayInitScript(normalizedScenario) });
   const rosterGates = new Set([
     "connect",

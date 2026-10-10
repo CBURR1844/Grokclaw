@@ -523,6 +523,9 @@ export function createTestChatPane(params: {
     sessions: context.sessions,
     sessionsError: null,
     sessionsLoading: false,
+    // Default preferences: the header reads the UI preset from settings, which the app
+    // host always provides. No gatewayUrl, so outbox scope matches the session fixtures.
+    settings: {},
     sidebarContent: null,
     sidebarFocusPanelId: "",
     sidebarFocusVersion: 0,

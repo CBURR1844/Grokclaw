@@ -234,7 +234,8 @@ describe("favicon presentation ownership", () => {
     };
     const themeStyle = document.createElement("style");
     themeStyle.textContent = `
-      :root { --primary: rgb(180, 20, 40); --primary-foreground: rgb(250, 250, 250); }
+      :root,
+      :root[data-theme="light"] { --primary: rgb(180, 20, 40); --primary-foreground: rgb(250, 250, 250); }
       :root[data-theme="favicon-neutral"] { --primary: rgb(190, 30, 50); --primary-foreground: rgb(240, 240, 240); }
     `;
     document.head.append(themeStyle);

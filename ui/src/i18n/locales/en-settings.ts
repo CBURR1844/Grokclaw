@@ -1279,8 +1279,8 @@ const enSettings = {
     },
     themes: {
       claw: {
-        label: "Claw",
-        description: "Chroma family",
+        label: "BotClaw",
+        description: "Cobalt on graphite or white",
       },
       knot: {
         label: "Knot",

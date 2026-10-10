@@ -5,6 +5,7 @@ import type { ApplicationNavigationOptions } from "../app/context.ts";
 import { nativeGatewaysCapability } from "../app/native-gateways.runtime.ts";
 import type { ThemeMode } from "../app/theme.ts";
 import { t } from "../i18n/index.ts";
+import { registerAdvancedSwitchEnglish } from "../i18n/locales/en-advanced-switch.ts";
 import { KEYBOARD_SHORTCUT_COMBOS } from "../lib/keyboard-shortcut-contract.ts";
 import type { PresenceViewer } from "../lib/presence-users.ts";
 import { requestDebugOverlayToggle } from "../pages/debug/debug-overlay-contract.ts";
@@ -22,6 +23,8 @@ import "./sidebar-build-chip.ts";
 import "./viewer-facepile.ts";
 import { syncDropdownItemRadio, trackDropdownKeyboardDismissal } from "./web-awesome.ts";
 
+registerAdvancedSwitchEnglish();
+
 type SidebarIdentityMenuParams = {
   position: { x: number; bottom: number; width: number };
   canPairDevice: boolean;
@@ -30,6 +33,8 @@ type SidebarIdentityMenuParams = {
   updateAttentionDismissed: boolean;
   profileViewer?: PresenceViewer;
   canRetryConnection: boolean;
+  /** BotClaw's Advanced switch; off keeps the menu to the simple screen's items. */
+  advanced: boolean;
   themeMode: ThemeMode;
   triggerWidth: number;
   onTabAway: () => void;
@@ -37,6 +42,7 @@ type SidebarIdentityMenuParams = {
   onNavigate: (routeId: NavigationRouteId, options?: ApplicationNavigationOptions) => void;
   onPairMobile: () => void;
   onRetryConnect?: () => void;
+  onToggleAdvanced: () => void;
 };
 
 function renderIdentityGateways(onClose: SidebarIdentityMenuParams["onClose"]) {
@@ -184,6 +190,9 @@ export function renderSidebarIdentityMenu(params: SidebarIdentityMenuParams) {
           case `${COMMAND_VALUE_PREFIX}retry-connect`:
             params.onRetryConnect?.();
             break;
+          case `${COMMAND_VALUE_PREFIX}advanced`:
+            params.onToggleAdvanced();
+            break;
         }
       }}
       @keydown=${(event: KeyboardEvent) => {
@@ -225,21 +234,43 @@ export function renderSidebarIdentityMenu(params: SidebarIdentityMenuParams) {
           ariaHidden: true,
         }),
       })}
-      ${renderSidebarMenuAction("command:usage", titleForRoute("usage"), "coins")}
+      ${params.advanced ? renderSidebarMenuAction("command:usage", titleForRoute("usage"), "coins") : nothing}
       <div class="sidebar-customize-menu__separator" role="separator"></div>
       ${renderSidebarMenuAction("command:pair-mobile", t("devices.pairing.button"), "smartphone", {
         className: "sidebar-pair-mobile",
         disabled: !params.canPairDevice,
         title: params.canPairDevice ? undefined : t("devices.pairing.adminRequired"),
       })}
-      ${renderSidebarMenuAction("command:apps", t("agentChip.getApps"), "layoutGrid")}
-      ${renderSidebarMenuAction("command:debug-overlay", t("debug.overlay.title"), "activity", {
-        details: renderKeyboardShortcut(KEYBOARD_SHORTCUT_COMBOS.debugOverlay, {
-          slot: "details",
-          className: "session-menu__shortcut",
-          ariaHidden: true,
-        }),
-      })}
+      ${
+        params.advanced
+          ? html`${renderSidebarMenuAction("command:apps", t("agentChip.getApps"), "layoutGrid")}
+            ${renderSidebarMenuAction(
+              "command:debug-overlay",
+              t("debug.overlay.title"),
+              "activity",
+              {
+                details: renderKeyboardShortcut(KEYBOARD_SHORTCUT_COMBOS.debugOverlay, {
+                  slot: "details",
+                  className: "session-menu__shortcut",
+                  ariaHidden: true,
+                }),
+              },
+            )}`
+          : nothing
+      }
+      <div class="sidebar-customize-menu__separator" role="separator"></div>
+      <wa-dropdown-item
+        class="sidebar-customize-menu__item sidebar-identity-menu__advanced"
+        type="checkbox"
+        value="command:advanced"
+        .checked=${params.advanced}
+      >
+        <span slot="icon" class="nav-item__icon" aria-hidden="true">${icons.layers}</span>
+        <span class="sidebar-customize-menu__text">${t("nav.advanced")}</span>
+        <span slot="details" class="sidebar-identity-menu__advanced-details"
+          >${t("nav.advancedDetails")}</span
+        >
+      </wa-dropdown-item>
 
       <div class="sidebar-customize-menu__separator" role="separator"></div>
       ${renderSidebarHelpMenu()}

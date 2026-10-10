@@ -92,6 +92,26 @@ function closeSlashMenuIfNeeded(state: SlashMenuState, requestUpdate: () => void
   }
 }
 
+/**
+ * With typed commands off, "/" typed into an empty box opens the + menu
+ * instead of the command list. Handles beforeinput so layouts that type "/"
+ * with a modifier and mobile keyboards behave the same.
+ */
+export function interceptSlashIntent(event: InputEvent, host: SkillMenuHost): boolean {
+  if (
+    !host.openAddMenu ||
+    event.isComposing ||
+    event.inputType !== "insertText" ||
+    event.data !== "/" ||
+    (host.getTextarea()?.value ?? host.getDraft()) !== "" ||
+    !host.openAddMenu()
+  ) {
+    return false;
+  }
+  event.preventDefault();
+  return true;
+}
+
 function requestSlashCommandRefresh(
   state: SlashMenuState,
   host: SlashMenuHost,
@@ -129,6 +149,10 @@ export function updateSlashMenu(
   requestUpdate: () => void,
   opts: { skipSlashIntent?: boolean } = {},
 ): void {
+  if (host.openAddMenu) {
+    closeSlashMenuIfNeeded(state, requestUpdate);
+    return;
+  }
   if (
     state.slashMenuMode === "freeform-args" &&
     state.slashMenuCompletion?.inline &&

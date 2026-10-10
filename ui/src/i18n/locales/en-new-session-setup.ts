@@ -6,6 +6,7 @@ const enNewSessionSetup = {
   newSession: {
     title: en.newSession.title,
     hint: en.newSession.hint,
+    simpleHint: "Say what to do.",
     environments: "Environments",
     gateway: "Gateway · local",
     cloudWorkerMachine: "{profile} · {machine}",

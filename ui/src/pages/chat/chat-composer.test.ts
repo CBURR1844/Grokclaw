@@ -11,6 +11,7 @@ import {
   renderComposerFixture as renderComposer,
   resetComposerFixture,
 } from "./chat-composer.test-support.ts";
+import { getChatComposerState } from "./components/chat-composer-state.ts";
 import { renderChatComposer } from "./components/chat-composer.ts";
 import { installChatComposerPickerDismissal } from "./components/chat-picker-overlay.ts";
 import type { ChatQuestionCard } from "./components/chat-question-card.ts";
@@ -61,6 +62,57 @@ describe("composer typing lifecycle", () => {
     expect(submit).toHaveBeenCalledOnce();
     expect(typingAtSubmit).toEqual([false]);
     expect(onTypingChange).toHaveBeenLastCalledWith(false);
+  });
+});
+
+describe("composer with typed commands off", () => {
+  function typeSlash(textarea: HTMLTextAreaElement) {
+    const event = new InputEvent("beforeinput", {
+      inputType: "insertText",
+      data: "/",
+      bubbles: true,
+      cancelable: true,
+    });
+    textarea.dispatchEvent(event);
+    return event;
+  }
+
+  it("opens the + menu for a leading slash instead of the command list", () => {
+    const onSlashIntent = vi.fn();
+    const { container, props: composerProps } = renderComposer({
+      slashCommands: false,
+      onSlashIntent,
+    });
+    const textarea = container.querySelector<HTMLTextAreaElement>("textarea")!;
+
+    expect(typeSlash(textarea).defaultPrevented).toBe(true);
+    expect(getChatComposerState(composerProps.paneId)).toMatchObject({
+      capabilityMenuOpen: true,
+      capabilityMenuView: "root",
+    });
+    expect(textarea.value).toBe("");
+    textarea.value = "/he";
+    textarea.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    expect(onSlashIntent).not.toHaveBeenCalled();
+    expect(getChatComposerState(composerProps.paneId).slashMenuOpen).toBe(false);
+  });
+
+  it("types the slash after text or when there is no + menu", () => {
+    const { container } = renderComposer({ slashCommands: false, draft: "a" });
+    const textarea = container.querySelector<HTMLTextAreaElement>("textarea")!;
+    textarea.value = "a";
+    expect(typeSlash(textarea).defaultPrevented).toBe(false);
+
+    const withoutMenu = renderComposer({
+      slashCommands: false,
+      uploadConfig: { current: { uploadsEnabled: false } } as Parameters<
+        typeof renderChatComposer
+      >[0]["uploadConfig"],
+    });
+    expect(
+      typeSlash(withoutMenu.container.querySelector<HTMLTextAreaElement>("textarea")!)
+        .defaultPrevented,
+    ).toBe(false);
   });
 });
 

@@ -4,6 +4,7 @@ import { CONTROL_UI_BOOTSTRAP_CONFIG_PATH } from "../../../src/gateway/control-u
 import type { DesktopClient } from "../components/desktop/desktop-client.ts";
 import { createControlUiE2eArtifactDir } from "../test-helpers/control-ui-e2e-artifacts.ts";
 import { waitForControlUiGatewayReady } from "../test-helpers/control-ui-e2e-readiness.ts";
+import { pinUpstreamUiDefaults } from "../test-helpers/control-ui-e2e-ui-defaults.ts";
 import {
   controlUiBundledSettingsStorageKey,
   controlUiSessionUrl,
@@ -474,6 +475,7 @@ suite.define(() => {
         await context.route(`**${CONTROL_UI_BOOTSTRAP_CONFIG_PATH}`, (route) =>
           route.fulfill({ json: createControlUiMockBootstrapConfig(popupScenario) }),
         );
+        await pinUpstreamUiDefaults(context);
         await context.addInitScript({
           content: createControlUiMockGatewayInitScript(popupScenario),
         });

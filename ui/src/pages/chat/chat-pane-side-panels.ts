@@ -1,6 +1,7 @@
-import { nothing } from "lit";
+import { html, nothing, type TemplateResult } from "lit";
 import type { SessionsCompanionStateResult } from "../../../../packages/gateway-protocol/src/schema/sessions.js";
 import { SESSION_COMPANION_SELECTION_CONTEXT_MAX_CHARS } from "../../../../packages/gateway-protocol/src/session-companion-contract.js";
+import { resolveUiPreset } from "../../app/ui-preset.ts";
 import { icons } from "../../components/icons.ts";
 import { t } from "../../i18n/index.ts";
 import type { ChatAttachment } from "../../lib/chat/chat-types.ts";
@@ -128,12 +129,23 @@ export abstract class ChatPaneSidePanels extends ChatPaneBase {
     return isSidebarSlotVisible(this.presentSidebarLayout(layout), slot);
   }
 
-  /** The header's toolbar toggle and menu entry for this conversation's agent details. */
+  /**
+   * The header's controls for this conversation's agent: the details toggle and
+   * menu entry, and on the simple screen the identity that replaces the crumbs.
+   */
   protected agentDetailsControls(catalog: boolean) {
-    const visible =
-      this.state !== undefined && isSidebarSlotVisible(this.state.sidebarLayout, "agent");
+    const state = this.state;
+    const visible = state !== undefined && isSidebarSlotVisible(state.sidebarLayout, "agent");
     if (catalog) {
-      return { visible, toggle: nothing, menuAction: null };
+      return { visible, toggle: nothing, menuAction: null, identity: undefined };
+    }
+    let identity: TemplateResult | undefined;
+    if (state && !resolveUiPreset(state.settings).advanced) {
+      // Same chunk as the details panel.
+      void import("../../components/agent-details-panel.ts");
+      identity = html`<openclaw-agent-identity
+        .agentId=${resolveChatAgentId(state)}
+      ></openclaw-agent-identity>`;
     }
     const label = t(visible ? "agentDetails.hide" : "agentDetails.toggle");
     const onActivate = () => this.requestBackgroundPanel("agent", "toggle");
@@ -151,7 +163,7 @@ export abstract class ChatPaneSidePanels extends ChatPaneBase {
       expanded: visible,
       onToggle: onActivate,
     });
-    return { visible, toggle, menuAction };
+    return { visible, toggle, menuAction, identity };
   }
 
   protected requestBackgroundPanel(

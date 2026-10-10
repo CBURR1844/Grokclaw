@@ -23,6 +23,7 @@ import {
 import { adjustTextareaHeight, paneDomId } from "../chat/components/chat-composer-dom.ts";
 import type { HumanMentionMenuHost } from "../chat/components/chat-composer-mention-menu.ts";
 import { resolveComposerMenus } from "../chat/components/chat-composer-menus.ts";
+import { hasChatComposerPlusMenu } from "../chat/components/chat-composer-plus-menu.ts";
 import { renderSelectedHumanMentions } from "../chat/components/chat-composer-selected-mentions.ts";
 import {
   handleSkillMenuKeydown,
@@ -33,6 +34,7 @@ import {
 } from "../chat/components/chat-composer-skill-menu.ts";
 import {
   handleSlashMenuKeydown,
+  interceptSlashIntent,
   renderSlashMenu,
   resetSlashMenuState,
   type SlashMenuHost,
@@ -164,6 +166,28 @@ export function renderNewSessionComposer(options: NewSessionComposerOptions) {
     commitDraft: options.onInput,
     getTextarea: options.textareaController.getTextarea,
     refreshCommands: options.refreshCommands,
+    openAddMenu:
+      options.slashCommands === false
+        ? () => {
+            if (
+              options.nativeTerminal ||
+              composerLocked ||
+              !(
+                options.draftAvailable ||
+                hasChatComposerPlusMenu({
+                  capabilityMenu: options.capabilityMenu,
+                  attachments: attachmentProps,
+                })
+              )
+            ) {
+              return false;
+            }
+            options.textareaController.capabilityMenuView = "root";
+            options.textareaController.capabilityMenuOpen = true;
+            options.requestUpdate();
+            return true;
+          }
+        : undefined,
   };
   const slashMenuHost: SlashMenuHost = {
     ...skillMenuHost,
@@ -393,6 +417,9 @@ export function renderNewSessionComposer(options: NewSessionComposerOptions) {
                 updateMenus(target, event);
               }}
               @beforeinput=${(event: InputEvent) => {
+                if (interceptSlashIntent(event, skillMenuHost)) {
+                  return;
+                }
                 // SAFETY: this beforeinput listener belongs to this native textarea.
                 const target = event.target as HTMLTextAreaElement;
                 options.textareaController.mentionInput = {

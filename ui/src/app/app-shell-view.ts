@@ -53,6 +53,7 @@ import { isDesktopPanelAvailable, isHomePanelAvailable } from "./panel-availabil
 import { NAV_WIDTH_MAX, NAV_WIDTH_MIN, normalizeCatalogOpenTarget } from "./settings.ts";
 import { renderCollapsedHomeToggle } from "./shell-assistant-toggles.ts";
 import type { ShellLayoutController } from "./shell-layout-traits.ts";
+import { resolveUiPreset } from "./ui-preset.ts";
 
 export interface ShellViewHost extends ShellLazyOverlayHost {
   readonly devicePairSetup: Parameters<typeof renderLazyDevicePairSetup>[0];
@@ -234,6 +235,7 @@ export function renderApplicationShell(host: ShellViewHost) {
   });
   const openNewSession = callbacks.requestOpenNewSession;
   const uiSettings = context.theme.settings;
+  const uiPreset = resolveUiPreset(uiSettings);
   // The new-session draft shares the chat layout: full-height pane that owns
   // its scrolling and pins the composer dock to the bottom.
   const chatLikeRoute = sessionRoute || activeRoute === "new-session" || activeRoute === "systems";
@@ -255,7 +257,8 @@ export function renderApplicationShell(host: ShellViewHost) {
       preferencesBrowserOnly: gatewayConnected && context.runtimeConfig.canPatch === false,
       sidebarEntries: navigationSnapshot.sidebarEntries,
       navigationVisible: !navigationSurfaceHidden,
-      sidebarAgentsMode: uiSettings.sidebarAgentsMode ?? "chip",
+      advanced: uiPreset.advanced,
+      sidebarAgentsMode: uiPreset.sidebarAgentsMode,
       sidebarLiveActivity: uiSettings.sidebarLiveActivity !== false,
       pinnedAgentIds: navigationSnapshot.pinnedAgentIds,
       themeMode: context.theme.mode,
@@ -324,6 +327,7 @@ export function renderApplicationShell(host: ShellViewHost) {
             basePath: context.basePath,
             canAdmin: operatorAccess.canAdmin,
             nativeDeviceSettings: context.nativeDeviceSettings,
+            advanced: uiPreset.advanced,
           },
           onExit: () => {
             if (!nativeEmbed) {
@@ -361,6 +365,7 @@ export function renderApplicationShell(host: ShellViewHost) {
           },
           canAdmin: operatorAccess.canAdmin,
           nativeDeviceSettings: context.nativeDeviceSettings,
+          advanced: uiPreset.advanced,
         })
       : host.navigationSidebar;
   // Optional tags stay mounted before definition. Lit replays their properties on upgrade,

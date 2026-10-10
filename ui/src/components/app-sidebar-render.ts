@@ -116,6 +116,37 @@ function renderSidebarAgentCard(host: AppSidebarRenderHost) {
 function renderSidebarWorkspaceHeader(host: AppSidebarRenderHost) {
   const name = readSidebarNativeGateway()?.name.trim() || t("common.productName");
   const menuOpen = host.sidebarMenus.agentMenuPosition !== null;
+  const environment = host.sessionDataContext?.config.current.environment;
+  const identity = (chevron: boolean) => html`
+    <span class="sidebar-workspace-header__mark" aria-hidden="true">${icons.mark}</span>
+    <span class="sidebar-agent-card__text">
+      <span class="sidebar-agent-card__name">
+        ${renderHoverMarquee(name, "sidebar-agent-card__name-text", { loop: true, delay: 300, speed: 35 })}
+        ${
+          chevron
+            ? html`<span class="sidebar-agent-card__chevron" aria-hidden="true"
+                >${icons.chevronsUpDown}</span
+              >`
+            : nothing
+        }
+      </span>
+      ${
+        environment
+          ? html`<span class="control-ui-environment-pill">${environment.label}</span>`
+          : nothing
+      }
+    </span>
+  `;
+  // The simple screen shows the brand only; bots and settings have their own menus.
+  if (!host.advanced) {
+    return html`
+      <div class="sidebar-workspace-header">
+        <div class="sidebar-workspace-header__main sidebar-workspace-header__main--static">
+          ${identity(false)}
+        </div>
+      </div>
+    `;
+  }
   return html`
     <div class="sidebar-workspace-header">
       <button
@@ -144,22 +175,7 @@ function renderSidebarWorkspaceHeader(host: AppSidebarRenderHost) {
           }
         }}
       >
-        <span class="sidebar-workspace-header__mark" aria-hidden="true">${icons.mark}</span>
-        <span class="sidebar-agent-card__text">
-          <span class="sidebar-agent-card__name">
-            ${renderHoverMarquee(name, "sidebar-agent-card__name-text", { loop: true, delay: 300, speed: 35 })}
-            <span class="sidebar-agent-card__chevron" aria-hidden="true"
-              >${icons.chevronsUpDown}</span
-            >
-          </span>
-          ${
-            host.sessionDataContext?.config.current.environment
-              ? html`<span class="control-ui-environment-pill"
-                  >${host.sessionDataContext.config.current.environment.label}</span
-                >`
-              : nothing
-          }
-        </span>
+        ${identity(true)}
       </button>
     </div>
   `;
@@ -205,7 +221,7 @@ export function renderAppSidebarBrand(
           </button>
         </openclaw-tooltip>
         ${
-          host.sidebarAgentsMode === "roster"
+          host.sidebarAgentsMode === "roster" && host.advanced
             ? renderSidebarSessionFilter(host, "sidebar-brand__icon sidebar-brand__header-control")
             : nothing
         }
@@ -393,7 +409,7 @@ export function renderAppSidebarFooterBar(host: AppSidebarRenderHost) {
       >
       <span class="sidebar-footer-actions">
         ${
-          isHomePanelAvailable(host.sessionDataContext?.gateway)
+          host.advanced && isHomePanelAvailable(host.sessionDataContext?.gateway)
             ? html`<openclaw-tooltip
                 .content=${`${t("assistantPanel.toggle")} (${formatKeyboardShortcutCombo(KEYBOARD_SHORTCUT_COMBOS.homePanel)})`}
                 .contentTemplate=${renderShortcutHint(t("assistantPanel.toggle"), KEYBOARD_SHORTCUT_COMBOS.homePanel)}

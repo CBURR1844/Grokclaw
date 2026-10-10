@@ -214,6 +214,7 @@ describe("chat pane session menu boundary", () => {
       client: createGatewayBrowserClientFixture(),
       sessions: createSessionCapabilityFixture(),
     });
+    state.settings = loadSettings();
     state.connected = false;
     pane.presentationTitle = "Retained conversation";
     const container = document.createElement("div");

@@ -82,6 +82,7 @@ export const en: TranslationMap & {
   mcpServers: TranslationMap;
   mcpPage: TranslationMap;
   modelSetup: TranslationMap;
+  nav: TranslationMap;
   newSession: TranslationMap &
     Record<"title" | "hint" | "placementReloadBlocked" | "discardUnsavedAndReload", string>;
   commandPalette: TranslationMap;

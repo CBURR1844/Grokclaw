@@ -28,6 +28,7 @@ import { parseImportedCustomTheme, type ImportedCustomTheme } from "./custom-the
 import { normalizeTerminalFontFamily } from "./terminal-font.ts";
 import { parseThemeSelection, type ThemeMode, type ThemeName } from "./theme.ts";
 import { normalizeTypefaceOverride, type TypefaceId } from "./typography.ts";
+import { resolveSidebarAgentsMode } from "./ui-preset.ts";
 import { normalizeLocalUserIdentity, type LocalUserIdentity } from "./user-identity.ts";
 
 const SETTINGS_KEY_PREFIX = "openclaw.control.settings.v1:";
@@ -217,6 +218,7 @@ export type UiSettings = {
   navCollapsed: boolean; // Collapsible sidebar state
   navWidth: number; // Sidebar width when expanded (240–400px)
   sidebarAgentsMode?: "chip" | "roster";
+  advancedUi?: boolean; // Browser-local Advanced switch; absent = product default
   sidebarPreTeamScope?: string | null; // null remembers All agents; undefined means unset.
   sidebarCollapsedAgentIds?: string[];
   sidebarEntries: string[]; // Ordered routes, plugin navigation, and pinned sessions below Home
@@ -302,18 +304,6 @@ type PersistedSettingsSource = {
   gatewayUrl: string;
   parsed: PersistedUiSettings;
 };
-
-/**
- * BotClaw opens the bot roster. OpenClaw's UI suites were written for the
- * agent chip; their setup and mock Gateway pin it through this global.
- */
-function resolveSidebarAgentsMode(stored?: unknown): "chip" | "roster" {
-  if (stored === "chip" || stored === "roster") {
-    return stored;
-  }
-  const pinned: unknown = Reflect.get(globalThis, "openclawDefaultSidebarAgentsMode");
-  return pinned === "chip" ? "chip" : "roster";
-}
 
 function readSettingsForGateway(
   storage: Storage | null,
@@ -565,6 +555,7 @@ export function loadUiPreferences(
           ? parsed.navWidth
           : defaults.navWidth,
       sidebarAgentsMode: resolveSidebarAgentsMode(parsed.sidebarAgentsMode),
+      advancedUi: normalizeBooleanSetting(parsed.advancedUi, undefined),
       sidebarPreTeamScope: normalizeSidebarPreTeamScope(parsed.sidebarPreTeamScope),
       sidebarCollapsedAgentIds: normalizeUniqueTrimmedStringList(parsed.sidebarCollapsedAgentIds),
       sidebarEntries:
@@ -708,6 +699,8 @@ export function saveSettings(next: UiSettings, options: { selectGateway?: boolea
         : undefined,
     navWidth: next.navWidth, // Persist size, not visibility: shared localStorage leaks across tabs.
     sidebarAgentsMode: resolveSidebarAgentsMode(next.sidebarAgentsMode),
+    // Only an explicit choice persists, so the product default can change.
+    advancedUi: typeof next.advancedUi === "boolean" ? next.advancedUi : undefined,
     sidebarPreTeamScope: normalizeSidebarPreTeamScope(next.sidebarPreTeamScope),
     sidebarCollapsedAgentIds: next.sidebarCollapsedAgentIds?.length
       ? normalizeUniqueTrimmedStringList(next.sidebarCollapsedAgentIds)

@@ -63,6 +63,7 @@ function renderSettingsSidebarSkeleton(props: SettingsSidebarProps) {
   const groups = visibleSettingsNavigationGroups(
     Boolean(props.canAdmin),
     props.nativeDeviceSettings ?? null,
+    props.advanced !== false,
   );
   return html`<div class="settings-sidebar__agent" aria-hidden="true">
       <span class="skeleton settings-sidebar__loading-agent"></span>
