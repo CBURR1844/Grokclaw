@@ -54,6 +54,8 @@ export function buildCronMocks(
     secondAgentId?: string;
     /** Claws whose details-panel cards read these routines and their latest runs. */
     clawAgentIds?: readonly [sorter: string, brief: string];
+    /** Agents whose details panels find no routines instead of the full fixture list. */
+    unscheduledAgentIds?: readonly string[];
   } = {},
 ) {
   const richAttention = options.richAttention === true;
@@ -397,6 +399,10 @@ export function buildCronMocks(
             .filter((job) => (job.agentId ?? "main") === agentId)
             .toSorted((left, right) => left.name.localeCompare(right.name)),
         ),
+      })),
+      ...(options.unscheduledAgentIds ?? []).map((agentId) => ({
+        match: { agentId, sortBy: "name" },
+        response: listResult([]),
       })),
       // Cases mirror the concrete queries today's Cron UI issues. Unknown combinations fall back
       // to the full fixture list; dynamic evaluation is intentionally out of scope because the

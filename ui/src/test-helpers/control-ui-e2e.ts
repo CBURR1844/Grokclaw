@@ -6,7 +6,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HelloOk, MessageReactionSummary } from "@openclaw/gateway-protocol";
 import { normalizeAgentId } from "@openclaw/normalization-core/agent-id";
-import { buildControlUiSessionPath } from "@openclaw/session-url-contract";
 import type { Locator, Page } from "playwright";
 import type { InlineConfig, Plugin, PreviewServer, ViteDevServer } from "vite";
 import { GATEWAY_SERVER_CAPS } from "../../../packages/gateway-protocol/src/server-capabilities.js";
@@ -45,6 +44,7 @@ import {
   controlUiE2eWaitTimeoutMs,
   waitForControlUiInitialRoster,
 } from "./control-ui-e2e-readiness.ts";
+import { controlUiSessionPath } from "./control-ui-e2e-session-paths.ts";
 import { getSharedControlUiE2ePreview } from "./control-ui-e2e-shared-preview.ts";
 import { pinUpstreamUiDefaults } from "./control-ui-e2e-ui-defaults.ts";
 import { createControlUiMockPresence } from "./control-ui-mock-presence.ts";
@@ -75,42 +75,7 @@ export {
   installControlUiRpcDiagnostics,
 } from "./control-ui-e2e-diagnostics.ts";
 export { controlUiE2eWaitTimeoutMs, waitForConfirmModal } from "./control-ui-e2e-readiness.ts";
-
-export function controlUiSessionPath(
-  sessionKey: string,
-  basePath = "",
-  namespace: "chat" | "dashboard" = "chat",
-): string {
-  const pathname = buildControlUiSessionPath({
-    namespace,
-    sessionKey,
-    fallbackAgentId: sessionKey.split(":")[1] || "main",
-    basePath,
-    shortIdLength: 32,
-  });
-  return pathname ?? `${basePath}/chat`;
-}
-
-export function controlUiSessionUrl(
-  baseUrl: string,
-  sessionKey: string,
-  namespace: "chat" | "dashboard" = "chat",
-): string {
-  const url = new URL(baseUrl);
-  // Cold fixture navigation knows the exact key; it must not depend on a warm
-  // short-reference cache or a separately mocked sessions.resolve response.
-  url.pathname =
-    buildControlUiSessionPath({
-      namespace,
-      sessionKey,
-      basePath: url.pathname,
-      fallbackAgentId: sessionKey.split(":")[1] || "main",
-      exactKey: true,
-    }) ?? controlUiSessionPath(sessionKey, url.pathname, namespace);
-  url.search = "";
-  url.hash = "";
-  return url.toString();
-}
+export { controlUiSessionPath, controlUiSessionUrl } from "./control-ui-e2e-session-paths.ts";
 
 export async function assertSessionSectionCountAlignment(
   page: Page,
@@ -1386,14 +1351,7 @@ function installControlUiMockGateway(
     if (existing) {
       return existing;
     }
-    const sequence =
-      Math.max(
-        0,
-        ...chatHistoryMessages(row.key).map(messageSequence),
-        ...committedChatInputs
-          .filter((source) => source.sessionId === row.sessionId)
-          .map((source) => source.message["__openclaw"].seq),
-      ) + 1;
+    const sequence = nextMessageSequence(row);
     const media = createAttachmentFacts(params.attachments);
     const source: CommittedChatInput = {
       sessionId: String(row.sessionId),
@@ -1412,17 +1370,36 @@ function installControlUiMockGateway(
         },
       },
     };
+    // Attachment turns ACK before their source receipt; publish actual source
+    // consumption as a separate event after the response reaches the browser.
+    commitTranscriptRow(row.key, source, media.length > 0);
+    return source;
+  }
+
+  function nextMessageSequence(row: { key: string; sessionId?: unknown }): number {
+    return (
+      Math.max(
+        0,
+        ...chatHistoryMessages(row.key).map(messageSequence),
+        ...committedChatInputs
+          .filter((source) => source.sessionId === row.sessionId)
+          .map((source) => source.message["__openclaw"].seq),
+      ) + 1
+    );
+  }
+
+  // chat.history serves committed rows after a reload too; `publish` also tells live
+  // subscribers, after the response that committed the row reaches the browser.
+  function commitTranscriptRow(key: string, source: CommittedChatInput, publish: boolean) {
     committedChatInputs.push(source);
-    if (media.length) {
-      // Attachment turns ACK before their source receipt; publish actual source
-      // consumption as a separate event after the response reaches the browser.
+    if (publish) {
       window.queueMicrotask(() => {
-        const currentSession = sessions.read(row.key);
+        const currentSession = sessions.read(key);
         if (currentSession.sessionId !== source.sessionId) {
           return;
         }
         emitGatewayEvent(MockWebSocket.latest, "session.message", {
-          sessionKey: row.key,
+          sessionKey: key,
           sessionId: currentSession.sessionId,
           status: currentSession.status,
           hasActiveRun: currentSession.hasActiveRun,
@@ -1440,7 +1417,6 @@ function installControlUiMockGateway(
     } catch {
       // Committed fixture source remains available in the current page.
     }
-    return source;
   }
 
   /** Transcript fields a scenario configured on chat.history, replayed onto the
@@ -2697,6 +2673,17 @@ function installControlUiMockGateway(
     },
     setRequestHandler(method, handler) {
       requestHandlers.set(method, handler);
+    },
+    commitHistoryMessage(sessionKey, message) {
+      const row = sessions.read(sessionKey);
+      const sequence = nextMessageSequence(row);
+      const meta = {
+        id: `mock-row:${row.sessionId}:${sequence}`,
+        ...message["__openclaw"],
+        seq: sequence,
+      };
+      const source = { message: { ...message, __openclaw: meta }, runId: meta.id };
+      commitTranscriptRow(row.key, { ...source, sessionId: String(row.sessionId) }, true);
     },
     setMethodResponse(method, payload) {
       scenario.methodResponses[method] = payload;

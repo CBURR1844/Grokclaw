@@ -32,6 +32,7 @@ import type {
 } from "../ui/src/api/types.ts";
 import { activityPulseBoundaries } from "../ui/src/pages/activity/activity-pulse-window.ts";
 import type { ActivityTimeFilter } from "../ui/src/pages/activity/session-activity.ts";
+import { clawDelegationMockInitScript } from "../ui/src/test-helpers/control-ui-e2e-claws.ts";
 import {
   controlUiSessionPath,
   createControlUiMockBootstrapConfig,
@@ -143,6 +144,48 @@ const NARRATION_DEMO_RUN_ID = "mock-sidebar-narration-run";
 const OBSERVER_DEMO_SESSION_KEY = "agent:main:session-observer-demo";
 const OBSERVER_DEMO_RUN_ID = "mock-session-observer-run";
 const PLAN_DEMO_RUN_ID = "mock-plan-run";
+// Single-job agents the sidebar-roster fixture lists as Claws: Forge has four, so its message
+// menu asks which; Molty has two without schedules, and Trip Planner's runs time out.
+const MOCK_CLAWS = [
+  {
+    id: "inbox-sorter",
+    name: "Inbox Sorter",
+    theme: "Sorts new email",
+    emoji: "📬",
+    bots: ["forge"],
+  },
+  {
+    id: "morning-brief",
+    name: "Morning Brief",
+    theme: "Writes the day's brief",
+    emoji: "☀️",
+    bots: ["forge"],
+  },
+  {
+    id: "expense-ledger",
+    name: "Expense Ledger",
+    theme: "Logs receipts and expenses",
+    emoji: "🧾",
+    bots: ["main", "forge"],
+    reply: "Logged 3 receipts: lunch $42.10, taxi $18.00 and hotel $120.00.",
+  },
+  {
+    id: "trip-planner",
+    name: "Trip Planner",
+    theme: "Plans trips and bookings",
+    emoji: "🧳",
+    bots: ["main", "forge"],
+    status: "timeout",
+  },
+] as const satisfies ReadonlyArray<{
+  id: string;
+  name: string;
+  theme: string;
+  emoji: string;
+  bots: readonly string[];
+  reply?: string;
+  status?: "timeout";
+}>;
 type UpdateFixture = {
   available: UpdateAvailable;
   runResponse: unknown;
@@ -935,7 +978,7 @@ function buildConfigMocks(
   options: {
     swarmEnabled?: boolean;
     workboardEnabled?: boolean;
-    claws?: { botId: string; clawIds: readonly string[] };
+    claws?: readonly { id: string; bots: readonly string[] }[];
   } = {},
 ) {
   const claws = options.claws;
@@ -949,8 +992,19 @@ function buildConfigMocks(
       ...(claws
         ? {
             entries: {
-              [claws.botId]: { subagents: { allowAgents: [...claws.clawIds] } },
-              ...Object.fromEntries(claws.clawIds.map((id) => [id, { kind: "claw" }])),
+              ...Object.fromEntries(
+                [...new Set(claws.flatMap((claw) => claw.bots))].map((bot) => [
+                  bot,
+                  {
+                    subagents: {
+                      allowAgents: claws
+                        .filter((claw) => claw.bots.includes(bot))
+                        .map((claw) => claw.id),
+                    },
+                  },
+                ]),
+              ),
+              ...Object.fromEntries(claws.map((claw) => [claw.id, { kind: "claw" }])),
             },
           }
         : {}),
@@ -1482,14 +1536,8 @@ async function createChatPickerScenario(
       sessionLabels: ["Welcome guide", "Story ideas"],
     },
   ] as const;
-  // Single-job agents Forge starts; the sidebar-roster fixture lists them as its Claws.
-  const clawAgents = [
-    { id: "inbox-sorter", name: "Inbox Sorter", theme: "Sorts new email", emoji: "📬" },
-    { id: "morning-brief", name: "Morning Brief", theme: "Writes the day's brief", emoji: "☀️" },
-  ] as const;
-  const clawBot = "forge";
-  const listedClaws: ReadonlyArray<(typeof clawAgents)[number]> =
-    fixture === "sidebar-roster" ? clawAgents : [];
+  const listedClaws: ReadonlyArray<(typeof MOCK_CLAWS)[number]> =
+    fixture === "sidebar-roster" ? MOCK_CLAWS : [];
   const pickerInventory = process.env.MOCK_PICKER_INVENTORY === "1";
   const selfProfile: UserProfile = {
     id: fixture === "reactions" ? "presence-avery" : "presence-riley",
@@ -2121,8 +2169,9 @@ async function createChatPickerScenario(
     richAttention,
     ...(fixture === "sidebar-roster"
       ? {
-          secondAgentId: clawBot,
-          clawAgentIds: [clawAgents[0].id, clawAgents[1].id] as const,
+          secondAgentId: "forge",
+          clawAgentIds: [MOCK_CLAWS[0].id, MOCK_CLAWS[1].id] as const,
+          unscheduledAgentIds: [MOCK_CLAWS[2].id, MOCK_CLAWS[3].id],
         }
       : {}),
   });
@@ -2167,9 +2216,7 @@ async function createChatPickerScenario(
     : modelProviders.authStatus;
   const channelWizard = buildChannelWizardMocks();
   const configMocks = buildConfigMocks({
-    ...(fixture === "sidebar-roster"
-      ? { claws: { botId: clawBot, clawIds: clawAgents.map((agent) => agent.id) } }
-      : {}),
+    ...(fixture === "sidebar-roster" ? { claws: MOCK_CLAWS } : {}),
     swarmEnabled: fixture === "swarm",
     workboardEnabled: fixture === "workboard" || fixture === "workboard-states",
   });
@@ -2364,6 +2411,7 @@ async function createChatPickerScenario(
       "sessions.catalog.read",
       "sessions.compact",
       "sessions.create",
+      "sessions.delegate",
       "system.info",
       "tts.speak",
       "desktop.observe",
@@ -2511,12 +2559,12 @@ async function createChatPickerScenario(
             identity: { name, theme, emoji, avatar },
             model: { primary: "example/model-small" },
           })),
-          ...listedClaws.map(({ id, name, theme, emoji }) => ({
+          ...listedClaws.map(({ id, name, theme, emoji, bots }) => ({
             id,
             name,
             identity: { name, theme, emoji },
             model: { primary: "example/model-small" },
-            claw: { requesterAgentIds: [clawBot] },
+            claw: { requesterAgentIds: [...bots] },
           })),
         ],
         defaultId: "main",
@@ -3431,6 +3479,18 @@ async function createMockGatewayPlugin(
       pluginLifecycleMockInitScript() +
       skillWorkshopMockInitScript(Date.now()) +
       approvalMockInitScript(fixture === "approval") +
+      clawDelegationMockInitScript(
+        Object.fromEntries(
+          MOCK_CLAWS.map((claw) => [
+            claw.id,
+            {
+              label: claw.name,
+              ...("status" in claw ? { status: claw.status } : {}),
+              ...("reply" in claw ? { reply: claw.reply } : {}),
+            },
+          ]),
+        ),
+      ) +
       (fixture === "workboard" || fixture === "workboard-states"
         ? `(() => { const __name = (target) => target; (${installWorkboardBoardMock.toString()})(${JSON.stringify(buildWorkboardMocks(Date.now(), MOCK_ACTOR_PETER, fixture === "workboard-states"))}); })();`
         : ""),

@@ -9,6 +9,9 @@ registerChatMessageMetadataEnglish();
 
 type MessageMenuAction = { label: string; disabled: boolean; tooltip: string; run: () => void };
 
+// More Claws than this share one item that asks which, so the menu stays short.
+const INLINE_CLAW_LIMIT = 3;
+
 // The side chat pins its comment to DOM text offsets, so it asks about the rendered body.
 function renderedBodySource(bubble: HTMLElement, body: HTMLElement) {
   const range = bubble.ownerDocument.createRange();
@@ -21,8 +24,8 @@ function renderedBodySource(bubble: HTMLElement, body: HTMLElement) {
 
 /**
  * The message menu's actions on a whole message, in menu order: ask about it in a side
- * chat, save its workflow as a skill, and read it aloud. Only messages with a text body get
- * them; tool output and attachment-only rows have nothing to ask about, learn or read.
+ * chat, save its workflow as a skill, send it to a Claw, and read it aloud. Only messages
+ * with a text body get them; tool output and attachment-only rows have nothing to act on.
  */
 export function wholeMessageActions(
   props: {
@@ -59,6 +62,23 @@ export function wholeMessageActions(
       () => commands?.run("learn", { message: text }),
       learn.disabledReason,
     );
+  }
+  const claw = commands?.read("claw");
+  const claws = claw ? (commands?.claws() ?? []) : [];
+  if (claw && claws.length > INLINE_CLAW_LIMIT) {
+    add(
+      t("chat.commandControls.sendToAnyClaw"),
+      () => commands?.run("claw", { message: text }),
+      claw.disabledReason,
+    );
+  } else {
+    for (const { id, name } of claws) {
+      add(
+        t("chat.commandControls.sendToClaw", { name }),
+        () => commands?.run("claw", { message: text, clawId: id }),
+        claw?.disabledReason,
+      );
+    }
   }
   if (onReadAloud) {
     const reading = isReadingAloud(text);
