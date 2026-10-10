@@ -259,8 +259,8 @@ describe("chat command controls", () => {
     dispatch.mockReturnValue(compaction.promise);
     const { host, controls } = setup();
 
-    controls.run("compact");
-    controls.run("compact");
+    void controls.run("compact");
+    void controls.run("compact");
 
     expect(dispatch).toHaveBeenCalledOnce();
     expect(dispatch).toHaveBeenCalledWith(host, "compact", "");
@@ -272,7 +272,7 @@ describe("chat command controls", () => {
   it("saves a message's workflow through chat.send without the composer's reply", () => {
     const { host, controls } = setup();
 
-    controls.run("learn", { message: "  Deploy\n\nthe   site  " });
+    void controls.run("learn", { message: "  Deploy\n\nthe   site  " });
 
     expect(host.handleSendChat).toHaveBeenCalledWith(
       "/learn Save the reusable workflow in this message as a skill: “Deploy the site”",
@@ -288,7 +288,7 @@ describe("chat command controls", () => {
     showInputDialog.mockResolvedValue(answer);
     const { host, controls } = setup();
 
-    controls.run("learn");
+    void controls.run("learn");
 
     await vi.waitFor(() => expect(showInputDialog).toHaveBeenCalledOnce());
     await Promise.resolve();
@@ -310,7 +310,7 @@ describe("chat command controls", () => {
       },
     });
 
-    controls.run("loop");
+    void controls.run("loop");
 
     await vi.waitFor(() =>
       expect(host.handleSendChat).toHaveBeenCalledWith("/loop 1h check the build", {
@@ -326,7 +326,7 @@ describe("chat command controls", () => {
   it("starts a goal draft, stops offering another and focuses the composer", async () => {
     const { host, controls, focus } = setup();
 
-    controls.run("goal");
+    void controls.run("goal");
 
     expect(host.chatGoalDraftMode).toEqual({ sessionId: "session-1", action: "start" });
     // While the goal is being drafted, the menus stop offering a second one.
@@ -340,7 +340,7 @@ describe("chat command controls", () => {
     const exportCurrentChat = vi.fn(async () => "exported" as const);
     const { controls } = setup({ host: { exportCurrentChat } });
 
-    controls.run("export");
+    void controls.run("export");
 
     await vi.waitFor(() => expect(exportCurrentChat).toHaveBeenCalledOnce());
   });
@@ -349,7 +349,7 @@ describe("chat command controls", () => {
     dispatch.mockRejectedValue(new Error("chunk failed to load"));
     const { controls } = setup();
 
-    controls.run("export");
+    void controls.run("export");
 
     await vi.waitFor(() =>
       expect(showToast).toHaveBeenCalledWith({
@@ -363,7 +363,7 @@ describe("chat command controls", () => {
     showInputDialog.mockReturnValue(answer.promise);
     const { host, controls } = setup();
 
-    controls.run("loop");
+    void controls.run("loop");
     await vi.waitFor(() => expect(showInputDialog).toHaveBeenCalledOnce());
     host.chatSending = true;
     answer.resolve("30m check the build");
@@ -380,7 +380,7 @@ describe("chat command controls", () => {
     const { host, controls } = setup();
     host.chatSending = true;
 
-    controls.run("learn", { message: "hello" });
+    void controls.run("learn", { message: "hello" });
 
     expect(host.handleSendChat).not.toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledWith({
@@ -410,23 +410,24 @@ describe("chat command controls", () => {
   });
 
   it("sends a message to a Claw with this chat's session and a fresh key", async () => {
+    const accepted = createDeferred<unknown>();
     const { request, controls } = setup({
-      request: () => ({ status: "accepted", runId: "run-1", childSessionKey: "child" }),
+      request: () => accepted.promise,
       host: { chatSending: true },
     });
 
-    controls.run("claw", { message: "  Sort my inbox ", clawId: "sorter" });
+    const run = controls.run("claw", { message: "  Sort my inbox ", clawId: "sorter" });
+    accepted.resolve({ status: "accepted", runId: "run-1", childSessionKey: "child" });
+    await run;
 
-    await vi.waitFor(() =>
-      expect(request).toHaveBeenCalledWith("sessions.delegate", {
-        sessionKey: "agent:main:main",
-        sessionId: "session-1",
-        targetAgentId: "sorter",
-        task: "Sort my inbox",
-        idempotencyKey: expect.any(String),
-      }),
-    );
-    await Promise.resolve();
+    expect(request).toHaveBeenCalledWith("sessions.delegate", {
+      sessionKey: "agent:main:main",
+      sessionId: "session-1",
+      targetAgentId: "sorter",
+      task: "Sort my inbox",
+      idempotencyKey: expect.any(String),
+    });
+    // The chat's working line shows the start; success needs no toast.
     expect(showToast).not.toHaveBeenCalled();
   });
 
@@ -451,7 +452,7 @@ describe("chat command controls", () => {
       },
     });
 
-    controls.run("claw", { message: "Sort my inbox", clawId: "sorter" });
+    void controls.run("claw", { message: "Sort my inbox", clawId: "sorter" });
 
     await vi.waitFor(() => expect(showToast).toHaveBeenCalledWith({ message }));
     expect(request).toHaveBeenCalledOnce();
@@ -460,7 +461,7 @@ describe("chat command controls", () => {
   it("asks which Claw, then sends to the session the menu was opened in", async () => {
     const { host, request, controls } = setup();
 
-    controls.run("claw", { message: "Sort my inbox" });
+    void controls.run("claw", { message: "Sort my inbox" });
 
     await vi.waitFor(() => expect(showClawTaskDialog).toHaveBeenCalledOnce());
     const [dialog] = showClawTaskDialog.mock.calls[0]!;

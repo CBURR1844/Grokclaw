@@ -63,7 +63,7 @@ export class ChatPaneHeaderSessionActions {
           description:
             disabledReason ??
             (command === "compact" ? t("chat.commandControls.freeUpSpaceDescription") : undefined),
-          onActivate: () => this.commands?.run(command),
+          onActivate: () => void this.commands?.run(command),
         })),
         ...pluginActions.map((action) => ({
           label: action.label,

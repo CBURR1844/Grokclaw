@@ -60,7 +60,7 @@ export function wholeMessageActions(
   if (learn) {
     add(
       t("chat.messages.saveAsSkill"),
-      () => commands?.run("learn", { message: text }),
+      () => void commands?.run("learn", { message: text }),
       learn.disabledReason,
     );
   }
@@ -73,14 +73,14 @@ export function wholeMessageActions(
   if (claws.length > INLINE_CLAW_LIMIT) {
     add(
       t("chat.commandControls.sendToAnyClaw"),
-      () => commands?.run("claw", { message: text }),
+      () => void commands?.run("claw", { message: text }),
       clawReason,
     );
   } else {
     for (const { id, name } of claws) {
       add(
         t("chat.commandControls.sendToClaw", { name }),
-        () => commands?.run("claw", { message: text, clawId: id }),
+        () => void commands?.run("claw", { message: text, clawId: id }),
         clawReason,
       );
     }
