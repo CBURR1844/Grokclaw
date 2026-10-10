@@ -31,9 +31,10 @@ export type ChatCommandControls = {
   claws(): ClawChoice[];
   /**
    * `message` turns learn into "save this message's workflow as a skill" and is the task a
-   * Claw gets; without `clawId` the claw command asks which Claw first.
+   * Claw gets; without `clawId` the claw command asks which Claw first. Settles once the
+   * command finished; a failure is toasted, never thrown.
    */
-  run(command: ChatControlCommand, options?: { message?: string; clawId?: string }): void;
+  run(command: ChatControlCommand, options?: { message?: string; clawId?: string }): Promise<void>;
 };
 
 type ComposerGate = {
@@ -257,14 +258,16 @@ export function createChatCommandControls(
   return {
     read,
     claws,
-    run(command, options) {
+    async run(command, options) {
       // Menus can outlive the render that built them; check again at click time.
       if (blocked(command)) {
         return;
       }
-      runNow(command, options).catch((error: unknown) =>
-        showToast({ message: t("chat.commandControls.failed", { error: formatUiError(error) }) }),
-      );
+      try {
+        await runNow(command, options);
+      } catch (error) {
+        showToast({ message: t("chat.commandControls.failed", { error: formatUiError(error) }) });
+      }
     },
   };
 }

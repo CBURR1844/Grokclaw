@@ -1,6 +1,7 @@
 import { html, nothing } from "lit";
 import { t } from "../i18n/index.ts";
 import { registerAgentDetailsClawsEnglish } from "../i18n/locales/en-agent-details-claws.ts";
+import { CLAW_TASK_MAX_CHARS } from "../lib/agents/claw-delegation.ts";
 import { formatUiError } from "../lib/format-error.ts";
 import { generateUUID } from "../lib/uuid.ts";
 import { withPromiseModalHost } from "./promise-modal-host.ts";
@@ -95,7 +96,7 @@ function presentClawTaskDialog(options: ClawTaskDialogOptions): Promise<boolean>
         <textarea
           name="task"
           rows="4"
-          maxlength="16000"
+          maxlength=${CLAW_TASK_MAX_CHARS}
           placeholder=${t("agentDetails.claws.runPlaceholder")}
           .value=${task}
           ?disabled=${submitting}

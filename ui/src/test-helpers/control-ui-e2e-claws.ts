@@ -9,9 +9,9 @@ export type ClawDelegationMock = Record<
 >;
 
 /**
- * Runs in the page after the mock Gateway: answers sessions.delegate as the Gateway does for
- * an admitted request, then commits the Claw's result to the bot's chat in the shape
- * chat.history projects it. It is serialized into an init script, so it imports nothing.
+ * Runs in the page after the mock Gateway: answers sessions.delegate as the Gateway does, then
+ * commits an admitted Claw's result to the bot's chat in the shape chat.history projects it.
+ * It is serialized into an init script, so it imports nothing.
  */
 function installClawDelegationMock(claws: ClawDelegationMock): void {
   const gateway = (window as MockGatewayWindow).openclawControlUiE2eGateway;
@@ -32,8 +32,10 @@ function installClawDelegationMock(claws: ClawDelegationMock): void {
       return undefined;
     }
   };
-  // Each key keeps its first request and run, so a retry joins the run it may have started.
-  const runs = new Map<string, { identity: string; result: Record<string, string> }>();
+  // As on the Gateway, a key belongs to its first request and keeps only an accepted run: a
+  // retry joins the run it may have started, and a refused request is evaluated again.
+  const keys = new Map<string, { identity: string; result?: Record<string, string> }>();
+  let runCount = 0;
   gateway.setRequestHandler("sessions.delegate", ({ params, respond }) => {
     if (!isRecord(params) || Object.keys(params).some((key) => !FIELDS.has(key))) {
       respond(refuse("INVALID_REQUEST", "invalid sessions.delegate params"));
@@ -50,32 +52,35 @@ function installClawDelegationMock(claws: ClawDelegationMock): void {
       respond(refuse("INVALID_REQUEST", "invalid sessions.delegate params"));
       return;
     }
-    const identity = JSON.stringify([sessionKey, sessionId ?? null, targetAgentId, task]);
-    const known = runs.get(idempotencyKey);
-    const claw = claws[targetAgentId];
-    if (known) {
-      respond(
-        known.identity === identity
-          ? known.result
-          : refuse("INVALID_REQUEST", "This request key was already used for a different request."),
-      );
-      return;
-    }
     if (sessionId && currentSessionId(sessionKey) !== sessionId) {
       respond(
         refuse("INVALID_REQUEST", "This chat changed since you opened it. Reload and try again."),
       );
       return;
     }
+    const identity = JSON.stringify([sessionKey, targetAgentId, task]);
+    const known = keys.get(idempotencyKey) ?? { identity };
+    if (known.identity !== identity) {
+      respond(
+        refuse("INVALID_REQUEST", "This request key was already used for a different request."),
+      );
+      return;
+    }
+    if (known.result) {
+      respond(known.result);
+      return;
+    }
+    keys.set(idempotencyKey, known);
+    const claw = claws[targetAgentId];
     if (!claw) {
       respond(refuse("FORBIDDEN", `agentId is not allowed for sessions_spawn: ${targetAgentId}`));
       return;
     }
-    const runId = `mock-claw-run-${runs.size + 1}`;
+    runCount += 1;
+    const runId = `mock-claw-run-${runCount}`;
     const childSessionKey = `agent:${targetAgentId}:subagent:${runId}`;
-    const result = { status: "accepted", runId, childSessionKey };
-    runs.set(idempotencyKey, { identity, result });
-    respond(result);
+    known.result = { status: "accepted", runId, childSessionKey };
+    respond(known.result);
     // A real run reports back when the Claw finishes; the mock finishes at once.
     const status = claw.status ?? "ok";
     const text =
