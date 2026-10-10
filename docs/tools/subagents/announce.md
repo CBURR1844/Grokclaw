@@ -119,9 +119,10 @@ The requester's model is not asked to relay it, and no requester turn starts:
   reset, replaced, or deleted, or can never accept results again (an expired
   Incognito chat, or one closed by restart recovery), delivery ends as a terminal
   non-delivery with no retry and no wake. While the chat is archived, still
-  initializing, paused for provider review, or waiting for workspace setup, and
-  after other commit failures, delivery retries until the normal delivery expiry.
-  `sessions.delegate` refuses to start a run from a chat in one of those states.
+  initializing, or waiting for workspace setup, and after other commit failures,
+  delivery retries until the normal delivery expiry. `sessions.delegate` refuses
+  to start a run from a chat in one of those states or paused for provider
+  review; a result still lands in a chat paused after the run started.
 
 The row stays in the requester transcript, so the bot sees the result on later
 turns and users can follow up on it. The row's model content opens with a header

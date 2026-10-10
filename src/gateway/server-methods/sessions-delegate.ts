@@ -43,9 +43,6 @@ type SessionAccess = NonNullable<GatewayRequestHandlerOptions["sessionAccessAuth
 
 const STALE_CHAT = "This chat changed since you opened it. Reload and try again.";
 
-/** A response, marked when a same-key retry must replay it because a child may already run. */
-type DelegateResult = GatewayInflightResult & { dispatched?: true };
-
 async function isWorkerPlaced(options: DelegateOptions, sessionId: string) {
   const service = options.context.workerSessionPlacementService;
   if (!service) {
@@ -59,7 +56,7 @@ async function isWorkerPlaced(options: DelegateOptions, sessionId: string) {
 }
 
 /** Maps the spawn tool's own outcome; a hook block or spawn refusal keeps the owner's text. */
-function mapSpawnResult(result: unknown): DelegateResult {
+function mapSpawnResult(result: unknown): GatewayInflightResult {
   const accepted = normalizeAcceptedSessionSpawnResult(result);
   if (accepted) {
     const payload: SessionsDelegateResult = {
@@ -78,12 +75,13 @@ function mapSpawnResult(result: unknown): DelegateResult {
   return {
     ok: false,
     error: errorShape(refused ? ErrorCodes.FORBIDDEN : ErrorCodes.UNAVAILABLE, message),
-    // Spawn names a run only once it dispatched the child, which may still be running.
-    ...(normalizeOptionalString(details?.runId) ? { dispatched: true as const } : {}),
   };
 }
 
-async function delegate(options: DelegateOptions, access: SessionAccess): Promise<DelegateResult> {
+async function delegate(
+  options: DelegateOptions,
+  access: SessionAccess,
+): Promise<GatewayInflightResult> {
   const { client, context, params: request } = options;
   const assertCurrent = () => {
     options.signal?.throwIfAborted();
@@ -257,11 +255,10 @@ async function handleSessionsDelegate(options: DelegateOptions) {
   }
   const work = (async (): Promise<GatewayInflightResult> => {
     try {
-      const { dispatched, ...result } = await delegate(options, access);
-      // Only a dispatched child is a side effect to replay; a same-key retry must not start a
-      // second one. A refusal can clear (a finished helper frees a slot, policy changes), so a
-      // same-key retry is evaluated again.
-      if (result.ok || dispatched) {
+      const result = await delegate(options, access);
+      // Only a started run has a side effect to replay. A refusal can clear (a finished
+      // helper frees a slot, policy changes), so a same-key retry is evaluated again.
+      if (result.ok) {
         cacheGatewayDedupeResult({ context, dedupeKey, requestIdentity, result });
       }
       return result;
