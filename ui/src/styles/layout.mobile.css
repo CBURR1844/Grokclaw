@@ -596,9 +596,10 @@ html.openclaw-native-desktop body .shell--mobile-nav {
   }
 }
 
-/* ≤560px: right-click and "..." menus open as sheets along the bottom edge.
+/* ≤560px touch screens: long-press and "..." menus open as sheets along the bottom edge.
+   A mouse keeps anchored menus, so a hover-opened menu stays within reach.
    Menus with fly-out submenus stay anchored to their trigger. */
-@media (max-width: 560px) {
+@media (max-width: 560px) and (pointer: coarse) {
   wa-dropdown:not(:has([slot="submenu"])):is(
       .session-menu,
       .sidebar-customize-menu,

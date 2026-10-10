@@ -1448,8 +1448,8 @@ openclaw-chat-video-player {
   animation: menu-in 140ms var(--ease-out);
 }
 
-/* ≤560px: the message menu is a sheet along the bottom edge, like the other menus. */
-@media (max-width: 560px) {
+/* ≤560px touch screens: the message menu is a sheet along the bottom edge, like the other menus. */
+@media (max-width: 560px) and (pointer: coarse) {
   /* Doubled to outrank the corner rule in base.css. */
   .chat-reply-context-menu.chat-reply-context-menu {
     /* Outranks the inline left/top the menu is placed at. */
