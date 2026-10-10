@@ -39,7 +39,7 @@ it("stores result presentation as a flat field that older readers can ignore", (
     runId: "captured",
     completionPresentation: "result",
   });
-  expect(rowToSubagentRunRecord(row).completionPresentation).toBe("result");
+  expect(rowToSubagentRunRecord(row)?.completionPresentation).toBe("result");
 });
 
 it.each(["reply", "no reply", "root array", "completion array"] as const)(

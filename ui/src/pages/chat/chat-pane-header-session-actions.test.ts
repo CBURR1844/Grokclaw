@@ -8,7 +8,7 @@ const context = { gateway: { snapshot: { phase: "connected" } } } as unknown as 
 function controls(
   states: Partial<Record<ChatControlCommand, { disabledReason: string | null }>>,
 ): ChatCommandControls {
-  return { read: (command) => states[command] ?? null, run: vi.fn() };
+  return { read: (command) => states[command] ?? null, claws: () => [], run: vi.fn() };
 }
 
 describe("chat menu session actions", () => {
