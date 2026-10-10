@@ -9,8 +9,8 @@ import type { DesktopMachines } from "./docker.js";
 
 type Runtime = OpenClawPluginApi["runtime"];
 
-// Core owns tool-policy matching and tests it; a literal matcher keeps this file off the large
-// harness module while still exercising which lists setup consults.
+// Core owns and tests tool-policy matching; this still exercises which lists setup consults.
+// mock-isolation: A literal matcher keeps this file off the large agent harness module.
 vi.mock("openclaw/plugin-sdk/agent-harness-runtime", () => ({
   toolPolicy: {
     createToolPolicyMatcher:
