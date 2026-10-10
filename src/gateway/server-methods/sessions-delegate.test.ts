@@ -262,6 +262,32 @@ describe("sessions.delegate", () => {
     expect(mocks.calls).not.toContain("tools");
   });
 
+  it.each([
+    { name: "an archived chat", patch: { archivedAt: 2 }, message: "is archived" },
+    {
+      name: "an initializing chat",
+      patch: { initializationPending: true },
+      message: "initializing",
+    },
+    {
+      name: "a chat awaiting workspace setup",
+      patch: { pendingProjectGitUrl: "https://example.com/repo.git" },
+      message: "workspace is not ready",
+    },
+  ] as const)("refuses $name with the lifecycle owner's text", async ({ patch, message }) => {
+    mocks.withGatewaySessionEntry.mockReturnValue({
+      sessionId: "session-1",
+      updatedAt: 1,
+      ...patch,
+    });
+    const calls = await fixture().invoke();
+    expect(calls[0]?.[2]).toMatchObject({
+      code: ErrorCodes.INVALID_REQUEST,
+      message: expect.stringContaining(message),
+    });
+    expect(mocks.calls).not.toContain("tools");
+  });
+
   it("refuses when the bot's tool policy hides sessions_spawn", async () => {
     mocks.resolveSkillDispatchTools.mockReturnValue([{ name: "read", execute: vi.fn() }]);
     const calls = await fixture().invoke();

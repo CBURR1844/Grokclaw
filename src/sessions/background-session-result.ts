@@ -1,7 +1,6 @@
 // Commits detached background results into an existing conversation generation.
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
 import { makeZeroUsageSnapshot } from "../agents/usage.js";
-import { resolveSessionWorkStartError } from "../config/sessions/lifecycle.js";
 import { resolveSessionStorePathCore } from "../config/sessions/paths.js";
 import { readResolvedSessionEntryInWorker } from "../config/sessions/session-accessor.entry.js";
 import {
@@ -13,6 +12,7 @@ import {
   readTranscriptEventMessage,
 } from "../config/sessions/session-accessor.sqlite-read.js";
 import { findTranscriptEvent } from "../config/sessions/session-transcript-match.js";
+import { resolveSessionWorkStartBlock } from "../config/sessions/session-work-start.js";
 import type { SessionTranscriptAssistantMessage } from "../config/sessions/transcript.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { racePromiseWithAbortSignal } from "../infra/abort-signal.js";
@@ -30,7 +30,11 @@ import {
 // must stay outside the transcript-only delivery-mirror model set.
 const AUTOMATION_RESULT_MODEL = "automation-result" as const;
 
-/** "rebound" and "unavailable" are final for the pinned generation; retries cannot commit. */
+/**
+ * "rebound" (replaced or deleted) and "unavailable" (expired incognito, restart tombstone) are
+ * final for the pinned generation. "not_committed" may commit on retry, including while the
+ * chat is initializing, archived, paused for review, or waiting for workspace setup.
+ */
 export type BackgroundSessionResultCommit =
   | { ok: true; messageId: string }
   | { ok: false; kind: "rebound" | "unavailable" | "not_committed"; reason: string };
@@ -119,12 +123,16 @@ export async function commitBackgroundResultToSession(params: {
           reason: `session rebound for sessionKey: ${sessionKey}`,
         };
       }
-      const unavailable = resolveSessionWorkStartError(sessionKey, current, {
+      const blocked = resolveSessionWorkStartBlock(sessionKey, current, {
         expectedSessionId,
         purpose: "accepted-result-settlement",
       });
-      if (unavailable) {
-        return { ok: false, kind: "unavailable", reason: unavailable };
+      if (blocked) {
+        return {
+          ok: false,
+          kind: blocked.recoverable ? "not_committed" : "unavailable",
+          reason: blocked.message,
+        };
       }
       const scope = {
         agentId: params.agentId,

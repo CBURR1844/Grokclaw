@@ -13,6 +13,7 @@ import { normalizeAcceptedSessionSpawnResult } from "../../agents/accepted-sessi
 import { resolveAgentWorkspaceDir } from "../../agents/agent-scope-config.js";
 import { resolveAgentIdentity } from "../../agents/identity.js";
 import { resolveIngressWorkspaceOverrideForSessionRun } from "../../agents/spawned-context.js";
+import { resolveSessionWorkStartError } from "../../config/sessions/session-work-start.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { getGatewayPluginMetadataSnapshot } from "../../plugins/current-plugin-metadata-state.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../../sessions/session-key-utils.js";
@@ -100,6 +101,11 @@ async function delegate(
   );
   if (!entry || entry.sessionId !== sessionId) {
     return { ok: false, error: errorShape(ErrorCodes.INVALID_REQUEST, STALE_CHAT) };
+  }
+  // An archived, initializing, or workspace-pending chat could not take the Claw's result.
+  const notReady = resolveSessionWorkStartError(sessionKey, entry);
+  if (notReady) {
+    return { ok: false, error: errorShape(ErrorCodes.INVALID_REQUEST, notReady) };
   }
   const caller = resolveChatSendCallerContext(client);
   const model = resolveSessionSelectedModelRef({
