@@ -141,7 +141,7 @@ export function createDesktopMachines(params: {
     try {
       result = await run([DOCKER, ...args], { timeoutMs: COMMAND_TIMEOUT_MS, ...options });
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
         throw new Error("Docker is not installed. Install Docker Engine, then try again.", {
           cause: error,
         });

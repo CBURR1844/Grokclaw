@@ -293,6 +293,7 @@ export async function setUpBotComputer(params: {
   config: OpenClawPluginApi["runtime"]["config"];
   canListen?: (host: string) => Promise<boolean>;
 }): Promise<BotComputerSetup> {
+  // SAFETY: setup only reads this snapshot; every write goes through config.mutate below.
   const current = params.config.current() as OpenClawConfig;
   const normalized = normalizeAgentIdStrict(params.agentId);
   if (!normalized.ok || !listAgentIds(current).includes(normalized.value)) {

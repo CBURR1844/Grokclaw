@@ -954,7 +954,7 @@ async function runGatewayCommandOnce(opts: GatewayRunOpts, hooks: GatewayRunRunt
         return await startGatewayServer(port, {
           // Only --bind pins the listener. The server reads gateway.bind from the config of
           // each start, so an in-process restart applies a changed bind.
-          ...(bindFlag ? { bind: bindFlag as GatewayBindMode } : {}),
+          ...(bindFlag && bindExplicitRaw ? { bind: bindExplicitRaw } : {}),
           ...(opts.updateCanary ? { updateCanary: true } : {}),
           ...(activeBootId ? { bootId: activeBootId } : {}),
           auth: authOverride,

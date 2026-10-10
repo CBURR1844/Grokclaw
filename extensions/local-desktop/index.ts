@@ -32,9 +32,7 @@ export default definePluginEntry({
       "localDesktop.setup",
       async ({ params, respond }) => {
         const agentId =
-          params && typeof params === "object" && !Array.isArray(params)
-            ? (params as Record<string, unknown>).agentId
-            : undefined;
+          params && typeof params === "object" && "agentId" in params ? params.agentId : undefined;
         if (typeof agentId !== "string" || !agentId || Object.keys(params ?? {}).length !== 1) {
           const message = "localDesktop.setup takes { agentId }.";
           respond(false, { error: message }, errorShape(ErrorCodes.INVALID_REQUEST, message));
