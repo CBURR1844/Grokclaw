@@ -5,6 +5,7 @@ import type { createOpenClawToolsAsync } from "../../agents/openclaw-tools.js";
 import { filterRequesterYieldTools } from "../../agents/openclaw-tools.requester-yield.js";
 import { resolveRequesterToolPolicies } from "../../agents/requester-tool-policy.js";
 import { resolveSandboxRuntimeStatus } from "../../agents/sandbox/runtime-status.js";
+import { resolveStoredSessionPermissionPolicy } from "../../agents/tool-fs-policy.js";
 import { buildDeclaredToolAllowlistContext } from "../../agents/tool-policy-declared-context.js";
 import {
   applyToolPolicyPipeline,
@@ -188,6 +189,11 @@ export async function resolveSkillDispatchTools(
     sessionConfigSource: "runtime",
     allowGatewaySubagentBinding: true,
     sandboxed: sandboxRuntime.sandboxed,
+    // Helpers spawned here keep the chat's permission mode, as on the model's own turn.
+    sessionPermissionPolicy: resolveStoredSessionPermissionPolicy(
+      params.sessionEntry,
+      params.workspaceDir,
+    ),
     requesterAgentIdOverride: params.agentId,
     requesterSenderId: params.senderId,
     senderIsOwner: params.senderIsOwner,

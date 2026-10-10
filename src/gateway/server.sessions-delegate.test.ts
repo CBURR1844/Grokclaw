@@ -8,7 +8,10 @@ import { buildAgentRunTerminalReplySnapshot } from "../agents/agent-run-terminal
 import type { AgentCommandGatewayIngressOpts } from "../agents/command/types.js";
 import { subagentRuns } from "../agents/subagents/registry/subagent-registry-memory.js";
 import { settleSubagentRegistryPersistenceWork } from "../agents/subagents/registry/subagent-registry.persistence.test-support.js";
-import { persistSessionTranscriptTurn } from "../config/sessions/session-accessor.js";
+import {
+  loadSessionEntry,
+  persistSessionTranscriptTurn,
+} from "../config/sessions/session-accessor.js";
 import { emitAgentEvent } from "../infra/agent-events.js";
 import { onSessionTranscriptUpdate } from "../sessions/transcript-events.js";
 import { startGatewayServerHarness, type GatewayServerHarness } from "./server.e2e-ws-harness.js";
@@ -23,6 +26,9 @@ import {
 import { buildMockOpenAiResponsesProvider } from "./test-openai-responses-model.js";
 
 const BOT_KEY = "agent:main:main";
+// Each agent keeps its own store; the Claw's child sessions live under its own agent.
+const storePath = (agentId: string) =>
+  path.join(process.env.OPENCLAW_STATE_DIR!, "agents", agentId, "sessions", "sessions.json");
 
 function ingressOpts(input: unknown): AgentCommandGatewayIngressOpts {
   // SAFETY: the Gateway's agent ingress is the only caller of the hoisted agentCommand mock.
@@ -57,9 +63,6 @@ describe("sessions.delegate through the Gateway", () => {
   beforeEach(async () => {
     sequence += 1;
     sessionId = `bot-session-${sequence}`;
-    // Each agent keeps its own store; the Claw's child sessions live under its own agent.
-    const storePath = (agentId: string) =>
-      path.join(process.env.OPENCLAW_STATE_DIR!, "agents", agentId, "sessions", "sessions.json");
     testState.sessionStorePath = storePath("{agentId}");
     // The agent command is mocked; spawn admission only needs a model it can resolve.
     const provider = buildMockOpenAiResponsesProvider("http://127.0.0.1:9/v1");
@@ -143,6 +146,52 @@ describe("sessions.delegate through the Gateway", () => {
     expect(refused.error?.message).toMatch(/^agentId is not allowed for sessions_spawn/);
     expect(agentCommandMock).not.toHaveBeenCalled();
     ws.close();
+  });
+
+  it("keeps the chat's permission mode on the Claw's session", async () => {
+    // A model-made spawn from this chat carries its mode; the delegated one must too.
+    await writeSessionStore({
+      entries: {
+        [BOT_KEY]: {
+          sessionId,
+          updatedAt: Date.now(),
+          permissionMode: "read-only",
+          sessionRoot: "/tmp/bot-root",
+        },
+      },
+      storePath: storePath("main"),
+    });
+    const stop = onSessionTranscriptUpdate((update) => {
+      const automation = (update.message as { openclawAutomation?: { runId?: unknown } })
+        ?.openclawAutomation;
+      if (update.sessionKey === BOT_KEY && typeof automation?.runId === "string") {
+        resultRow(automation.runId).resolve();
+      }
+    });
+    const { ws } = await harness.openClient({ scopes: ["operator.read", "operator.write"] });
+    try {
+      const started = await delegate(ws, {
+        targetAgentId: "claw",
+        task: "first task",
+        idempotencyKey: `mode-${sequence}`,
+      });
+      expect(started.ok, JSON.stringify(started.error)).toBe(true);
+      const child = loadSessionEntry({
+        sessionKey: started.payload!.childSessionKey,
+        storePath: storePath("claw"),
+      });
+      // Cross-agent children keep the mode and root at their own workspace, as spawn does.
+      expect(child?.spawnedWorkspaceDir).toBeTruthy();
+      expect(child).toMatchObject({
+        permissionMode: "read-only",
+        sessionRoot: child?.spawnedWorkspaceDir,
+      });
+      await resultRow(started.payload!.runId).promise;
+      await settleSubagentRegistryPersistenceWork();
+    } finally {
+      stop();
+      ws.close();
+    }
   });
 
   it("shows two concurrent Claw results as forwarded rows without a bot turn", async () => {
