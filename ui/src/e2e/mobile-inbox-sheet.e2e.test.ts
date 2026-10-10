@@ -4,6 +4,8 @@ import { beforeEach, expect, it } from "vitest";
 import { createControlUiE2eArtifactDir } from "../test-helpers/control-ui-e2e-artifacts.ts";
 import { takeControlUiViewportScreenshot } from "../test-helpers/control-ui-e2e-screenshot.ts";
 import {
+  controlUiBundledGatewayUrl,
+  controlUiBundledSettingsStorageKey,
   defaultControlUiFeatureMethods,
   installMockGateway,
   waitForControlUiRoute,
@@ -147,7 +149,13 @@ suite.define(() => {
       }>;
     }> = [];
 
-    for (const theme of ["light", "dark"] as const) {
+    // BotClaw's dark palette paints the header's --secondary and the list's
+    // --bg-elevated the same graphite, so Dash's distinct dark surfaces show
+    // the header/list split.
+    for (const [theme, family] of [
+      ["light", "claw"],
+      ["dark", "dash"],
+    ] as const) {
       const context = await suite.newBrowserContext({
         colorScheme: theme,
         deviceScaleFactor: 1,
@@ -159,10 +167,27 @@ suite.define(() => {
         serviceWorkers: "block",
         viewport,
       });
+      await context.addInitScript(
+        ({ key, settings }) => localStorage.setItem(key, JSON.stringify(settings)),
+        {
+          key: controlUiBundledSettingsStorageKey(suite.server.baseUrl),
+          settings: {
+            gatewayUrl: controlUiBundledGatewayUrl(suite.server.baseUrl),
+            theme: family,
+            themeMode: theme,
+          },
+        },
+      );
       const page = await context.newPage();
       await installMockGateway(page, { operatorScopes: ["operator.read", "operator.write"] });
       await page.goto(`${suite.server.baseUrl}activity`);
       await setTheme(page, theme);
+      if (family !== "claw") {
+        await page.waitForFunction((id) => {
+          const palette = document.getElementById(id);
+          return palette instanceof HTMLLinkElement && palette.sheet !== null;
+        }, `openclaw-theme-palette-${family}`);
+      }
       await page.getByRole("button", { name: "Expand sidebar" }).click();
       await page.locator(".nav-drawer").waitFor();
       await page.locator(".sidebar-issues-button:visible").click();
