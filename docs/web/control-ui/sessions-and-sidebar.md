@@ -178,7 +178,7 @@ You can also give a Claw one task from a bot's chat:
 
 - A message's menu has **Send to {Claw}** for each of the bot's Claws, up to
   three. With more, **Send to a Claw…** asks which one. The message text is the
-  task.
+  task, so a message over 16,000 characters can't be sent and its items say so.
 - In the chat's **Details**, a Claw without a schedule has **Run…**, and every
   Claw's menu has **Run with a task…**. Both ask what the Claw should do.
 

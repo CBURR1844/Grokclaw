@@ -19,6 +19,9 @@ export function readClawDelegationAccess(
   });
 }
 
+/** The most text one Claw task carries: the limit sessions.delegate admits. */
+export const CLAW_TASK_MAX_CHARS = 16_000;
+
 /**
  * Whether a chat offers its Claws at all. The Gateway admits only a bot's own chat key, so a
  * global-scope chat has none; it refuses helper and routine chats; and an incognito chat stays

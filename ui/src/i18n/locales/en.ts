@@ -3518,6 +3518,7 @@ export const en: TranslationMap & {
       learnFromMessage: "Save the reusable workflow in this message as a skill: “{excerpt}”",
       sendToClaw: "Send to {name}",
       sendToAnyClaw: "Send to a Claw…",
+      clawTaskTooLong: "Too long for a Claw: a task can be up to 16,000 characters.",
       clawUncertain: "Couldn't confirm {name} started. Check this chat before sending again.",
       availableWhenIdle: "Available when the current reply finishes",
       compacting: "Already freeing up space",

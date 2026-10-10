@@ -1,5 +1,6 @@
 import { t } from "../../../i18n/index.ts";
 import { registerChatMessageMetadataEnglish } from "../../../i18n/locales/en-chat-message-metadata.ts";
+import { CLAW_TASK_MAX_CHARS } from "../../../lib/agents/claw-delegation.ts";
 import type { ChatSelectionSource } from "../../../lib/chat/chat-types.ts";
 import { isReadingAloud } from "../../../lib/chat/read-aloud.ts";
 import type { ChatCommandControls } from "../chat-command-controls.ts";
@@ -65,18 +66,22 @@ export function wholeMessageActions(
   }
   const claw = commands?.read("claw");
   const claws = claw ? (commands?.claws() ?? []) : [];
-  if (claw && claws.length > INLINE_CLAW_LIMIT) {
+  // The whole message is the Claw's task, so one longer than a task can be can't go.
+  const clawReason =
+    claw?.disabledReason ??
+    (text.trim().length > CLAW_TASK_MAX_CHARS ? t("chat.commandControls.clawTaskTooLong") : null);
+  if (claws.length > INLINE_CLAW_LIMIT) {
     add(
       t("chat.commandControls.sendToAnyClaw"),
       () => commands?.run("claw", { message: text }),
-      claw.disabledReason,
+      clawReason,
     );
   } else {
     for (const { id, name } of claws) {
       add(
         t("chat.commandControls.sendToClaw", { name }),
         () => commands?.run("claw", { message: text, clawId: id }),
-        claw?.disabledReason,
+        clawReason,
       );
     }
   }

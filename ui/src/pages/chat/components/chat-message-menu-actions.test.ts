@@ -64,4 +64,29 @@ describe("whole-message actions", () => {
       count > 3 ? { message: "Sort my inbox" } : { message: "Sort my inbox", clawId: "claw-1" },
     );
   });
+
+  it.each([
+    ["Send to Claw 1", 1],
+    ["Send to a Claw…", 4],
+  ])("disables %s for a message longer than a Claw's task, saying why", (label, count) => {
+    const { bubble } = renderBubble('<div class="chat-text">Build log</div>');
+    const commands = {
+      read: (command: string) => (command === "claw" ? { disabledReason: null } : null),
+      claws: () =>
+        Array.from({ length: count }, (_, index) => ({
+          id: `claw-${index + 1}`,
+          name: `Claw ${index + 1}`,
+        })),
+      run: vi.fn(),
+    };
+    const claw = (text: string) => wholeMessageActions({ commands }, { text, bubble })[0];
+
+    // Surrounding space is trimmed from the task, so it doesn't count.
+    expect(claw(` ${"x".repeat(16_000)}\n`)).toMatchObject({ label, disabled: false });
+    expect(claw("x".repeat(16_001))).toMatchObject({
+      label,
+      disabled: true,
+      tooltip: "Too long for a Claw: a task can be up to 16,000 characters.",
+    });
+  });
 });
