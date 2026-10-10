@@ -194,8 +194,9 @@ function assertGatewaySecret(draft: OpenClawConfig): void {
     : Boolean(auth.token?.trim()) || configured(draft.gateway?.auth?.token);
   if (!secret) {
     const kind = password ? "password" : "token";
+    const envName = password ? "OPENCLAW_GATEWAY_PASSWORD" : "OPENCLAW_GATEWAY_TOKEN";
     throw new Error(
-      `Bot computers reach the Gateway over Docker's network, which needs a saved Gateway ${kind}. Run \`openclaw config set gateway.auth.${kind} <${kind}>\` (or set OPENCLAW_GATEWAY_${kind.toUpperCase()} for the Gateway service), then set up the computer again.`,
+      `Bot computers reach the Gateway over Docker's network, which needs a saved Gateway ${kind}. Run \`openclaw config set gateway.auth.${kind} <${kind}>\` (or set ${envName} for the Gateway service), then set up the computer again.`,
     );
   }
 }
