@@ -17,6 +17,7 @@ import type { LogsTailParams } from "./schema/logs-chat.js";
 import type * as PortalSchema from "./schema/portals.js";
 import type { PresenceActivityParams, PresenceQueryParams } from "./schema/presence.js";
 import type * as GitHubSchema from "./schema/session-github-publication.js";
+import type { SessionsDelegateParams } from "./schema/sessions-delegate.js";
 import type { StorageLocationsListParams, StorageLocationsProbeParams } from "./schema/storage.js";
 import type {
   ThemesListParams,
@@ -73,6 +74,7 @@ export type GatewayCoreRequestParams = {
   "sessions.github.options": Static<typeof GitHubSchema.SessionGitHubOptionsParamsSchema>;
   "sessions.github.status": Static<typeof GitHubSchema.SessionGitHubStatusParamsSchema>;
   "sessions.github.confirm": GitHubSchema.SessionGitHubConfirmParams;
+  "sessions.delegate": SessionsDelegateParams;
   "update.runs.get": UpdateRunsGetParams;
   "update.runs.list": UpdateRunsListParams;
   "users.authConnect.catalog": UsersSchema.UsersAuthConnectCatalogParams;

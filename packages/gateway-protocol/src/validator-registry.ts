@@ -295,6 +295,7 @@ export const validateSessionsCompanionResetParams = compile(S.SessionsCompanionR
 export const validateSessionsActivitySummaryEnsureParams = compile(
   S.SessionsActivitySummaryEnsureParamsSchema,
 );
+export const validateSessionsDelegateParams = compile(S.SessionsDelegateParamsSchema);
 export const validateSessionsObserverVisibilityParams = compile(
   S.SessionsObserverVisibilityParamsSchema,
 );

@@ -13,6 +13,7 @@ import { SessionOwnerSchema } from "./sessions-row.js";
 export * from "./sessions-create.js";
 export * from "./sessions-involvement.js";
 export * from "./sessions-activity-summary.js";
+export * from "./sessions-delegate.js";
 export {
   SessionsStorageParamsSchema,
   SessionsStorageStatusResultSchema,
