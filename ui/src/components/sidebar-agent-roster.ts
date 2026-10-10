@@ -199,6 +199,7 @@ class SidebarAgentRoster extends AgentRosterElement {
                 aria-label=${card.name}
               >
                 <div
+                  data-touch-contextmenu
                   class="sidebar-agent-roster__header session-row-host"
                   @contextmenu=${this.openRowMenu}
                   @keydown=${this.openRowMenu}

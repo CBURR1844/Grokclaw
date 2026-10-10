@@ -121,6 +121,7 @@ function renderTranscriptShell(
   return html`
     <div class="chat-thread-viewport">
       <div
+        data-touch-contextmenu
         class="chat-thread ${projection.isDirectThread ? "chat-thread--direct" : ""} ${
           routeLoading ? "chat-thread--route-loading" : ""
         } ${commentPins ? "chat-thread--comment-pins" : ""}"

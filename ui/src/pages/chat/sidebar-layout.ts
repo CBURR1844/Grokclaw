@@ -269,13 +269,13 @@ const narrowPresentations = new WeakMap<SidebarLayout, SidebarLayout>();
 /**
  * How a narrow pane shows a layout. It can only stack its side panel under the
  * main view, which leaves a list-and-detail panel too little room, so an open
- * Subagents or Processes panel is shown focused in place. The layout itself is
+ * Subagents, Processes or bot Details panel is shown focused in place. The layout itself is
  * unchanged: a wider pane shows that panel beside the main view again.
  */
 export function presentNarrowSidebarLayout(layout: SidebarLayout): SidebarLayout {
   const slot =
     layout.open === true && !layout.expanded ? sidebarActivePanel(layout)?.slot : undefined;
-  if (slot !== "subagents" && slot !== "processes") {
+  if (slot !== "subagents" && slot !== "processes" && slot !== "agent") {
     return layout;
   }
   let presented = narrowPresentations.get(layout);

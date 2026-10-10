@@ -577,6 +577,7 @@ function renderCatalogSessionRow(
       data-catalog-session-key=${identityKey}
       data-session-row-action-count="1"
       role="listitem"
+      data-touch-contextmenu
       @contextmenu=${openMenuFromEvent}
       @keydown=${openMenuFromEvent}
     >

@@ -174,6 +174,16 @@ in its settings. Details shows up to 12 Claws and links to the rest; a Claw's
 own Details names the bots it works for. These Claws are unrelated to the
 experimental [`openclaw claws`](/cli/claws) agent packages.
 
+### Phones and touch screens
+
+On a touch screen, press and hold a message, a bot, or a chat in the sidebar to
+open the menu a right-click opens there. A hold that moves or scrolls does
+nothing. A hold on message text opens the menu instead of selecting words; the
+menu can still copy the whole message. On touch screens 560 px wide or
+narrower, menus open as sheets along the bottom edge, and menus with fly-out
+submenus stay next to their button. In a pane too narrow to show a side panel beside the chat,
+a bot's **Details** takes the chat's place until you close it.
+
 ## Sidebar navigation
 
 The **Filter & sort** popover keeps **Filters** and **Display** in one panel.
