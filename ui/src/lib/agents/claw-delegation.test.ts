@@ -101,6 +101,8 @@ describe("chatOffersClaws", () => {
     ["an incognito chat", "agent:forge:main", true, false],
     ["a helper's chat", "agent:forge:subagent:abc", false, false],
     ["a routine's chat", "agent:forge:cron:job-1", false, false],
+    // The Gateway refuses a key that names no bot, such as global scope's shared chat.
+    ["a global-scope chat", "global", false, false],
   ])("decides for %s", (_name, sessionKey, incognito, expected) => {
     expect(chatOffersClaws({ sessionKey, incognito })).toBe(expected);
   });

@@ -1,5 +1,8 @@
 import type { SessionsDelegateParams } from "@openclaw/gateway-protocol";
-import { isCronSessionKey } from "../../../../src/sessions/session-key-utils.js";
+import {
+  isCronSessionKey,
+  parseAgentSessionKey,
+} from "../../../../src/sessions/session-key-utils.js";
 import { GatewayRequestError, type GatewayBrowserClient } from "../../api/gateway.ts";
 import { t } from "../../i18n/index.ts";
 import { formatUiError } from "../format-error.ts";
@@ -17,12 +20,16 @@ export function readClawDelegationAccess(
 }
 
 /**
- * Whether a chat offers its Claws at all. The Gateway refuses helper and routine chats, and
- * an incognito chat stays out of other sessions' reach, Claws included.
+ * Whether a chat offers its Claws at all. The Gateway admits only a bot's own chat key, so a
+ * global-scope chat has none; it refuses helper and routine chats; and an incognito chat stays
+ * out of other sessions' reach, Claws included.
  */
 export function chatOffersClaws(chat: { sessionKey: string; incognito: boolean }): boolean {
   return (
-    !chat.incognito && !isSubagentSessionKey(chat.sessionKey) && !isCronSessionKey(chat.sessionKey)
+    !chat.incognito &&
+    parseAgentSessionKey(chat.sessionKey) !== null &&
+    !isSubagentSessionKey(chat.sessionKey) &&
+    !isCronSessionKey(chat.sessionKey)
   );
 }
 

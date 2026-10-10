@@ -75,7 +75,7 @@ function setup(options: Setup = {}) {
     requestHandlers: { "sessions.delegate": options.request ?? (() => ({})) },
     connected,
     hello: options.hello ?? gatewayHelloForMethods(CLAW_METHODS),
-    sessionKey: "main",
+    sessionKey: "agent:main:main",
   });
   const host = Object.assign(
     base,
@@ -224,7 +224,7 @@ describe("chat command controls", () => {
         host: {
           sessionsResult: (() => {
             const result = createSessionsListResult();
-            result.sessions[0] = { ...result.sessions[0]!, goal: GOAL };
+            result.sessions[0] = { ...result.sessions[0]!, key: "agent:main:main", goal: GOAL };
             return result;
           })(),
         },
@@ -392,6 +392,7 @@ describe("chat command controls", () => {
     ["the chat is incognito", { host: { selectedChatSessionIncognito: true } }],
     ["the chat is a helper's", { host: { sessionKey: "agent:main:subagent:abc" } }],
     ["the chat is a routine's", { host: { sessionKey: "agent:main:cron:job-1" } }],
+    ["the chat is global scope's, which names no bot", { host: { sessionKey: "global" } }],
     [
       "the Gateway lacks the method",
       { hello: gatewayHelloForMethods(SESSION_MUTATION_TEST_METHODS) },
@@ -418,7 +419,7 @@ describe("chat command controls", () => {
 
     await vi.waitFor(() =>
       expect(request).toHaveBeenCalledWith("sessions.delegate", {
-        sessionKey: "main",
+        sessionKey: "agent:main:main",
         sessionId: "session-1",
         targetAgentId: "sorter",
         task: "Sort my inbox",

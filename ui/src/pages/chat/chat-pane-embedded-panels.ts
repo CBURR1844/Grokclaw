@@ -15,7 +15,6 @@ import { EMPTY_LINK_READERS } from "../../components/link-reader-target.ts";
 import { renderPanelLoadingSkeleton } from "../../components/panel-loading-skeleton.ts";
 import { t } from "../../i18n/index.ts";
 import { registerFilePreviewEnglish } from "../../i18n/locales/en-file-preview.ts";
-import { chatOffersClaws } from "../../lib/agents/claw-delegation.ts";
 import type { ChatAttachment } from "../../lib/chat/chat-types.ts";
 import { canCallGatewayMethod } from "../../lib/gateway-methods.ts";
 import {
@@ -26,6 +25,7 @@ import {
 } from "../../lit/presentation-binding.ts";
 import type { ControlUiRegistration } from "../../plugins/control-ui-capability.ts";
 import { renderPluginContribution } from "../../plugins/control-ui-view.ts";
+import type { ChatCommandControls } from "./chat-command-controls.ts";
 import { SIDEBAR_PANEL_SHORTCUTS } from "./chat-pane-panel-shortcuts.ts";
 import type { PaneSessionChangeOptions } from "./chat-pane-shared.ts";
 import type {
@@ -57,6 +57,8 @@ type SidebarPanelDefinitionParams = {
   subagentsPresented: PresentationValue;
   processesPresented?: PresentationValue;
   agentPresented?: PresentationValue;
+  /** The chat's own commands; the agent panel runs Claws only where these offer them. */
+  commands?: ChatCommandControls;
   onRefreshProcesses?: () => void;
   subagentsAvailable: boolean;
   subagentsShowRequest?: () => string | null | undefined;
@@ -372,14 +374,9 @@ export function sidebarPanelDefinitions(
             .agentId=${params.agentId}
             .presented=${livePresentation(params.agentPresented ?? false)}
             .sessionKey=${
-              // The panel shows this chat's bot, so its Claws report back to this chat.
-              state &&
-              chatOffersClaws({
-                sessionKey: state.sessionKey,
-                incognito: state.selectedChatSessionIncognito,
-              })
-                ? state.sessionKey
-                : null
+              // The panel shows this chat's bot, so its Claws report back to this chat, and only
+              // where the chat itself offers them: archived, view-only or unsendable chats don't.
+              state && params.commands?.read("claw") ? state.sessionKey : null
             }
             .sessionId=${state?.currentSessionId ?? null}
           ></openclaw-agent-details-panel>`
