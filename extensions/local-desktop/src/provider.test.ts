@@ -141,6 +141,32 @@ describe("local desktop provider", () => {
     expect(host.containers.size).toBe(0);
   });
 
+  it("stops the node install when core closes the enrollment", async () => {
+    const closed = new AbortController();
+    const installing = Promise.withResolvers<void>();
+    const host = fakeMachines({
+      exec: async (_leaseId, _argv, options) => {
+        installing.resolve();
+        const stopped = Promise.withResolvers<void>();
+        options.signal?.addEventListener("abort", () => stopped.resolve());
+        await stopped.promise;
+        throw new Error("docker exec stopped");
+      },
+    });
+    const provider = createLocalDesktopProvider(host.machines);
+
+    const result = provider
+      .provision(PROFILE, "op-1", {
+        beginNodeEnrollment: async () => enrollment({ signal: closed.signal }),
+      })
+      .catch((caught: unknown) => caught);
+    await installing.promise;
+    closed.abort(new Error("Gateway is shutting down"));
+
+    expect(WorkerProviderError.isCleanupComplete(await result)).toBe(true);
+    expect(host.containers.size).toBe(0);
+  });
+
   it("reports indeterminate cleanup when the failed container cannot be removed", async () => {
     const host = fakeMachines({
       start: async () => {

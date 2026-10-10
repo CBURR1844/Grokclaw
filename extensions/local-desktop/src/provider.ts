@@ -100,9 +100,14 @@ export function createLocalDesktopProvider(machines: DesktopMachines): WorkerPro
         // Enrollment checks its own owner. After it begins, the node's pairing writes its device
         // id onto the record, so core's owner check would refuse the lease it is waiting for.
         const enrollment = await beginNodeEnrollment();
-        signal?.throwIfAborted();
+        // Stop ends the open; so does core closing the enrollment (shutdown or a newer open).
+        const live =
+          signal && enrollment.signal
+            ? AbortSignal.any([signal, enrollment.signal])
+            : (signal ?? enrollment.signal);
+        live?.throwIfAborted();
         const exec: GuestExec = (argv, execOptions) => machines.exec(leaseId, argv, execOptions);
-        await launchGuestNode(exec, enrollment, signal);
+        await launchGuestNode(exec, enrollment, live);
         let deviceId: string;
         try {
           deviceId = await enrollment.waitForDeviceId();
@@ -113,7 +118,7 @@ export function createLocalDesktopProvider(machines: DesktopMachines): WorkerPro
             { cause: error },
           );
         }
-        signal?.throwIfAborted();
+        live?.throwIfAborted();
         return { leaseId, node: { deviceId }, desktop: { ...DESKTOP } };
       });
     },

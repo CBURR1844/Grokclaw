@@ -89,7 +89,7 @@ Crabbox setup uses an environment-owned one-use pairing credential and the confi
 
 ### Local desktop profile
 
-The bundled `local-desktop` provider gives one agent its own Linux desktop in a Docker container on the Gateway host. Each lease is a fresh container running XFCE on a private VNC display and an ephemeral OpenClaw node that installs the Gateway's exact build. The agent's home directory is a Docker volume that outlives leases, so files and installed software persist between chats. Nothing is published to the host network: the node connects out to the Gateway and relays the desktop.
+The bundled `local-desktop` provider gives one agent its own Linux desktop in a Docker container on the Gateway host. Each lease is a fresh container running XFCE on a private VNC display and an ephemeral OpenClaw node that installs the Gateway's exact build. The agent's home directory (`/home/bot`) is a Docker volume that outlives leases, so files there persist between chats. Everything outside it resets when the computer closes, and the desktop user has no root access, so system packages cannot be installed. Nothing is published to the host network: the node connects out to the Gateway and relays the desktop.
 
 Set it up with one admin call instead of editing config:
 
@@ -97,12 +97,21 @@ Set it up with one admin call instead of editing config:
 openclaw gateway call localDesktop.setup --params '{"agentId":"main"}'
 ```
 
-Setup refuses with a next step when Docker is unavailable, the agent does not exist, Gateway auth is `none`, or the host cannot listen on Docker's network. Otherwise it:
+Setup changes nothing and names the next step when:
 
-- binds the Gateway to Docker's bridge address (`gateway.bind: "custom"`, `gateway.customBindHost`) unless the Gateway already advertises a non-loopback address, and the Gateway restarts to listen there. The Gateway keeps listening on `127.0.0.1`;
+- Docker is unavailable, or the Gateway's user may not use it;
+- the agent does not exist, or Gateway auth is `none`;
+- the host cannot listen on Docker's network. Rootless Docker, Docker Desktop, and remote Docker contexts all cause this; bot computers need rootful Docker Engine on the Gateway host;
+- the address computers would be given is loopback, link-local, or unspecified;
+- the Gateway would have to listen on Docker's network without a saved token or password (a token the Gateway generates at startup changes on every restart);
+- `tools.allow`, `tools.deny`, or the agent's `tools.deny` exclude `computer` or `my_computer`.
+
+Otherwise it:
+
+- binds the Gateway to Docker's bridge address (`gateway.bind: "custom"`, `gateway.customBindHost`) unless the Gateway already gives workers a reachable address. Setup resolves that address the way node enrollment does, including `gateway.publicOrigin`, `plugins.entries.device-pair.config.publicUrl`, and Tailscale Serve. The Gateway keeps listening on `127.0.0.1`. The result's `gatewayRestart` is `automatic` when the Gateway restarts itself to listen there, `manual` when `gateway.reload.mode` is `off` and you must run `openclaw gateway restart`, or `none` when nothing changed;
 - turns on `cloudWorkers.desktop`, so the chat's Desktop panel can show and hand over the computer;
 - adds a profile named `computer-<agentId>`;
-- adds `computer` and `my_computer` to the agent's `tools.allow` (when it has one) or `tools.alsoAllow`.
+- adds `computer` and `my_computer` to the agent's `tools.allow` (when it has one) or `tools.alsoAllow`. A new agent `alsoAllow` starts from the global `tools.alsoAllow`, because an agent list replaces the global one.
 
 ```json5
 {
@@ -123,9 +132,17 @@ Setup refuses with a next step when Docker is unavailable, the agent does not ex
 - `settings.agentId` (required, the only setting): the agent whose disk the computer uses. Unknown settings are rejected.
 - The agent opens its computer with the `my_computer` tool (`open`, `status`, `close`) and passes the returned `environmentId` to `computer`. Both tools are owner-only and are not offered in sandboxed runs.
 - One open computer per agent disk: opening it from a second chat fails until the first chat closes it.
-- The first open builds the image (tagged by a hash of the plugin's image files) and installs OpenClaw on the agent's disk; later opens reuse both. The image trusts the Gateway's `NODE_EXTRA_CA_CERTS`, so downloads work behind a TLS-inspecting proxy the host already trusts.
-- Containers drop all capabilities, run with `no-new-privileges`, and are limited to 2 GiB of memory. Expect about 1 GiB per open computer.
-- Requires Docker Engine on Linux. Docker Desktop on macOS and Windows has no host bridge address and is refused by setup.
+- The first open builds the image (tagged by a hash of the plugin's image files) and installs OpenClaw on the agent's disk; later opens reuse both. A new image replaces the images earlier plugin versions built. The image trusts the Gateway's `NODE_EXTRA_CA_CERTS`, so downloads work behind a TLS-inspecting proxy the host already trusts.
+- Containers drop all capabilities, run with `no-new-privileges`, and are limited to 2 GiB of memory and 4096 processes. Expect about 1 GiB per open computer.
+
+<Warning>
+Know these limits before giving a bot its computer:
+
+- **Gateway start depends on Docker.** After setup binds the Gateway to Docker's bridge, the Gateway refuses to start while that address is missing: Docker stopped or removed, or started after the Gateway at boot. Enable Docker at boot (`sudo systemctl enable --now docker`), or undo the bind with `openclaw config set gateway.bind loopback` and `openclaw config unset gateway.customBindHost`. A Gateway started with `--bind` keeps that bind and ignores setup's.
+- **`computer` is not limited to the bot's computer.** Without an `environmentId`, the `computer` tool can also drive the Gateway host's desktop or a paired computer node when those are set up.
+- **Computers have the host's network reach.** They join Docker's default bridge, so they can reach other containers, services on the host's networks, and cloud metadata addresses. On a cloud VM, block metadata from containers: `sudo iptables -I DOCKER-USER -d 169.254.0.0/16 -j DROP`.
+- **Disks outlive agents.** A disk is named after its agent id and stays when the agent is deleted, so a new agent with the same id gets its files. To remove one, delete the `computer-<agentId>` profile, then run `docker volume rm` on the volume that `docker volume ls --filter label=openclaw.local-desktop.disk=<agentId>` lists.
+</Warning>
 
 ### Static SSH development profile
 

@@ -3,6 +3,7 @@ import net from "node:net";
 import os from "node:os";
 import { listAgentIds } from "openclaw/plugin-sdk/agent-scope-runtime";
 import { resolvePairingGatewayUrl } from "openclaw/plugin-sdk/device-bootstrap";
+import { isLoopbackHost, resolveGatewayAuth } from "openclaw/plugin-sdk/gateway-runtime";
 import { readStringParam } from "openclaw/plugin-sdk/param-readers";
 import type {
   AnyAgentTool,
@@ -10,6 +11,9 @@ import type {
   OpenClawPluginApi,
   OpenClawPluginToolContext,
 } from "openclaw/plugin-sdk/plugin-entry";
+import { runCommandWithTimeout } from "openclaw/plugin-sdk/process-runtime";
+import { normalizeAgentId } from "openclaw/plugin-sdk/routing";
+import { hasConfiguredSecretInput } from "openclaw/plugin-sdk/secret-input";
 import { jsonResult } from "openclaw/plugin-sdk/tool-results";
 import type { DesktopMachines } from "./docker.js";
 import { LOCAL_DESKTOP_PROVIDER_ID, readComputerOwner } from "./provider.js";
@@ -76,7 +80,7 @@ export function createMyComputerTool(params: {
     name: MY_COMPUTER_TOOL,
     label: "My computer",
     description:
-      "Open, check, or close your own computer: a private Linux desktop that keeps its files between chats. open returns environmentId; pass it to the computer tool to see the screen and use the mouse and keyboard. Pass show=true when the user wants to watch. The first open can take several minutes. The computer closes itself after 30 idle minutes; close it sooner when the task is done.",
+      "Open, check, or close your own computer: a private Linux desktop that keeps its files between chats. open returns environmentId; pass it to the computer tool to see the screen and use the mouse and keyboard. Pass show=true when the user wants to watch. The first open can take several minutes. Close it when the task is done.",
     parameters: {
       type: "object",
       additionalProperties: false,
@@ -143,25 +147,67 @@ async function canListenOn(host: string): Promise<boolean> {
   });
 }
 
-async function advertisedGatewayUrl(config: OpenClawConfig): Promise<string | undefined> {
+// Core's node enrollment refuses these hosts for any worker, so setup refuses them too.
+const UNREACHABLE = new net.BlockList();
+UNREACHABLE.addSubnet("169.254.0.0", 16, "ipv4");
+UNREACHABLE.addSubnet("fe80::", 10, "ipv6");
+UNREACHABLE.addAddress("0.0.0.0", "ipv4");
+UNREACHABLE.addAddress("::", "ipv6");
+
+/** The address core's node enrollment would hand a computer, resolved from the same inputs. */
+async function enrollmentAddress(config: OpenClawConfig) {
+  const publicUrl = config.plugins?.entries?.["device-pair"]?.config?.publicUrl;
   const result = await resolvePairingGatewayUrl(config, {
     env: process.env,
+    useLocalGateway: config.gateway?.mode === "remote",
+    ...(typeof publicUrl === "string" && publicUrl.trim() ? { publicUrl: publicUrl.trim() } : {}),
     publicOriginPreference: "prefer",
     networkInterfaces: () => os.networkInterfaces(),
+    runCommandWithTimeout: async (argv, options) =>
+      await runCommandWithTimeout(argv, { timeoutMs: options.timeoutMs }),
   });
   if (!result.url) {
     return undefined;
   }
   const host = new URL(result.url).hostname.replace(/^\[|\]$/g, "");
-  return net.isIP(host) && /^(127\.|::1$|0\.0\.0\.0$)/.test(host) ? undefined : result.url;
+  const family = net.isIP(host);
+  const reachable =
+    !isLoopbackHost(host) && !(family && UNREACHABLE.check(host, family === 6 ? "ipv6" : "ipv4"));
+  return { url: result.url, source: result.source ?? "the Gateway's settings", reachable };
 }
+
+/**
+ * Refuse a write that would stop the Gateway's next cold start: a non-loopback bind needs a
+ * shared secret from config or the environment, not the token a Gateway generates per start.
+ */
+function assertGatewaySecret(draft: OpenClawConfig): void {
+  const auth = resolveGatewayAuth({ authConfig: draft.gateway?.auth, env: process.env });
+  const configured = (value: unknown) => hasConfiguredSecretInput(value, draft.secrets?.defaults);
+  const secret =
+    auth.mode === "trusted-proxy" ||
+    (auth.mode === "token" &&
+      (Boolean(auth.token?.trim()) || configured(draft.gateway?.auth?.token))) ||
+    (auth.mode === "password" &&
+      (Boolean(auth.password?.trim()) || configured(draft.gateway?.auth?.password)));
+  if (!secret) {
+    throw new Error(
+      "Bot computers reach the Gateway over Docker's network, which needs a saved Gateway token. Run `openclaw config set gateway.auth.token <token>` (or set OPENCLAW_GATEWAY_TOKEN for the Gateway service), then set up the computer again.",
+    );
+  }
+}
+
+const GRANTED_TOOLS = ["computer", MY_COMPUTER_TOOL];
+type ToolLists = { allow?: string[]; alsoAllow?: string[]; deny?: string[] };
 
 export type BotComputerSetup = {
   profileId: string;
   /** Where the computer's OpenClaw node will reach the Gateway. */
   gatewayUrl: string;
-  /** The Gateway restarts to start listening where computers can reach it. */
-  restarting: boolean;
+  /**
+   * none: the Gateway already listens where computers reach it. automatic: it restarts itself to
+   * listen on Docker's bridge. manual: config reload is off, so restart the Gateway to finish.
+   */
+  gatewayRestart: "none" | "automatic" | "manual";
 };
 
 /**
@@ -175,10 +221,10 @@ export async function setUpBotComputer(params: {
   config: OpenClawPluginApi["runtime"]["config"];
   canListen?: (host: string) => Promise<boolean>;
 }): Promise<BotComputerSetup> {
-  const { agentId } = params;
+  const agentId = normalizeAgentId(params.agentId);
   const current = params.config.current() as OpenClawConfig;
   if (!listAgentIds(current).includes(agentId)) {
-    throw new Error(`There is no bot with id "${agentId}".`);
+    throw new Error(`There is no bot with id "${params.agentId}".`);
   }
   if (current.gateway?.auth?.mode === "none") {
     throw new Error("Bot computers need Gateway sign-in. Set a Gateway token or password first.");
@@ -186,28 +232,49 @@ export async function setUpBotComputer(params: {
   const bridge = await params.machines.bridgeAddress();
   if (!(await (params.canListen ?? canListenOn)(bridge))) {
     throw new Error(
-      `This host cannot listen on Docker's network (${bridge}). Docker Desktop on Mac and Windows is not supported yet; use Docker Engine on Linux.`,
+      `This host cannot listen on Docker's network (${bridge}), so a bot computer could not reach the Gateway. Rootless Docker, Docker Desktop and remote Docker contexts all cause this; bot computers need rootful Docker Engine on the Gateway's host.`,
     );
   }
-  const keepUrl = await advertisedGatewayUrl(current);
   const bound = (config: OpenClawConfig): OpenClawConfig => ({
     ...config,
     gateway: { ...config.gateway, bind: "custom", customBindHost: bridge },
   });
-  const gatewayUrl = keepUrl ?? (await advertisedGatewayUrl(bound(current)));
-  if (!gatewayUrl) {
-    throw new Error("Could not work out an address where bot computers can reach the Gateway.");
+  const existing = await enrollmentAddress(current);
+  const address = existing?.reachable ? existing : await enrollmentAddress(bound(current));
+  if (!address?.reachable) {
+    throw new Error(
+      address
+        ? `Bot computers would be sent to ${address.url} (from ${address.source}), which they cannot reach. Set gateway.publicOrigin (or plugins.entries.device-pair.config.publicUrl) to an address they can reach, or remove it.`
+        : "Could not work out where bot computers can reach the Gateway. Set gateway.publicOrigin to an address they can reach.",
+    );
   }
+  const rebind = address !== existing;
+  // Loaded only here: setup is rare, and the matcher lives in a large SDK module.
+  const { toolPolicy } = await import("openclaw/plugin-sdk/agent-harness-runtime");
+  const refusedBy = (tools: ToolLists | undefined, path: string) => {
+    const extra = tools?.alsoAllow?.length ? tools.alsoAllow : undefined;
+    const allow = extra
+      ? [...(tools?.allow?.length ? tools.allow : ["*"]), ...extra]
+      : tools?.allow;
+    const matches = toolPolicy.createToolPolicyMatcher({
+      ...(allow?.length ? { allow } : {}),
+      ...(tools?.deny?.length ? { deny: tools.deny } : {}),
+    });
+    return GRANTED_TOOLS.every(matches) ? undefined : path;
+  };
   const profileId = findComputerProfile(current, agentId) ?? `computer-${agentId}`;
   await params.config.mutateConfigFile({
     afterWrite: { mode: "auto" },
     mutate: (draft) => {
+      if (rebind) {
+        assertGatewaySecret(draft);
+      }
       const profiles = draft.cloudWorkers?.profiles ?? {};
-      const existing = profiles[profileId];
-      if (existing && readComputerOwner(existing.settings) !== agentId) {
+      const profile = profiles[profileId];
+      if (profile && readComputerOwner(profile.settings) !== agentId) {
         throw new Error(`Worker profile "${profileId}" already exists for something else.`);
       }
-      if (!keepUrl) {
+      if (rebind) {
         Object.assign(draft, bound(draft));
       }
       draft.cloudWorkers = {
@@ -215,7 +282,7 @@ export async function setUpBotComputer(params: {
         desktop: true,
         profiles: {
           ...profiles,
-          [profileId]: existing ?? {
+          [profileId]: profile ?? {
             provider: LOCAL_DESKTOP_PROVIDER_ID,
             install: "bundle",
             suspendAfter: IDLE_SUSPEND,
@@ -223,23 +290,43 @@ export async function setUpBotComputer(params: {
           },
         },
       };
-      const entry = draft.agents?.entries?.[agentId] ?? {};
+      // Edit the authored entry, whatever its key's case.
+      const entryKey =
+        Object.keys(draft.agents?.entries ?? {}).find((key) => normalizeAgentId(key) === agentId) ??
+        agentId;
+      const entry = draft.agents?.entries?.[entryKey] ?? {};
       const tools = entry.tools ?? {};
-      const listKey = tools.allow?.length ? "allow" : "alsoAllow";
+      // An agent list replaces the inherited one, so a new alsoAllow starts from the global grants.
+      const granted: typeof tools = tools.allow?.length
+        ? { ...tools, allow: [...new Set([...tools.allow, ...GRANTED_TOOLS])] }
+        : {
+            ...tools,
+            alsoAllow: [
+              ...new Set([...(tools.alsoAllow ?? draft.tools?.alsoAllow ?? []), ...GRANTED_TOOLS]),
+            ],
+          };
+      // Global and agent allow/deny lists are their own filters; an agent grant cannot widen them.
+      const refusal =
+        refusedBy(draft.tools, "tools.allow or tools.deny") ??
+        refusedBy(granted, `agents.entries.${entryKey}.tools.deny`);
+      if (refusal) {
+        throw new Error(
+          `${refusal} keeps this bot from using computer and my_computer. Allow both there, then set up the computer again.`,
+        );
+      }
       draft.agents = {
         ...draft.agents,
-        entries: {
-          ...draft.agents?.entries,
-          [agentId]: {
-            ...entry,
-            tools: {
-              ...tools,
-              [listKey]: [...new Set([...(tools[listKey] ?? []), "computer", MY_COMPUTER_TOOL])],
-            },
-          },
-        },
+        entries: { ...draft.agents?.entries, [entryKey]: { ...entry, tools: granted } },
       };
     },
   });
-  return { profileId, gatewayUrl, restarting: !keepUrl };
+  return {
+    profileId,
+    gatewayUrl: address.url,
+    gatewayRestart: !rebind
+      ? "none"
+      : current.gateway?.reload?.mode === "off"
+        ? "manual"
+        : "automatic",
+  };
 }

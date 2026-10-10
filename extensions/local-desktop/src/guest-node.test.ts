@@ -98,19 +98,32 @@ if (args[0] === "--version") {
 }
 `,
   );
-  const npm = path.join(bin, "npm");
+  // `holdInstall()` makes the next install wait, like a slow npm, until something kills it.
+  const holdFile = path.join(root, "hold-install");
+  const npmScript = path.join(root, "npm.mjs");
   fs.writeFileSync(
-    npm,
-    `#!/usr/bin/env node
-const fs = require("node:fs");
-const path = require("node:path");
+    npmScript,
+    `import fs from "node:fs";
+import path from "node:path";
+${fixtureReceiptClientSource(receipts.endpoint)}
 const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(npmCalls)}, args.join(" ") + "\\n");
+if (fs.existsSync(${JSON.stringify(holdFile)})) {
+  fs.rmSync(${JSON.stringify(holdFile)});
+  sendReceipt(${JSON.stringify(holdFile)}, "installing");
+  await awaitRelease(${JSON.stringify(holdFile)}, "never");
+}
 const target = args[args.indexOf("--prefix") + 1];
 fs.cpSync(${JSON.stringify(fixturePackage)}, path.join(target, "node_modules", "openclaw"), { recursive: true });
 `,
   );
+  const npm = path.join(bin, "npm");
+  fs.writeFileSync(npm, `#!/bin/sh\nexec node ${JSON.stringify(npmScript)} "$@"\n`);
   fs.chmodSync(npm, 0o755);
+  const holdInstall = () => {
+    fs.writeFileSync(holdFile, "");
+    return holdFile;
+  };
 
   const exec: GuestExec = async (argv, options) => {
     const planned = JSON.parse(options.env?.LOCAL_DESKTOP_PLAN ?? "{}") as Record<string, unknown>;
@@ -146,7 +159,7 @@ fs.cpSync(${JSON.stringify(fixturePackage)}, path.join(target, "node_modules", "
     };
   const npmRuns = () =>
     fs.existsSync(npmCalls) ? fs.readFileSync(npmCalls, "utf8").trim().split("\n") : [];
-  return { exec, stateDir, runtimes, launchedPid, launchRecord, npmRuns };
+  return { exec, stateDir, runtimes, launchedPid, launchRecord, npmRuns, holdInstall };
 }
 
 /** Bootstrap artifact server; records each request's authorization header. */
@@ -220,33 +233,63 @@ describe("guest node bootstrap", () => {
     expect(fs.statSync(path.join(computer.stateDir, "setup-code")).mode & 0o777).toBe(0o600);
   });
 
-  it("reuses the cached runtime and replaces the node a replay started earlier", async () => {
-    const computer = guest();
-    const server = await gateway();
-    fs.mkdirSync(path.join(computer.runtimes, "stale-build"), { recursive: true });
+  // The guest recognizes earlier runs through /proc; it only ever runs in a Linux computer.
+  it.runIf(process.platform === "linux")(
+    "reuses the cached runtime and replaces the node a replay started earlier",
+    async () => {
+      const computer = guest();
+      const server = await gateway();
+      fs.mkdirSync(path.join(computer.runtimes, "stale-build"), { recursive: true });
 
-    await launchGuestNode(computer.exec, enrollment(server.url));
-    const first = computer.launchedPid();
-    await receipts.waitFor(`node-${first}`, "launched");
-    await launchGuestNode(computer.exec, enrollment(server.url, {}, "resume"));
-    const second = computer.launchedPid();
-    await receipts.waitFor(`node-${second}`, "launched");
+      await launchGuestNode(computer.exec, enrollment(server.url));
+      const first = computer.launchedPid();
+      await receipts.waitFor(`node-${first}`, "launched");
+      await launchGuestNode(computer.exec, enrollment(server.url, {}, "resume"));
+      const second = computer.launchedPid();
+      await receipts.waitFor(`node-${second}`, "launched");
 
-    await receipts.waitForExit(`node-${first}`);
-    expect(second).not.toBe(first);
-    expect(computer.launchRecord(second).args).toEqual([
-      "node",
-      "run",
-      "--ephemeral",
-      "--display-name",
-      "Cloud worker computer-main",
-    ]);
-    expect(server.seen).toHaveLength(1);
-    expect(computer.npmRuns()).toHaveLength(1);
-    expect(fs.readdirSync(computer.runtimes)).toEqual([SHA]);
-    receipts.release(`node-${second}`, "stop");
-    await receipts.waitForExit(`node-${second}`);
-  });
+      await receipts.waitForExit(`node-${first}`);
+      expect(second).not.toBe(first);
+      expect(computer.launchRecord(second).args).toEqual([
+        "node",
+        "run",
+        "--ephemeral",
+        "--display-name",
+        "Cloud worker computer-main",
+      ]);
+      expect(server.seen).toHaveLength(1);
+      expect(computer.npmRuns()).toHaveLength(1);
+      expect(fs.readdirSync(computer.runtimes)).toEqual([SHA]);
+      receipts.release(`node-${second}`, "stop");
+      await receipts.waitForExit(`node-${second}`);
+    },
+  );
+
+  it.runIf(process.platform === "linux")(
+    "stops an earlier run that is still installing before the replay installs",
+    async () => {
+      const computer = guest();
+      const server = await gateway();
+      const held = computer.holdInstall();
+
+      const orphan = launchGuestNode(computer.exec, enrollment(server.url));
+      const orphanFailed = expect(orphan).rejects.toThrow(
+        "Could not start OpenClaw on the computer",
+      );
+      await receipts.waitFor(held, "installing");
+      await launchGuestNode(computer.exec, enrollment(server.url));
+      const node = computer.launchedPid();
+      await receipts.waitFor(`node-${node}`, "launched");
+
+      await orphanFailed;
+      await receipts.waitForExit(held);
+      expect(computer.npmRuns()).toHaveLength(2);
+      expect(fs.readdirSync(computer.runtimes)).toEqual([SHA]);
+      expect(computer.launchRecord(node).leaked).toEqual([]);
+      receipts.release(`node-${node}`, "stop");
+      await receipts.waitForExit(`node-${node}`);
+    },
+  );
 
   it("installs nothing and starts nothing when the archive fails verification", async () => {
     const computer = guest();
@@ -264,12 +307,17 @@ describe("guest node bootstrap", () => {
     const computer = guest();
     const server = await gateway({ tls: true });
 
+    // The whole error is the refusal; nothing else in the script fails after it.
     await expect(
       launchGuestNode(
         computer.exec,
         enrollment(server.url, { tlsFingerprint: `sha256:${"00".repeat(32)}` }),
       ),
-    ).rejects.toThrow("Gateway certificate does not match its pinned fingerprint");
+    ).rejects.toThrow(
+      new Error(
+        `Could not start OpenClaw on the computer: Could not download OpenClaw from the Gateway at ${new URL(server.url).origin}: Gateway certificate does not match its pinned fingerprint`,
+      ),
+    );
     expect(server.seen).toEqual([]);
   });
 });

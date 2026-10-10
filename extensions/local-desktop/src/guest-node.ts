@@ -51,17 +51,21 @@ const runtimeDir = path.join(runtimeRoot, bootstrap.sha256);
 const packageRoot = path.join(runtimeDir, "node_modules", "openclaw");
 const cli = path.join(packageRoot, "openclaw.mjs");
 const pidFile = path.join(stateDir, "node.pid");
+const guestPidFile = path.join(stateDir, "guest.pid");
+const RUN_MARKER = "LOCAL_DESKTOP_RUN=" + stateDir;
 const setupFile = path.join(stateDir, "setup-code");
 const session = Object.fromEntries(
   fs.readFileSync(plan.sessionEnv, "utf8").split("\n").filter(Boolean)
     .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]),
 );
-const env = {
+const nodeEnv = {
   ...process.env,
   ...session,
   OPENCLAW_STATE_DIR: stateDir,
   PATH: path.join(packageRoot, "dist", "worker-tools", "bin") + ":" + process.env.PATH,
 };
+// Install and setup subprocesses carry the run marker; the node does not.
+const env = { ...nodeEnv, LOCAL_DESKTOP_RUN: stateDir };
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const subprocessFailure = (message, result) =>
   new Error(message + " (" + (result.error?.message || result.signal || "exit code " + result.status) + "): " + String(result.stderr || "").trim().slice(-1500));
@@ -76,18 +80,21 @@ const downloadOnce = async (archive) => {
     headers: { authorization: "Bearer " + token },
     ...(pin ? { rejectUnauthorized: false } : {}),
   });
+  // Every failure surfaces once, through the response promise; keep the rest observed.
   request.on("error", () => {});
+  request.once("response", (response) => response.on("error", () => {}));
   const pending = once(request, "response");
   // The bearer token is written only after the pinned certificate is verified.
-  if (pin) {
-    const [socket] = await once(request, "socket");
-    await once(socket, "secureConnect");
-    if (normalize(socket.getPeerCertificate().fingerprint256 || "") !== pin) {
-      request.destroy();
-      throw new Error("Gateway certificate does not match its pinned fingerprint");
+  void (async () => {
+    if (pin) {
+      const [socket] = await once(request, "socket");
+      await once(socket, "secureConnect");
+      if (normalize(socket.getPeerCertificate().fingerprint256 || "") !== pin) {
+        throw new Error("Gateway certificate does not match its pinned fingerprint");
+      }
     }
-  }
-  request.end();
+    request.end();
+  })().catch((error) => request.destroy(error));
   const [response] = await pending;
   if (response.statusCode !== 200) {
     response.resume();
@@ -156,14 +163,37 @@ const install = async () => {
   }
 };
 
+const processes = () => {
+  try { return fs.readdirSync("/proc").filter((entry) => /^[0-9]+$/.test(entry)).map(Number); } catch { return []; }
+};
+const procFile = (pid, name) => {
+  try { return fs.readFileSync("/proc/" + pid + "/" + name, "utf8"); } catch { return ""; }
+};
+
+// A Gateway that dies mid-open leaves its guest run going in the container, and core replays the
+// open. The newest run wins: it stops the earlier run and everything that run started, which all
+// carry the run marker, before touching the runtime cache or the node.
+const stopEarlierRun = async () => {
+  let earlier;
+  try { earlier = Number(fs.readFileSync(guestPidFile, "utf8").trim()); } catch {}
+  if (earlier > 1 && earlier !== process.pid && procFile(earlier, "cmdline") === procFile("self", "cmdline")) {
+    try { process.kill(earlier, "SIGKILL"); } catch {}
+  }
+  for (let pass = 0; pass < 100; pass++) {
+    const left = processes().filter((pid) => pid !== process.pid && procFile(pid, "environ").split("\0").includes(RUN_MARKER));
+    if (left.length === 0) break;
+    for (const pid of left) try { process.kill(pid, "SIGKILL"); } catch {}
+    await sleep(100);
+  }
+  fs.writeFileSync(guestPidFile, process.pid + "\n");
+};
+
 // A replayed provision replaces the node it started earlier in this container. OpenClaw rewrites
 // its process title, so the node is recognized by the state directory in its environment.
 const stopPrevious = async () => {
   let pid;
   try { pid = Number(fs.readFileSync(pidFile, "utf8").trim()); } catch { return; }
-  const alive = () => {
-    try { return fs.readFileSync("/proc/" + pid + "/environ", "utf8").split("\0").includes("OPENCLAW_STATE_DIR=" + stateDir); } catch { return false; }
-  };
+  const alive = () => procFile(pid, "environ").split("\0").includes("OPENCLAW_STATE_DIR=" + stateDir);
   if (pid > 1 && alive()) {
     try { process.kill(-pid, "SIGTERM"); } catch {}
     for (let waited = 0; waited < 10000 && alive(); waited += 100) await sleep(100);
@@ -174,6 +204,7 @@ const stopPrevious = async () => {
 
 (async () => {
   fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+  await stopEarlierRun();
   if (fs.existsSync(runtimeDir)) verifyRuntime(runtimeDir);
   else await install();
   for (const entry of fs.readdirSync(runtimeRoot)) {
@@ -190,7 +221,7 @@ const stopPrevious = async () => {
     args = ["connect", "--target-file", setupFile];
   }
   const log = fs.openSync(path.join(stateDir, "node.log"), "a", 0o600);
-  const child = spawn(process.execPath, [cli, ...args, "--ephemeral", "--display-name", displayName], { cwd: runtimeDir, env, detached: true, stdio: ["ignore", log, log] });
+  const child = spawn(process.execPath, [cli, ...args, "--ephemeral", "--display-name", displayName], { cwd: runtimeDir, env: nodeEnv, detached: true, stdio: ["ignore", log, log] });
   await once(child, "spawn");
   fs.writeFileSync(pidFile, child.pid + "\n");
   child.unref();

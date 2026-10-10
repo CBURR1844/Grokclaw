@@ -52,9 +52,17 @@ describe("desktop machines", () => {
   it("builds the image once, then runs a locked-down container on the bot's disk", async () => {
     const ca = path.join(tempDirs.make("local-desktop-ca-"), "ca.pem");
     fs.writeFileSync(ca, "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n");
-    const docker = fakeDocker((args) =>
-      args[0] === "image" ? failed("No such image") : args[1] === "inspect" ? NOT_FOUND : undefined,
-    );
+    let built = false;
+    const docker = fakeDocker((args) => {
+      if (args[0] === "build") {
+        built = true;
+      }
+      return args[0] === "image" && args[1] === "inspect" && !built
+        ? failed("No such image")
+        : args[0] === "container" && args[1] === "inspect"
+          ? NOT_FOUND
+          : undefined;
+    });
     const machines = machinesWith(docker.run, ca);
 
     await machines.start({ leaseId: "ldk_1", disk: "Main Bot" });
@@ -72,16 +80,75 @@ describe("desktop machines", () => {
         "--cap-drop",
         "ALL",
         "no-new-privileges",
+        "--pids-limit",
+        "4096",
         `type=volume,source=${volume},target=/home/bot`,
         "openclaw.local-desktop.lease=ldk_1",
       ]),
     );
-    expect(run.at(-1)).toBe(tag);
+    expect(run.slice(-3)).toEqual(["--pull", "never", tag]);
     expect(run.join(" ")).not.toMatch(/--publish|-p /);
     expect(docker.calls.at(-1)?.argv.slice(0, 2)).toEqual(["exec", "openclaw-desktop-ldk_1"]);
 
     await machines.start({ leaseId: "ldk_2", disk: "Main Bot" });
-    expect(docker.calls.filter((call) => call.argv[0] === "image")).toHaveLength(1);
+    expect(docker.calls.filter((call) => call.argv[0] === "build")).toHaveLength(1);
+  });
+
+  it("shares one build between opens, survives a stopped open, and rebuilds a pruned image", async () => {
+    let built = false;
+    const builds: Array<{ started: PromiseWithResolvers<void>; done: PromiseWithResolvers<void> }> =
+      [];
+    const nextBuild = () => {
+      const build = { started: Promise.withResolvers<void>(), done: Promise.withResolvers<void>() };
+      builds.push(build);
+      return build;
+    };
+    let pending = nextBuild();
+    const docker = fakeDocker((args) => {
+      if (args[0] === "image" && args[1] === "ls") {
+        return ok("openclaw-local-desktop:0000000000000000\nopenclaw-local-desktop:current\n");
+      }
+      return args[0] === "image" && args[1] === "inspect" && !built
+        ? failed("No such image")
+        : args[0] === "container" && args[1] === "inspect"
+          ? NOT_FOUND
+          : undefined;
+    });
+    const run: CommandRunner = async (argv, options) => {
+      if (argv[1] === "build") {
+        const build = pending;
+        build.started.resolve();
+        await build.done.promise;
+        built = true;
+      }
+      return await docker.run(argv, options);
+    };
+    const machines = machinesWith(run);
+    const stopped = new AbortController();
+
+    const first = machines.start({ leaseId: "ldk_1", disk: "one" }, stopped.signal);
+    const second = machines.start({ leaseId: "ldk_2", disk: "two" });
+    await pending.started.promise;
+    stopped.abort(new Error("chat closed"));
+    await expect(first).rejects.toThrow();
+    pending.done.resolve();
+    await second;
+    // Docker pruned the image while no computer ran.
+    built = false;
+    pending = nextBuild();
+    const rebuilt = machines.start({ leaseId: "ldk_3", disk: "three" });
+    await pending.started.promise;
+    pending.done.resolve();
+    await rebuilt;
+
+    expect(docker.calls.filter((call) => call.argv[0] === "build")).toHaveLength(2);
+    expect(builds).toHaveLength(2);
+    const removed = docker.calls.filter(
+      (call) => call.argv[0] === "image" && call.argv[1] === "rm",
+    );
+    expect(removed.map((call) => call.argv[2])).toContain(
+      "openclaw-local-desktop:0000000000000000",
+    );
   });
 
   it("adopts a running container and restarts a stopped one without creating another", async () => {
@@ -164,6 +231,15 @@ describe("desktop machines", () => {
         .run,
     );
     await expect(down.state("ldk_1")).rejects.toThrow("Docker is not running");
+
+    const denied = machinesWith(
+      fakeDocker(() =>
+        failed(
+          "permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock",
+        ),
+      ).run,
+    );
+    await expect(denied.state("ldk_1")).rejects.toThrow("Add the user the Gateway runs as");
 
     const missing = machinesWith(async () => {
       throw Object.assign(new Error("spawn docker ENOENT"), { code: "ENOENT" });

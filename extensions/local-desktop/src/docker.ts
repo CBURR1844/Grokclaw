@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { runCommandWithTimeout } from "openclaw/plugin-sdk/process-runtime";
 import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
+import { racePromiseWithAbortSignal } from "openclaw/plugin-sdk/time-runtime";
 
 /** Exit facts from one engine command; mirrors the SDK command runner result. */
 export type CommandResult = {
@@ -23,6 +24,9 @@ export type CommandRunner = (
 ) => Promise<CommandResult>;
 
 export type MachineState = "running" | "stopped" | "absent";
+
+/** The image's build context and the content-hash tag it builds to. */
+type ImageSource = { context: Map<string, Buffer>; tag: string };
 
 /** One bot computer per lease, on Docker, with its home on a disk that outlives the lease. */
 export type DesktopMachines = {
@@ -92,6 +96,11 @@ function engineError(action: string, result: CommandResult): Error {
   if (/cannot connect to the docker daemon|is the docker daemon running/i.test(detail)) {
     return new Error("Docker is not running. Start Docker, then try again.");
   }
+  if (/permission denied.*docker/i.test(detail)) {
+    return new Error(
+      "OpenClaw may not use Docker. Add the user the Gateway runs as to the docker group, then restart the Gateway (log in again first so the group applies).",
+    );
+  }
   if (result.termination === "timeout") {
     return new Error(`Docker timed out while trying to ${action}.`);
   }
@@ -115,7 +124,8 @@ export function createDesktopMachines(params: {
   const instance = digest(params.instance, 8);
   const containerName = (leaseId: string) => `openclaw-desktop-${leaseId}`;
   const diskLabel = (disk: string) => dockerSafeName(disk);
-  let image: Promise<string> | undefined;
+  let imageSource: Promise<ImageSource> | undefined;
+  let building: Promise<void> | undefined;
 
   const docker = async (
     action: string,
@@ -139,7 +149,10 @@ export function createDesktopMachines(params: {
       throw error;
     }
     options.signal?.throwIfAborted();
-    if (result.code !== 0 && /cannot connect to the docker daemon/i.test(result.stderr)) {
+    if (
+      result.code !== 0 &&
+      /cannot connect to the docker daemon|permission denied.*docker/i.test(result.stderr)
+    ) {
       throw engineError(action, result);
     }
     return result;
@@ -154,47 +167,70 @@ export function createDesktopMachines(params: {
   };
 
   // The tag is the content hash of the build context, so edits rebuild and replays reuse.
-  const ensureImage = (signal?: AbortSignal): Promise<string> => {
-    image ??= (async () => {
-      const context = new Map<string, Buffer>();
-      for (const file of await fs.readdir(params.assetsDir)) {
-        context.set(file, await fs.readFile(path.join(params.assetsDir, file)));
+  const imageContext = async (): Promise<ImageSource> => {
+    const context = new Map<string, Buffer>();
+    for (const file of await fs.readdir(params.assetsDir)) {
+      context.set(file, await fs.readFile(path.join(params.assetsDir, file)));
+    }
+    const extraCa = params.extraCaCertificates ?? process.env.NODE_EXTRA_CA_CERTS;
+    context.set(
+      "extra-ca-certificates.pem",
+      extraCa ? await fs.readFile(extraCa) : Buffer.alloc(0),
+    );
+    const hash = createHash("sha256");
+    for (const [file, bytes] of [...context].toSorted(([a], [b]) => a.localeCompare(b))) {
+      hash.update(`${file}\0${bytes.length}\0`).update(bytes);
+    }
+    return { context, tag: `${IMAGE_REPOSITORY}:${hash.digest("hex").slice(0, 16)}` };
+  };
+
+  // One build serves every waiting open and is not tied to any one of them, so a stopped open
+  // never fails the others. Earlier builds are removed once no computer uses them.
+  const build = async ({ context, tag }: ImageSource) => {
+    const dir = await fs.mkdtemp(path.join(resolvePreferredOpenClawTmpDir(), "desktop-image-"));
+    try {
+      for (const [file, bytes] of context) {
+        await fs.writeFile(path.join(dir, file), bytes);
       }
-      const extraCa = params.extraCaCertificates ?? process.env.NODE_EXTRA_CA_CERTS;
-      context.set(
-        "extra-ca-certificates.pem",
-        extraCa ? await fs.readFile(extraCa) : Buffer.alloc(0),
+      await checked(
+        "build the desktop image",
+        ["build", "--quiet", "--label", `${LABEL}.image=1`, "--tag", tag, dir],
+        { timeoutMs: IMAGE_BUILD_TIMEOUT_MS },
       );
-      const hash = createHash("sha256");
-      for (const [file, bytes] of [...context].toSorted(([a], [b]) => a.localeCompare(b))) {
-        hash.update(`${file}\0${bytes.length}\0`).update(bytes);
-      }
-      const tag = `${IMAGE_REPOSITORY}:${hash.digest("hex").slice(0, 16)}`;
-      const present = await docker("inspect the desktop image", ["image", "inspect", tag], {
-        signal,
-      });
-      if (present.code === 0) {
-        return tag;
-      }
-      const dir = await fs.mkdtemp(path.join(resolvePreferredOpenClawTmpDir(), "desktop-image-"));
-      try {
-        for (const [file, bytes] of context) {
-          await fs.writeFile(path.join(dir, file), bytes);
-        }
-        await checked(
-          "build the desktop image",
-          ["build", "--quiet", "--label", `${LABEL}.image=1`, "--tag", tag, dir],
-          { timeoutMs: IMAGE_BUILD_TIMEOUT_MS, signal },
-        );
-      } finally {
-        await fs.rm(dir, { recursive: true, force: true });
-      }
-      return tag;
-    })().catch((error: unknown) => {
-      image = undefined;
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+    const listed = await docker("list desktop images", [
+      "image",
+      "ls",
+      "--filter",
+      `label=${LABEL}.image=1`,
+      "--format",
+      "{{.Repository}}:{{.Tag}}",
+    ]);
+    for (const stale of listed.stdout.split("\n").filter((name) => name && name !== tag)) {
+      // Refused while a computer still runs it; the next build tries again.
+      await docker("remove an old desktop image", ["image", "rm", stale]);
+    }
+  };
+
+  // Docker can prune the image while no computer runs, so every start checks it again.
+  const ensureImage = async (signal?: AbortSignal): Promise<string> => {
+    imageSource ??= imageContext().catch((error: unknown) => {
+      imageSource = undefined;
       throw error;
     });
-    return image;
+    const source = await imageSource;
+    const present = await docker("inspect the desktop image", ["image", "inspect", source.tag], {
+      signal,
+    });
+    if (present.code !== 0) {
+      building ??= build(source).finally(() => {
+        building = undefined;
+      });
+      await racePromiseWithAbortSignal(building, signal);
+    }
+    return source.tag;
   };
 
   const inspect = async (leaseId: string): Promise<{ lease: string; status: string } | null> => {
@@ -277,10 +313,14 @@ export function createDesktopMachines(params: {
             "no-new-privileges",
             "--memory",
             "2g",
+            "--pids-limit",
+            "4096",
             "--shm-size",
             "256m",
             "--mount",
             `type=volume,source=${volume},target=${HOME}`,
+            "--pull",
+            "never",
             imageTag,
           ],
           { signal },
