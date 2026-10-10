@@ -33,6 +33,15 @@ it("persists the child owner and identity independently of a redirected transcri
   });
 });
 
+it("stores result presentation as a flat field that older readers can ignore", () => {
+  const row = bindSubagentRunRecord({ ...createRun(), completionPresentation: "result" });
+  expect(JSON.parse(row.payload_json)).toMatchObject({
+    runId: "captured",
+    completionPresentation: "result",
+  });
+  expect(rowToSubagentRunRecord(row).completionPresentation).toBe("result");
+});
+
 it.each(["reply", "no reply", "root array", "completion array"] as const)(
   "rejects invalid encoding without mutating the run: %s",
   (kind) => {

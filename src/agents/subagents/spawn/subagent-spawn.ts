@@ -284,6 +284,7 @@ export async function spawnSubagentDirect(
     const envelope = buildSubagentSpawnEnvelope({
       completionMode,
       completionTarget: params.completionTarget,
+      completionPresentation: ctx.completionPresentation,
       soleCollectorChild: soleImplicitMember,
       spawnMode,
       task,
@@ -554,6 +555,7 @@ export async function spawnSubagentDirect(
           runTimeoutSeconds,
           expectsCompletionMessage: completionMode === "announce",
           completionTarget: params.completionTarget,
+          completionPresentation: ctx.completionPresentation,
           completionRequesterSessionId,
           completionRequesterLifecycleRevision,
           spawnMode,

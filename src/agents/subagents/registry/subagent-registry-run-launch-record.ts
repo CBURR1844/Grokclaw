@@ -48,6 +48,7 @@ export type RegisterSubagentRunParams = {
   runTimeoutSeconds?: number;
   expectsCompletionMessage?: boolean;
   completionTarget?: "parent";
+  completionPresentation?: "result";
   completionRequesterSessionId?: string;
   completionRequesterLifecycleRevision?: string;
   spawnMode?: "run" | "session";
@@ -104,6 +105,7 @@ export function createSubagentRegistrationRecord(
     cleanup: registerParams.cleanup,
     expectsCompletionMessage: registerParams.expectsCompletionMessage,
     completionTarget: registerParams.completionTarget,
+    completionPresentation: registerParams.completionPresentation,
     completionRequesterSessionId: registerParams.completionRequesterSessionId,
     completionRequesterLifecycleRevision: registerParams.completionRequesterLifecycleRevision,
     spawnMode: registerParams.spawnMode === "session" ? "session" : "run",

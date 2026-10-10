@@ -56,6 +56,8 @@ export async function adoptSubagentRunForRequesterTurnInRuns(params: {
           (!entry.requesterTurnRunId || entry.requesterTurnRunId === requesterTurnRunId) &&
           entry.expectsCompletionMessage === true &&
           entry.collect !== true &&
+          // The host owns a result run's completion; the requester's turns never adopt it.
+          entry.completionPresentation !== "result" &&
           !entry.killIntent &&
           !entry.killReconciliation &&
           entry.suppressCompletionDelivery !== true &&

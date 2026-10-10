@@ -1,5 +1,6 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { observeHostDataSql } from "../../test/helpers/sqlite-statement-execution-counter.js";
 import { useAutoCleanupTempDirTracker } from "../../test/helpers/temp-dir.js";
 import {
   loadSessionEntryReadOnly,
@@ -350,6 +351,53 @@ describe("commitBackgroundResultToSession", () => {
     },
   );
 
+  it("reads the target generation off the Gateway thread and keeps subagent provenance", async () => {
+    const target = await createTarget();
+    const provenance = {
+      kind: "subagent",
+      runId: "run-claw",
+      childSessionKey: "agent:claw:subagent:child",
+      agentId: "claw",
+      label: "Researcher",
+      status: "ok",
+      task: "Summarize the thread",
+    } as const;
+    // Display preparation runs after the generation read and before the transcript write.
+    const readPhaseSql = observeHostDataSql();
+    let committed: Awaited<ReturnType<typeof commitBackgroundResultToSession>>;
+    try {
+      committed = await commitBackgroundResultToSession({
+        agentId: "main",
+        sessionKey: target.sessionKey,
+        expectedGeneration: target.generation,
+        text: "Here is the summary.",
+        prepareDisplayContent: async () => {
+          readPhaseSql.restore();
+          return undefined;
+        },
+        idempotencyKey: "subagent-result:run-claw",
+        provenance,
+        config: target.config,
+      });
+    } finally {
+      readPhaseSql.restore();
+    }
+
+    expect(committed).toMatchObject({ ok: true });
+    expect(
+      readPhaseSql.queries.filter((sql) => /\bsession_(?:nodes|entry_snapshots)\b/u.test(sql)),
+    ).toEqual([]);
+    const events = await loadTranscriptEvents({
+      agentId: "main",
+      sessionId: target.sessionId,
+      sessionKey: target.sessionKey,
+      storePath: target.storePath,
+    });
+    expect(events.at(-1)).toMatchObject({
+      message: { model: "automation-result", openclawAutomation: provenance },
+    });
+  });
+
   it("refuses an archived target conversation", async () => {
     const target = await createTarget();
     await replaceSessionEntry(
@@ -372,7 +420,11 @@ describe("commitBackgroundResultToSession", () => {
         provenance: { kind: "cron", jobId: "job-2", runId: "cron:job-2:2000" },
         config: target.config,
       }),
-    ).resolves.toMatchObject({ ok: false, reason: expect.stringContaining("archived") });
+    ).resolves.toMatchObject({
+      ok: false,
+      kind: "unavailable",
+      reason: expect.stringContaining("archived"),
+    });
   });
 
   it("does not commit when cancelled during display preparation", async () => {
@@ -436,7 +488,11 @@ describe("commitBackgroundResultToSession", () => {
         provenance: { kind: "cron", jobId: "job-stale", runId: "cron:job-stale:3000" },
         config: target.config,
       }),
-    ).resolves.toMatchObject({ ok: false, reason: expect.stringContaining("session rebound") });
+    ).resolves.toMatchObject({
+      ok: false,
+      kind: "rebound",
+      reason: expect.stringContaining("session rebound"),
+    });
 
     await expect(
       loadTranscriptEvents({

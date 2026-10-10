@@ -80,6 +80,9 @@ import {
 const loadSubagentRegistryRuntime = createLazyPromise(
   () => import("../registry/subagent-registry.js"),
 );
+const loadSubagentResultPresentation = createLazyPromise(
+  () => import("./subagent-result-presentation.js"),
+);
 
 export { captureSubagentCompletionReply } from "./subagent-announce-output.js";
 
@@ -143,6 +146,7 @@ type SubagentAnnounceFlowParams = {
   outcome?: SubagentRunOutcome;
   expectsCompletionMessage?: boolean;
   completionTarget?: "parent";
+  completionPresentation?: "result";
   completionRequesterSessionId?: string;
   completionRequesterLifecycleRevision?: string;
   spawnMode?: SpawnSubagentMode;
@@ -461,6 +465,25 @@ async function runSubagentAnnounceFlowBound(
     // Descendant findings are wake input; only this child's own answer travels onward.
     const childResultText = reply;
     const findings = childResultText || "(no output)";
+    if (params.completionPresentation === "result") {
+      // The host shows the result itself; the requester's model is never asked to relay it.
+      const { presentSubagentResult } = await loadSubagentResultPresentation();
+      return await presentSubagentResult({
+        requesterSessionKey: targetRequesterSessionKey,
+        requesterAgentId: targetRequesterAgentId,
+        requesterSessionId: params.completionRequesterSessionId,
+        requesterLifecycleRevision: params.completionRequesterLifecycleRevision,
+        childSessionKey: params.childSessionKey,
+        childRunId: params.childRunId,
+        childAgentId: params.childAgentId,
+        label: params.label,
+        task: params.task,
+        status: outcome.status,
+        reply: childResultText,
+        isCurrent: completionDeliveryAllowed,
+        signal: params.signal,
+      });
+    }
 
     let requesterIsSubagent = requesterIsInternalSession();
     if (requesterIsSubagent) {

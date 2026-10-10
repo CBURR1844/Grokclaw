@@ -1,6 +1,9 @@
 // Subagent delivery-state tests cover current registry record normalization.
 import { describe, expect, it } from "vitest";
-import { normalizeSubagentRunState } from "./subagent-delivery-state.js";
+import {
+  loadPendingFinalDeliveryPayload,
+  normalizeSubagentRunState,
+} from "./subagent-delivery-state.js";
 import type { SubagentRunRecord } from "./subagent-registry.types.js";
 
 function baseRun(overrides: Partial<SubagentRunRecord> = {}): SubagentRunRecord {
@@ -39,6 +42,20 @@ describe("normalizeSubagentRunState", () => {
     expect(malformed.taskRunId).toBeUndefined();
     expect(malformed.generation).toBeUndefined();
     expect(nonString.taskRunId).toBeUndefined();
+  });
+
+  it("keeps only the known result presentation and hands it to the announce payload", () => {
+    const result = normalizeSubagentRunState(baseRun({ completionPresentation: "result" }));
+    const unknown = normalizeSubagentRunState({
+      ...baseRun(),
+      completionPresentation: "card",
+    } as unknown as SubagentRunRecord);
+
+    expect(result.completionPresentation).toBe("result");
+    expect(unknown.completionPresentation).toBeUndefined();
+    expect(loadPendingFinalDeliveryPayload(result)).toMatchObject({
+      completionPresentation: "result",
+    });
   });
 
   it("normalizes the durable delete-dispatch boundary", () => {

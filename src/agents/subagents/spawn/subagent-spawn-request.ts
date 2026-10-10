@@ -65,6 +65,19 @@ export async function resolveSubagentSpawnRequest(
       'sessions_spawn completionTarget="parent" requires mode="run", thread=false, collect=false, and completion notifications enabled.',
     );
   }
+  if (
+    ctx.completionPresentation === "result" &&
+    (params.collect ||
+      requestThreadBinding ||
+      spawnMode !== "run" ||
+      params.expectsCompletionMessage === false ||
+      params.completionTarget !== undefined)
+  ) {
+    return rejectSubagentSpawnRequest(
+      "error",
+      'A result run requires mode="run", no thread, collector or private completion, and completion notifications enabled.',
+    );
+  }
   if (params.collect && (requestThreadBinding || spawnMode === "session")) {
     return rejectSubagentSpawnRequest(
       "error",
@@ -131,6 +144,9 @@ export async function resolveSubagentSpawnRequest(
         "error",
         "Private completion requires an existing requester session. Retry from an active session.",
       );
+    }
+    if (ctx.completionPresentation === "result" && !completionRequesterSessionId) {
+      return rejectSubagentSpawnRequest("error", "A Claw result needs the bot's current chat.");
     }
     return undefined;
   };

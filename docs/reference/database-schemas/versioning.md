@@ -223,6 +223,14 @@ the field in `payload_json` because
 `normalizeSubagentRunState` mutates the parsed record in place rather than
 rebuilding it from known fields.
 
+Runs started by `sessions.delegate` record `completionPresentation: "result"` as
+a flat optional field in `subagent_runs.payload_json`, next to `completionTarget`.
+It is also a payload-only addition with no DDL or schema-version bump; any other
+value normalizes to absent. Older readers keep the row and ignore the field, so a
+result run that finishes under a downgraded Gateway is announced to its requester
+as an ordinary completion, which starts a requester turn instead of writing a
+result row.
+
 Cron standing-grant definition generations use three bare nullable projections on
 `cron_jobs`: `grant_definition_revision`, `grant_definition_generation`, and
 `grant_definition_updated_at`. The canonical job remains `job_json`. Current

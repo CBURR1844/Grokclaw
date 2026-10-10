@@ -22,6 +22,9 @@ const COMPLETION_NOTES = {
   announce: "The final reply returns to the requester as a completion event.",
 } satisfies Record<SubagentCompletionMode, string>;
 
+const RESULT_PRESENTATION_NOTE =
+  "The final reply is shown to the user in the requester's chat as the result.";
+
 const PERSISTENT_SESSION_NOTE =
   "This subagent session is persistent and remains available for thread follow-up messages.";
 
@@ -47,6 +50,7 @@ export function buildSubagentTaskMessage(params: {
 export function buildSubagentSpawnEnvelope(params: {
   completionMode: SubagentCompletionMode;
   completionTarget?: "parent";
+  completionPresentation?: "result";
   soleCollectorChild?: boolean;
   spawnMode: "run" | "session";
   task: string;
@@ -67,7 +71,9 @@ export function buildSubagentSpawnEnvelope(params: {
   const completionNote =
     params.completionTarget === "parent"
       ? "The result returns privately to the requester. No result is automatically sent to a channel; the requester reviews the result and continues any unfinished work."
-      : COMPLETION_NOTES[params.completionMode];
+      : params.completionPresentation === "result"
+        ? RESULT_PRESENTATION_NOTE
+        : COMPLETION_NOTES[params.completionMode];
   const persistentNote = params.spawnMode === "session" ? PERSISTENT_SESSION_NOTE : undefined;
   const lines = [
     "# Subagent Context",

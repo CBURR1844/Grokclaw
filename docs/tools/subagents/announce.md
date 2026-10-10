@@ -93,6 +93,31 @@ Use a build that supports this option throughout the run. Older builds cannot
 resume private completion handoffs and may discard them after a downgrade;
 existing session transcripts remain separate.
 
+### Result presentation
+
+A run started with the Gateway's `sessions.delegate` method (for example, **Send
+to a Claw** in the Control UI) presents its result instead of announcing it. When
+the child ends, OpenClaw writes the child's final reply into the requester chat as
+an `automation-result` assistant row with `openclawAutomation.kind: "subagent"`.
+The requester's model is not asked to relay it, and no requester turn starts:
+
+- The run never arms the requester settle wake, so a batch of finished results
+  does not wake the bot.
+- A requester turn never adopts the run, including through a later
+  `sessions_send` follow-up from the bot.
+- A failed, timed-out, or stopped run writes a host line such as "Researcher
+  didn't finish (timed out). Open the run to see what it did." An empty success
+  writes "Researcher finished without a reply. Open the run to see what it did."
+- The row is bound to the chat generation that started the run. If that chat was
+  reset or replaced, or can no longer accept results, delivery ends as a terminal
+  non-delivery with no retry and no wake. Other commit failures retry until the
+  normal delivery expiry.
+
+The row stays in the requester transcript, so the bot sees the result on later
+turns and users can follow up on it. Result presentation supports native,
+one-shot runs only; it cannot be combined with `thread: true`, `mode: "session"`,
+`collect: true`, `completionTarget`, or `expectsCompletionMessage: false`.
+
 ### Announce context
 
 Announce context is normalized to a stable internal event block:
