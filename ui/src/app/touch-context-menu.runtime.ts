@@ -6,7 +6,10 @@
  * native event then wins over the timer. A pan needs no scroll listener: the
  * browser sends `pointercancel` when it takes the touch over, while a scroll
  * the page makes itself (a transcript following a reply) leaves the hold alone.
+ * The touch presentation (sheets, callouts) loads with it.
  */
+import "../styles/touch-context-menu.css";
+
 const HOLD_MS = 500;
 // Below the nav drawer swipe's 7px lock, so a drag cancels the hold before the drawer moves.
 const MOVE_TOLERANCE_PX = 6;

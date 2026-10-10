@@ -1,0 +1,71 @@
+/* Touch presentation. Loaded with the long-press runtime, so only touch screens download it. */
+
+/* ≤560px touch screens: long-press and "..." menus open as sheets along the bottom edge.
+   A mouse keeps anchored menus, so a hover-opened menu stays within reach.
+   Menus with fly-out submenus stay anchored to their trigger. */
+@media (max-width: 560px) and (pointer: coarse) {
+  wa-dropdown:not(:has([slot="submenu"])):is(
+      .session-menu,
+      .sidebar-customize-menu,
+      .sidebar-session-sort-menu
+    )::part(menu) {
+    /* Web Awesome caps the panel with these in its shadow root, so they are the only override. */
+    --auto-size-available-width: 100vw;
+    --auto-size-available-height: calc(100dvh - var(--safe-area-top) - var(--space-7));
+
+    position: fixed;
+    inset: auto var(--safe-area-right) 0 var(--safe-area-left);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    padding-block-end: calc(var(--menu-padding) + var(--safe-area-bottom));
+    border-width: 1px 0 0;
+    /* Outranks the generic corner rule in base.css, which is also !important. */
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
+    transform-origin: bottom center;
+  }
+
+  /* The message menu. Doubled to outrank the corner rule in base.css. */
+  .chat-reply-context-menu.chat-reply-context-menu {
+    /* Outranks the inline left/top the menu is placed at. */
+    inset: auto var(--safe-area-right) 0 var(--safe-area-left) !important;
+    max-height: calc(100dvh - var(--safe-area-top) - var(--space-7));
+    overflow-y: auto;
+    padding-block-end: calc(var(--menu-padding) + var(--safe-area-bottom));
+    border-width: 1px 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation: menu-sheet-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-reply-context-menu.chat-reply-context-menu {
+    animation: none;
+  }
+}
+
+@keyframes menu-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Long-pressed rows open their menu instead of iOS's link preview or drag lift. */
+[data-touch-contextmenu]:not(.chat-thread) {
+  -webkit-touch-callout: none;
+}
+
+/* A long press opens the message menu, so iOS shows no callout over the bubble; links and media keep theirs. */
+.chat-bubble {
+  -webkit-touch-callout: none;
+}
+
+.chat-bubble :is(a, img, video, audio) {
+  -webkit-touch-callout: default;
+}
+
+@media (pointer: coarse) {
+  .sidebar-recent-session[data-touch-contextmenu] {
+    -webkit-user-drag: none;
+  }
+}
