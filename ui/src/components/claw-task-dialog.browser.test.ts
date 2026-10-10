@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.ts";
 import { getRenderedModalDialog } from "../test-helpers/modal-dialog.ts";
 import "../test-helpers/load-styles.ts";
-import { showClawTaskDialog, type ClawTaskRequest } from "./claw-task-dialog.ts";
+import { showClawTaskDialog, type ClawTaskDialogOptions } from "./claw-task-dialog.ts";
+
+type ClawTaskRequest = Parameters<ClawTaskDialogOptions["submit"]>[0];
 
 const CLAWS = [
   { id: "sorter", name: "Inbox Sorter" },

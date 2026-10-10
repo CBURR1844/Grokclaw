@@ -26,15 +26,18 @@ export type ChatControlCommand = "goal" | "compact" | "learn" | "loop" | "export
 
 export type ChatCommandControls = {
   /** Null hides the item; a reason disables it. */
-  read(command: ChatControlCommand): { disabledReason: string | null } | null;
+  read: (command: ChatControlCommand) => { disabledReason: string | null } | null;
   /** The chat bot's Claws in roster order: the ones a message can be sent to. */
-  claws(): ClawChoice[];
+  claws: () => ClawChoice[];
   /**
    * `message` turns learn into "save this message's workflow as a skill" and is the task a
    * Claw gets; without `clawId` the claw command asks which Claw first. Settles once the
    * command finished; a failure is toasted, never thrown.
    */
-  run(command: ChatControlCommand, options?: { message?: string; clawId?: string }): Promise<void>;
+  run: (
+    command: ChatControlCommand,
+    options?: { message?: string; clawId?: string },
+  ) => Promise<void>;
 };
 
 type ComposerGate = {

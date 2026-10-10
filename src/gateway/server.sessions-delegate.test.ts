@@ -54,7 +54,7 @@ describe("sessions.delegate through the Gateway", () => {
   const resultRow = (runId: string) => {
     let row = committed.get(runId);
     if (!row) {
-      row = createDeferred<void>();
+      row = createDeferred();
       committed.set(runId, row);
     }
     return row;

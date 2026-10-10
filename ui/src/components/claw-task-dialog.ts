@@ -10,7 +10,7 @@ import "../styles/claw-task-dialog.css";
 registerAgentDetailsClawsEnglish();
 
 export type ClawChoice = { id: string; name: string };
-export type ClawTaskRequest = { clawId: string; task: string; idempotencyKey: string };
+type ClawTaskRequest = { clawId: string; task: string; idempotencyKey: string };
 
 export type ClawTaskDialogOptions = (
   | { /** Send this message: the dialog only asks which Claw. */ task: string; claws: ClawChoice[] }

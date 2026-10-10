@@ -163,7 +163,7 @@ describe("result presentation lifecycle", () => {
   it("gives up an unpresented success without suspending it into a requester wake", async () => {
     // The commit kept failing until expiry; suspension would hand the findings to the bot.
     const entry = resultRun("result");
-    const settled = createDeferred<void>();
+    const settled = createDeferred();
     const wake = vi.fn(async () => {
       settled.resolve();
       return false;

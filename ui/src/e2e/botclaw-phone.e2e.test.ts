@@ -84,7 +84,7 @@ async function openPhone(page: Page, context: BrowserContext) {
   return {
     gateway,
     /** Holds a finger on the element for the long-press time and returns the lift. */
-    async hold(target: Locator) {
+    hold: async (target: Locator) => {
       const box = await target.boundingBox();
       if (!box) {
         throw new Error("expected a visible long-press target");
