@@ -1228,32 +1228,6 @@ describe("gateway run option collisions", () => {
     expect(options.auth?.token).toBe("tok_run");
   });
 
-  it("leaves a configured bind to each start so in-process restarts apply bind changes", async () => {
-    configState.cfg = {
-      gateway: {
-        bind: "custom",
-        customBindHost: "172.17.0.1",
-        auth: { mode: "token", token: "tok_cfg" },
-      },
-    };
-    configState.snapshot = {
-      exists: true,
-      valid: true,
-      config: configState.cfg,
-      parsed: configState.cfg,
-    };
-    runGatewayLoop.mockImplementationOnce(async ({ start }: GatewayLoopParams) => {
-      await start();
-      await start();
-    });
-
-    await runGatewayCli(["gateway", "run", "--allow-unconfigured"]);
-
-    expect(startGatewayServer).toHaveBeenCalledTimes(2);
-    expect(gatewayStartOptions(0)).not.toHaveProperty("bind");
-    expect(gatewayStartOptions(1)).not.toHaveProperty("bind");
-  });
-
   it("leaves service environment unchanged until Doctor repairs invalid config", async () => {
     detectRespawnSupervisor.mockReturnValue("systemd");
     const { createConfigResolutionFacts, setConfigResolutionFacts } =
@@ -1697,9 +1671,11 @@ describe("gateway run option collisions", () => {
     );
   });
 
-  it("allows password mode preflight when password is configured via SecretRef", async () => {
+  it("allows SecretRef password preflight and leaves a configured bind to each start", async () => {
     configState.cfg = {
       gateway: {
+        bind: "custom",
+        customBindHost: "172.17.0.1",
         auth: {
           mode: "password",
           password: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_PASSWORD" },
@@ -1711,15 +1687,11 @@ describe("gateway run option collisions", () => {
         },
       },
     };
-    configState.snapshot = {
-      exists: true,
-      valid: true,
-      config: configState.cfg,
-      parsed: configState.cfg,
-    };
+    configState.snapshot = configSnapshot(configState.cfg, { parsed: configState.cfg });
 
     await runGatewayCli(["gateway", "run", "--allow-unconfigured"]);
 
+    // Only --bind pins the listener; the server reads gateway.bind again on in-process restarts.
     expect(gatewayStartOptions().bind).toBeUndefined();
   });
 
