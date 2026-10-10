@@ -20,7 +20,7 @@ function installClawDelegationMock(claws: ClawDelegationMock): void {
   }
   const FIELDS = new Set(["sessionKey", "sessionId", "targetAgentId", "task", "idempotencyKey"]);
   const HOST_LINES = { error: "hit an error", timeout: "timed out", stopped: "stopped" };
-  const isRecord = (value: unknown): value is Record<string, unknown> =>
+  const isParamsObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value);
   const isText = (value: unknown, max: number): value is string =>
     typeof value === "string" && value.length > 0 && value.length <= max;
@@ -37,7 +37,7 @@ function installClawDelegationMock(claws: ClawDelegationMock): void {
   const keys = new Map<string, { identity: string; result?: Record<string, string> }>();
   let runCount = 0;
   gateway.setRequestHandler("sessions.delegate", ({ params, respond }) => {
-    if (!isRecord(params) || Object.keys(params).some((key) => !FIELDS.has(key))) {
+    if (!isParamsObject(params) || Object.keys(params).some((key) => !FIELDS.has(key))) {
       respond(refuse("INVALID_REQUEST", "invalid sessions.delegate params"));
       return;
     }
