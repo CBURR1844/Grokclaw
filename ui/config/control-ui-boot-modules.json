@@ -2172,6 +2172,7 @@
   "ui/src/i18n/locales/en-chat-ci.ts",
   "ui/src/i18n/locales/en-file-preview.ts",
   "ui/src/i18n/locales/en-plugin-management.ts",
+  "ui/src/lib/agents/claw-delegation.ts",
   "ui/src/lib/authenticated-avatar-route.ts",
   "ui/src/lib/board/gateway-provider.ts",
   "ui/src/lib/board/grid.ts",

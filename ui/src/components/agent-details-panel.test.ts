@@ -14,7 +14,13 @@ import {
   type GatewayRequestMock,
 } from "../test-helpers/gateway-client.ts";
 import { gatewayHelloForMethods } from "../test-helpers/gateway-methods.ts";
+import type { ClawTaskDialogOptions } from "./claw-task-dialog.ts";
 import "./agent-details-panel.ts";
+
+const { showClawTaskDialog } = vi.hoisted(() => ({
+  showClawTaskDialog: vi.fn<(options: ClawTaskDialogOptions) => Promise<boolean>>(),
+}));
+vi.mock("./claw-task-dialog.ts", () => ({ showClawTaskDialog }));
 
 const METHODS = [
   "config.get",
@@ -23,6 +29,7 @@ const METHODS = [
   "cron.run",
   "cron.runs",
   "cron.update",
+  "sessions.delegate",
   "sessions.list",
   "sessions.subscribe",
 ];
@@ -78,7 +85,10 @@ function roster(extraClaws = 0): AgentsListResult {
   };
 }
 
-function mount(agentId: string, options: { allowAgents?: string[]; extraClaws?: number } = {}) {
+function mount(
+  agentId: string,
+  options: { allowAgents?: string[]; extraClaws?: number; sessionKey?: string } = {},
+) {
   const config = {
     agents: {
       entries: {
@@ -132,6 +142,8 @@ function mount(agentId: string, options: { allowAgents?: string[]; extraClaws?: 
         patches.push({ raw: JSON.parse(patch.raw), replacePaths: patch.replacePaths });
         return { ok: true, config, hash: "next" };
       }
+      case "sessions.delegate":
+        return { status: "accepted", runId: "run-1", childSessionKey: "agent:brief:subagent:1" };
       case "sessions.subscribe":
         return { subscribed: true };
       case "sessions.list":
@@ -158,8 +170,12 @@ function mount(agentId: string, options: { allowAgents?: string[]; extraClaws?: 
   const provider = createApplicationContextProvider(context);
   const panel = document.createElement("openclaw-agent-details-panel") as HTMLElement & {
     agentId: string;
+    sessionKey: string | null;
+    sessionId: string | null;
   };
   panel.agentId = agentId;
+  panel.sessionKey = options.sessionKey ?? null;
+  panel.sessionId = options.sessionKey ? "session-1" : null;
   provider.append(panel);
   document.body.append(provider);
   const observer = new MutationObserver(wake);
@@ -201,6 +217,7 @@ function select(dropdown: Element | null | undefined, value: string) {
 }
 
 beforeEach(async () => {
+  showClawTaskDialog.mockReset();
   await i18n.setLocale("en");
 });
 
@@ -328,5 +345,45 @@ describe("agent details Claws", () => {
     await until(() => panel.querySelector(".agent-details__works-for") !== null);
     expect(text(panel.querySelector(".agent-details__works-for"))).toBe("Works for Forge");
     expect(panel.querySelector("openclaw-agent-details-claws")).toBeNull();
+  });
+
+  it("runs a Claw with a task from the Bot's chat: Run… without a schedule, the menu for any", async () => {
+    const { panel, request, until } = mount("forge", { sessionKey: "agent:forge:main" });
+    const run = () => claw(panel, "brief")?.querySelector<HTMLButtonElement>(".agent-details__run");
+    await until(() => Boolean(run()));
+    // A scheduled Claw keeps Run now per schedule; Run… is for Claws without one.
+    expect(claw(panel, "sorter")?.querySelector(".agent-details__claw-idle")).toBeNull();
+    expect(run()?.getAttribute("aria-label")).toBe("Run Morning Brief");
+
+    run()?.click();
+    const [options] = showClawTaskDialog.mock.calls[0] ?? [];
+    expect(options).toEqual({
+      claw: { id: "brief", name: "Morning Brief" },
+      submit: expect.any(Function),
+    });
+    await expect(
+      options?.submit({ clawId: "brief", task: "Summarize the news", idempotencyKey: "key-1" }),
+    ).resolves.toBeNull();
+    expect(calls(request, "sessions.delegate")).toEqual([
+      {
+        sessionKey: "agent:forge:main",
+        sessionId: "session-1",
+        targetAgentId: "brief",
+        task: "Summarize the news",
+        idempotencyKey: "key-1",
+      },
+    ]);
+
+    select(claw(panel, "sorter")?.querySelector(".agent-details__claw-menu"), "run");
+    expect(showClawTaskDialog).toHaveBeenLastCalledWith(
+      expect.objectContaining({ claw: { id: "sorter", name: "Inbox Sorter" } }),
+    );
+  });
+
+  it("offers no Run outside the Bot's chat", async () => {
+    const { panel, until } = mount("forge");
+    await until(() => text(claw(panel, "brief")).includes("No schedule yet"));
+    expect(panel.querySelector(".agent-details__claw-idle button")).toBeNull();
+    expect(panel.querySelector("wa-dropdown-item[value='run']")).toBeNull();
   });
 });

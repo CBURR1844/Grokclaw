@@ -44,6 +44,9 @@ function renderAgentStatus(card: { activeNow: boolean; lastActiveAt?: number | n
 class AgentDetailsPanel extends AgentRosterElement {
   @property({ attribute: false }) agentId = "";
   @property({ type: Boolean }) presented = true;
+  /** The chat this agent is in, where its Claws' results go; null where none can run. */
+  @property({ attribute: false }) sessionKey: string | null = null;
+  @property({ attribute: false }) sessionId: string | null = null;
   private routines: AgentRoutines | null = null;
   private routinesContext: ApplicationContext | null = null;
 
@@ -255,6 +258,8 @@ class AgentDetailsPanel extends AgentRosterElement {
                 .botId=${card.id}
                 .active=${this.active}
                 .presented=${this.presented}
+                .sessionKey=${this.sessionKey}
+                .sessionId=${this.sessionId}
               ></openclaw-agent-details-claws>`
         }
         ${this.renderRoutines()}

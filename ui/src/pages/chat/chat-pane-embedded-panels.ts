@@ -15,6 +15,7 @@ import { EMPTY_LINK_READERS } from "../../components/link-reader-target.ts";
 import { renderPanelLoadingSkeleton } from "../../components/panel-loading-skeleton.ts";
 import { t } from "../../i18n/index.ts";
 import { registerFilePreviewEnglish } from "../../i18n/locales/en-file-preview.ts";
+import { chatOffersClaws } from "../../lib/agents/claw-delegation.ts";
 import type { ChatAttachment } from "../../lib/chat/chat-types.ts";
 import { canCallGatewayMethod } from "../../lib/gateway-methods.ts";
 import {
@@ -370,6 +371,17 @@ export function sidebarPanelDefinitions(
         ? html`<openclaw-agent-details-panel
             .agentId=${params.agentId}
             .presented=${livePresentation(params.agentPresented ?? false)}
+            .sessionKey=${
+              // The panel shows this chat's bot, so its Claws report back to this chat.
+              state &&
+              chatOffersClaws({
+                sessionKey: state.sessionKey,
+                incognito: state.selectedChatSessionIncognito,
+              })
+                ? state.sessionKey
+                : null
+            }
+            .sessionId=${state?.currentSessionId ?? null}
           ></openclaw-agent-details-panel>`
         : null,
     ),

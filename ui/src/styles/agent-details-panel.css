@@ -296,6 +296,14 @@ wa-dropdown-item .agent-details__claw-avatar {
 }
 
 .agent-details__claw-last,
+.agent-details__claw-idle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+}
+
 .agent-details__claw-none {
   overflow: hidden;
   margin: 0;

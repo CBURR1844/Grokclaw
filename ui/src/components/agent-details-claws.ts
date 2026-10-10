@@ -9,6 +9,7 @@ import type { ApplicationContext } from "../app/context.ts";
 import { t } from "../i18n/index.ts";
 import { registerAgentDetailsClawsEnglish } from "../i18n/locales/en-agent-details-claws.ts";
 import { AgentRoutines } from "../lib/agents/agent-routines.ts";
+import { delegateToClaw, readClawDelegationAccess } from "../lib/agents/claw-delegation.ts";
 import {
   attachClaw,
   clawCandidates,
@@ -24,6 +25,7 @@ import { describeCronSchedule } from "../lib/cron/schedule-phrase.ts";
 import { formatRelativeTimestamp, formatTimeMs } from "../lib/format.ts";
 import { shouldHandleNavigationClick } from "../lib/navigation-click.ts";
 import { SubscriptionsController } from "../lit/subscriptions-controller.ts";
+import { showClawTaskDialog } from "./claw-task-dialog.ts";
 import { icons } from "./icons.ts";
 import { renderAgentIdentityAvatar } from "./identity-avatar-view.ts";
 import { renderSettingsToggle } from "./settings-ui.ts";
@@ -49,13 +51,17 @@ function isToday(ms: number) {
 
 /**
  * A Bot's Claws in its details panel: who they are, when each last ran and
- * what it did, one switch and Run per schedule, and linking Claws in or out.
- * Membership comes from the Gateway's `agents.list` projection; every change
- * goes through the runtime config, so the list here never decides it.
+ * what it did, one switch and Run per schedule, running one with a task, and
+ * linking Claws in or out. Membership comes from the Gateway's `agents.list`
+ * projection; every change goes through the runtime config, so the list here
+ * never decides it.
  */
 class AgentDetailsClaws extends AgentRosterElement {
   @property({ attribute: false }) botId = "";
   @property({ type: Boolean }) presented = true;
+  /** The Bot's chat a Claw run from here reports back to; null offers no Run. */
+  @property({ attribute: false }) sessionKey: string | null = null;
+  @property({ attribute: false }) sessionId: string | null = null;
   @state() private pending: string | null = null;
   @state() private notice: string | null = null;
   private readonly routines = new Map<string, AgentRoutines>();
@@ -132,6 +138,32 @@ class AgentDetailsClaws extends AgentRosterElement {
     }
   }
 
+  private canRunClaws() {
+    return (
+      this.sessionKey !== null && readClawDelegationAccess(this.context.gateway.snapshot).allowed
+    );
+  }
+
+  private runClaw(claw: ClawCard) {
+    const { context, sessionKey, sessionId } = this;
+    void showClawTaskDialog({
+      claw: { id: claw.id, name: claw.name },
+      submit: async ({ clawId, task, idempotencyKey }) => {
+        const client = context.gateway.snapshot.client;
+        // The panel can move to another chat while the dialog is open.
+        if (!sessionKey || this.sessionKey !== sessionKey || !client || !this.canRunClaws()) {
+          return t("chat.commandControls.unavailable");
+        }
+        const target = { sessionKey, ...(sessionId ? { sessionId } : {}) };
+        return delegateToClaw(
+          client,
+          { ...target, targetAgentId: clawId, task, idempotencyKey },
+          claw.name,
+        );
+      },
+    });
+  }
+
   private lastRunLine(routines: AgentRoutines | undefined) {
     if (!routines) {
       return nothing;
@@ -189,7 +221,7 @@ class AgentDetailsClaws extends AgentRosterElement {
     </li>`;
   }
 
-  private renderMenu(claw: ClawCard, botName: string, canChange: boolean) {
+  private renderMenu(claw: ClawCard, botName: string, canChange: boolean, canRun: boolean) {
     const config = resolveEditableSnapshotConfig(this.context.runtimeConfig.state.configSnapshot);
     const blocked = canChange && clawRemovalBlocked(config, this.botId);
     return html`<wa-dropdown
@@ -205,6 +237,8 @@ class AgentDetailsClaws extends AgentRosterElement {
         const panel = CLAW_LINKS.find(([candidate]) => candidate === value)?.[0];
         if (value === "remove") {
           void this.change(claw.id, () => detachClaw(this.context.runtimeConfig, this.botId, claw));
+        } else if (value === "run") {
+          this.runClaw(claw);
         } else if (panel) {
           this.navigate("agents", pathForAgentPanel(claw.id, panel, this.context.basePath));
         }
@@ -218,6 +252,15 @@ class AgentDetailsClaws extends AgentRosterElement {
       >
         ${icons.moreHorizontal}
       </button>
+      ${
+        canRun
+          ? html`<wa-dropdown-item value="run"
+              ><span slot="icon" class="agent-details__menu-icon" aria-hidden="true"
+                >${icons.play}</span
+              >${t("agentDetails.claws.runWithTask")}</wa-dropdown-item
+            >`
+          : nothing
+      }
       ${CLAW_LINKS.map(
         ([panel, label, icon]) =>
           html`<wa-dropdown-item value=${panel}
@@ -244,6 +287,7 @@ class AgentDetailsClaws extends AgentRosterElement {
   private renderClaw(claw: ClawCard, botName: string, canChange: boolean) {
     const routines = this.routines.get(claw.id);
     const jobs = routines?.jobs ?? [];
+    const canRun = this.canRunClaws();
     return html`<li class="agent-details__claw" data-claw-id=${claw.id}>
       <div class="agent-details__claw-head">
         <span class="agent-details__claw-avatar" aria-hidden="true"
@@ -253,7 +297,7 @@ class AgentDetailsClaws extends AgentRosterElement {
           <strong>${claw.name}</strong>
           <span class="agent-details__claw-last">${this.lastRunLine(routines)}</span>
         </span>
-        ${this.renderMenu(claw, botName, canChange)}
+        ${this.renderMenu(claw, botName, canChange, canRun)}
       </div>
       ${
         routines?.error
@@ -282,7 +326,21 @@ class AgentDetailsClaws extends AgentRosterElement {
           : jobs.length === 0
             ? routines.error
               ? nothing
-              : html`<p class="agent-details__claw-none">${t("agentDetails.claws.noSchedule")}</p>`
+              : html`<div class="agent-details__claw-idle">
+                  <p class="agent-details__claw-none">${t("agentDetails.claws.noSchedule")}</p>
+                  ${
+                    canRun
+                      ? html`<button
+                          type="button"
+                          class="btn btn--sm agent-details__run"
+                          aria-label=${t("agentDetails.claws.runTitle", { name: claw.name })}
+                          @click=${() => this.runClaw(claw)}
+                        >
+                          ${icons.play}<span>${t("agentDetails.claws.run")}</span>
+                        </button>`
+                      : nothing
+                  }
+                </div>`
             : html`<ul class="agent-details__schedules">
                 ${repeat(
                   jobs,

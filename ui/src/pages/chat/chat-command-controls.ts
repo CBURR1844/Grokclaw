@@ -1,26 +1,39 @@
 import { isRecord } from "@openclaw/normalization-core/record-coerce";
 import type { ApplicationContext } from "../../app/context.ts";
+import type { ClawChoice } from "../../components/claw-task-dialog.ts";
 import { t } from "../../i18n/index.ts";
+import {
+  chatOffersClaws,
+  delegateToClaw,
+  readClawDelegationAccess,
+} from "../../lib/agents/claw-delegation.ts";
+import { clawsOf, normalizeAgentLabel } from "../../lib/agents/display.ts";
 import { extractText } from "../../lib/chat/message-extract.ts";
 import { formatUiError } from "../../lib/format-error.ts";
 import { readSessionMethodAccess } from "../../lib/session-method-access.ts";
 import { showToast } from "../../lib/toast.ts";
+import { generateUUID } from "../../lib/uuid.ts";
 import { dispatchChatSlashCommand } from "./chat-commands.ts";
 import { chatGoalRecovery, setChatGoalDraftMode } from "./chat-goals.ts";
 import { CHAT_COMPOSER_TEXTAREA_SELECTOR } from "./chat-pane-shared.ts";
 import { isChatPaneWorking } from "./chat-pane-state.ts";
 import { readChatSessionActionAccess } from "./chat-session-action-access.ts";
 import type { ChatPageHost } from "./chat-state-host.ts";
-import { selectedChatSessionRow } from "./chat-state-route.ts";
+import { resolveChatAgentId, selectedChatSessionRow } from "./chat-state-route.ts";
 
 /** Session commands offered as buttons and menu items, so nobody has to type them. */
-export type ChatControlCommand = "goal" | "compact" | "learn" | "loop" | "export";
+export type ChatControlCommand = "goal" | "compact" | "learn" | "loop" | "export" | "claw";
 
 export type ChatCommandControls = {
   /** Null hides the item; a reason disables it. */
   read(command: ChatControlCommand): { disabledReason: string | null } | null;
-  /** `message` turns learn into "save this message's workflow as a skill". */
-  run(command: ChatControlCommand, options?: { message?: string }): void;
+  /** The chat bot's Claws in roster order: the ones a message can be sent to. */
+  claws(): ClawChoice[];
+  /**
+   * `message` turns learn into "save this message's workflow as a skill" and is the task a
+   * Claw gets; without `clawId` the claw command asks which Claw first.
+   */
+  run(command: ChatControlCommand, options?: { message?: string; clawId?: string }): void;
 };
 
 type ComposerGate = {
@@ -61,10 +74,14 @@ function lastUserTask(state: ChatPageHost): string {
  */
 export function createChatCommandControls(
   state: ChatPageHost,
-  gateway: Pick<ApplicationContext["gateway"], "snapshot">,
+  context: {
+    gateway: Pick<ApplicationContext["gateway"], "snapshot">;
+    agents: { state: Pick<ApplicationContext["agents"]["state"], "agentsList"> };
+  },
   gate: ComposerGate,
   pane: ComposerPane,
 ): ChatCommandControls {
+  const { gateway } = context;
   const hiddenByAccess = (command: ChatControlCommand) => {
     const access =
       command === "compact"
@@ -75,20 +92,34 @@ export function createChatCommandControls(
               method: "chat.send",
               requiredScope: "operator.admin",
             })
-          : null;
+          : command === "claw"
+            ? readClawDelegationAccess(gateway.snapshot)
+            : null;
     return access?.allowed === false && access.cause !== "disconnected";
   };
+  const claws = () =>
+    clawsOf(context.agents.state.agentsList?.agents ?? [], resolveChatAgentId(state)).map(
+      (agent) => ({ id: agent.id, name: normalizeAgentLabel(agent) }),
+    );
+  const clawsHidden = () =>
+    !chatOffersClaws({
+      sessionKey: state.sessionKey,
+      incognito: state.selectedChatSessionIncognito,
+    }) || claws().length === 0;
   const disabledReason = (command: ChatControlCommand) =>
     (!state.connected ? t("sessionsView.actionRequiresConnection") : null) ??
     (gate.canSend ? null : (gate.disabledReason ?? t("chat.commandControls.unavailable"))) ??
-    gate.submitDisabledReason ??
-    gate.modelRequiredReason ??
-    (isChatPaneWorking(state) ? t("chat.commandControls.availableWhenIdle") : null) ??
-    (command === "compact" &&
-    (state.compactionStatus?.phase === "active" || compactRequests.has(state))
-      ? t("chat.commandControls.compacting")
-      : null) ??
-    (command === "goal" && chatGoalRecovery(state) ? t("chat.goals.outcomeUnknown") : null);
+    // A Claw works beside the bot, so it waits for neither the bot's model nor its reply.
+    (command === "claw"
+      ? null
+      : (gate.submitDisabledReason ??
+        gate.modelRequiredReason ??
+        (isChatPaneWorking(state) ? t("chat.commandControls.availableWhenIdle") : null) ??
+        (command === "compact" &&
+        (state.compactionStatus?.phase === "active" || compactRequests.has(state))
+          ? t("chat.commandControls.compacting")
+          : null) ??
+        (command === "goal" && chatGoalRecovery(state) ? t("chat.goals.outcomeUnknown") : null)));
   const read: ChatCommandControls["read"] = (command) => {
     if (command === "export") {
       // Export reads the loaded transcript; it needs neither a connection nor a send slot.
@@ -96,7 +127,8 @@ export function createChatCommandControls(
     }
     if (
       hiddenByAccess(command) ||
-      (command === "goal" && (selectedChatSessionRow(state)?.goal || state.chatGoalDraftMode))
+      (command === "goal" && (selectedChatSessionRow(state)?.goal || state.chatGoalDraftMode)) ||
+      (command === "claw" && clawsHidden())
     ) {
       return null;
     }
@@ -135,7 +167,24 @@ export function createChatCommandControls(
       requireValue: dialog === "repeat",
     });
   };
-  const runNow = async (command: ChatControlCommand, message?: string) => {
+  // `target` is the session captured at click time, so a chat that moved on refuses the task.
+  const sendToClaw = async (
+    target: { sessionKey: string; sessionId?: string },
+    request: { clawId: string; task: string; idempotencyKey: string },
+  ) => {
+    const client = state.sessionKey === target.sessionKey ? state.client : null;
+    const current = read("claw");
+    if (!client || !current || current.disabledReason) {
+      return current?.disabledReason ?? t("chat.commandControls.unavailable");
+    }
+    const { clawId, ...rest } = request;
+    const name = claws().find((claw) => claw.id === clawId)?.name ?? clawId;
+    return delegateToClaw(client, { ...target, targetAgentId: clawId, ...rest }, name);
+  };
+  const runNow = async (
+    command: ChatControlCommand,
+    { message, clawId }: { message?: string; clawId?: string } = {},
+  ) => {
     const sessionKey = state.sessionKey;
     switch (command) {
       case "export":
@@ -179,16 +228,41 @@ export function createChatCommandControls(
         }
         break;
       }
+      case "claw": {
+        const task = message?.trim();
+        if (!task) {
+          break;
+        }
+        const target = {
+          sessionKey,
+          ...(state.currentSessionId ? { sessionId: state.currentSessionId } : {}),
+        };
+        if (clawId) {
+          const error = await sendToClaw(target, { clawId, task, idempotencyKey: generateUUID() });
+          if (error) {
+            showToast({ message: error });
+          }
+          break;
+        }
+        const { showClawTaskDialog } = await import("../../components/claw-task-dialog.ts");
+        await showClawTaskDialog({
+          claws: claws(),
+          task,
+          submit: (request) => sendToClaw(target, request),
+        });
+        break;
+      }
     }
   };
   return {
     read,
+    claws,
     run(command, options) {
       // Menus can outlive the render that built them; check again at click time.
       if (blocked(command)) {
         return;
       }
-      runNow(command, options?.message).catch((error: unknown) =>
+      runNow(command, options).catch((error: unknown) =>
         showToast({ message: t("chat.commandControls.failed", { error: formatUiError(error) }) }),
       );
     },
