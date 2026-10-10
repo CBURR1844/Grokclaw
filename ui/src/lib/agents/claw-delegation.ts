@@ -1,4 +1,5 @@
 import type { SessionsDelegateParams } from "@openclaw/gateway-protocol";
+import { truncateCodePoints } from "@openclaw/normalization-core/code-points";
 import {
   isCronSessionKey,
   parseAgentSessionKey,
@@ -21,6 +22,12 @@ export function readClawDelegationAccess(
 
 /** The most text one Claw task carries: the limit sessions.delegate admits. */
 export const CLAW_TASK_MAX_CHARS = 16_000;
+
+/** Whether text is longer than one Claw task can be, counted the way sessions.delegate counts. */
+export function isClawTaskTooLong(task: string): boolean {
+  // The Gateway's schema counts code points, so an emoji is one character, not two.
+  return truncateCodePoints(task, CLAW_TASK_MAX_CHARS).length < task.length;
+}
 
 /**
  * Whether a chat offers its Claws at all. The Gateway admits only a bot's own chat key, so a

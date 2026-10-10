@@ -375,8 +375,11 @@ export function sidebarPanelDefinitions(
             .presented=${livePresentation(params.agentPresented ?? false)}
             .sessionKey=${
               // The panel shows this chat's bot, so its Claws report back to this chat, and only
-              // where the chat itself offers them: archived, view-only or unsendable chats don't.
-              state && params.commands?.read("claw") ? state.sessionKey : null
+              // while the chat itself can start one: not archived, view-only, unsendable, paused
+              // or disconnected chats.
+              state && params.commands?.read("claw")?.disabledReason === null
+                ? state.sessionKey
+                : null
             }
             .sessionId=${state?.currentSessionId ?? null}
           ></openclaw-agent-details-panel>`

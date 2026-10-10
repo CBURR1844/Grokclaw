@@ -1,6 +1,6 @@
 import type { Page } from "playwright";
 import { expect, it } from "vitest";
-import type { AgentsListResult, GatewaySessionRow } from "../api/types.ts";
+import type { AgentsListResult } from "../api/types.ts";
 import { clawDelegationMockInitScript } from "../test-helpers/control-ui-e2e-claws.ts";
 import {
   controlUiBundledSettingsStorageKey,
@@ -8,6 +8,7 @@ import {
   installMockGateway,
   waitForControlUiRoute,
 } from "../test-helpers/control-ui-e2e.ts";
+import type { ControlUiSessionFixture } from "../test-helpers/control-ui-session-fixtures.ts";
 import { cronListResponseFixture } from "../test-helpers/cron.ts";
 import { createControlUiE2eSuite } from "./control-ui-e2e-suite.test-support.ts";
 
@@ -30,7 +31,7 @@ const agentsList: AgentsListResult = {
 const mainChat = { key: "agent:main:main", kind: "direct", agentId: "main", isMain: true } as const;
 
 /** Opens Harbor's chat with its Details showing Morning Brief, a Claw with no schedule. */
-async function openDetails(page: Page, rows: GatewaySessionRow[]) {
+async function openDetails(page: Page, rows: ControlUiSessionFixture[]) {
   await page.addInitScript(
     ({ key }) => localStorage.setItem(key, JSON.stringify({ advancedUi: false })),
     { key: controlUiBundledSettingsStorageKey(suite.server.baseUrl) },

@@ -617,7 +617,7 @@ describe("chat pane embedded panels", () => {
     expect(discussionSlots(true)).toContain("discussion");
   });
 
-  it("lets the bot's details run its Claws only where the chat offers its Claw command", () => {
+  it("lets the bot's details run its Claws only while the chat can start one", () => {
     const { state } = createReviewFixture();
     state.sessionKey = "agent:forge:main";
     state.currentSessionId = "session-1";
@@ -643,6 +643,8 @@ describe("chat pane embedded panels", () => {
     // Archived, catalog, view-only and unsendable chats get no commands at all.
     expect(panelChat()).toBeNull();
     expect(panelChat(commands(null))).toBeNull();
+    // A chat that can't start work right now (paused for review, disconnected) can't either.
+    expect(panelChat(commands({ disabledReason: "Unavailable right now." }))).toBeNull();
     expect(panelChat(commands({ disabledReason: null }))).toBe("agent:forge:main");
   });
 

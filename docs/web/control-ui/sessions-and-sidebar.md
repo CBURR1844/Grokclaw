@@ -193,9 +193,10 @@ Details offer Claws only where the chat can start one: not in archived,
 view-only or catalog chats, chats you can't send to, incognito chats, a
 helper's or routine's chat, or the shared chat of global session scope. If
 the Control UI cannot confirm that the Claw started, it says so instead of
-sending again; check the chat before you retry. A retry of the same task reuses
-its request, so it joins a run the first attempt started rather than starting
-a second one.
+sending again; check the chat before you retry. In the task dialog, pressing
+**Send** or **Run** again with the same Claw and task reuses the request, so it
+joins a run the first attempt started rather than starting a second one. A new
+**Send to {Claw}** from the message menu is a new request.
 
 ### Phones and touch screens
 

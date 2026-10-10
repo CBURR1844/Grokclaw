@@ -83,7 +83,9 @@ describe("whole-message actions", () => {
 
     // Surrounding space is trimmed from the task, so it doesn't count.
     expect(claw(` ${"x".repeat(16_000)}\n`)).toMatchObject({ label, disabled: false });
-    expect(claw("x".repeat(16_001))).toMatchObject({
+    // The Gateway counts characters, not UTF-16 units: 16,000 emoji still fit.
+    expect(claw("😊".repeat(16_000))).toMatchObject({ label, disabled: false });
+    expect(claw("😊".repeat(16_001))).toMatchObject({
       label,
       disabled: true,
       tooltip: "Too long for a Claw: a task can be up to 16,000 characters.",
