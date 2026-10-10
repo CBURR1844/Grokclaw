@@ -23,6 +23,11 @@ import {
 import { buildMockOpenAiResponsesProvider } from "./test-openai-responses-model.js";
 
 const BOT_KEY = "agent:main:main";
+
+function ingressOpts(input: unknown): AgentCommandGatewayIngressOpts {
+  // SAFETY: the Gateway's agent ingress is the only caller of the hoisted agentCommand mock.
+  return input as AgentCommandGatewayIngressOpts;
+}
 type Delegated = { status: string; runId: string; childSessionKey: string };
 type HistoryMessage = Record<string, unknown> & { __openclaw?: Record<string, unknown> };
 
@@ -78,7 +83,8 @@ describe("sessions.delegate through the Gateway", () => {
     });
     await prepareGatewayReplyRuntimeForTest({ force: true });
     agentCommandMock.mockReset();
-    agentCommandMock.mockImplementation(async (opts: AgentCommandGatewayIngressOpts) => {
+    agentCommandMock.mockImplementation(async (input) => {
+      const opts = ingressOpts(input);
       const sessionKey = opts.sessionKey ?? "";
       const routing = {
         runId: opts.runId ?? "",
@@ -209,7 +215,7 @@ describe("sessions.delegate through the Gateway", () => {
         expect(entry?.delivery?.status).toBe("delivered");
         expect(entry?.requesterSettleWake).toBeUndefined();
       }
-      const turns = agentCommandMock.mock.calls.map(([opts]) => opts.sessionKey);
+      const turns = agentCommandMock.mock.calls.map(([input]) => ingressOpts(input).sessionKey);
       expect(turns).toHaveLength(2);
       expect(turns).not.toContain(BOT_KEY);
     } finally {
