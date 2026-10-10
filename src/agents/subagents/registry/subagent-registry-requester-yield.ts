@@ -167,6 +167,8 @@ export function listUnsettledRequesterChildrenInRuns(params: {
     if (
       entry.collect === true ||
       entry.expectsCompletionMessage !== true ||
+      // A result run's reply lands as a host card, never as a later turn of this session.
+      entry.completionPresentation === "result" ||
       (excludedTurnRunId !== undefined &&
         (entry.requesterTurnRunId === excludedTurnRunId ||
           isRequesterSettleWakeForRun({

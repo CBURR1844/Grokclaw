@@ -1,8 +1,10 @@
 // Result runs are presented by the host; their completion never starts a requester turn.
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createDeferred } from "../../../../test/helpers/promise.js";
 import { replaceSessionEntrySync } from "../../../config/sessions/session-accessor.js";
 import type { CallGatewayOptions } from "../../../gateway/call.js";
 import { resetGatewayWorkAdmission } from "../../../process/gateway-work-admission.js";
+import { captureOpenClawStateWorkerContext } from "../../../state/openclaw-state-worker-context.js";
 import { SUBAGENT_ENDED_REASON_COMPLETE } from "./subagent-lifecycle-events.js";
 import { mockBlockedCompletionDeliveryOwner } from "./subagent-registry-lifecycle-completion.test-support.js";
 import {
@@ -14,6 +16,7 @@ import type {
   SubagentLifecycleController,
   SubagentLifecycleOptions,
 } from "./subagent-registry-lifecycle.js";
+import { claimSubagentYieldInRuns } from "./subagent-registry-run-pause.js";
 import type { SubagentRunRecord } from "./subagent-registry.types.js";
 
 const completionDeliveryMocks = vi.hoisted(() => ({
@@ -60,7 +63,11 @@ vi.mock("./subagent-registry-cleanup.js", async (importOriginal) => ({
 
 type AnnounceOutcome = Awaited<ReturnType<SubagentLifecycleOptions["runSubagentAnnounceFlow"]>>;
 
-function startRun(entry: SubagentRunRecord, outcome: AnnounceOutcome) {
+function startRun(
+  entry: SubagentRunRecord,
+  outcome: AnnounceOutcome,
+  overrides: Partial<SubagentLifecycleOptions> = {},
+) {
   const wake = vi.fn(async () => false);
   const announce = vi.fn<SubagentLifecycleOptions["runSubagentAnnounceFlow"]>(async () => outcome);
   const controller: SubagentLifecycleController = createLifecycleControllerFixture(
@@ -68,6 +75,7 @@ function startRun(entry: SubagentRunRecord, outcome: AnnounceOutcome) {
       entry,
       runSubagentAnnounceFlow: announce,
       maybeWakeRequesterAfterAllChildrenSettled: wake,
+      ...overrides,
     },
     {
       callGateway: async <T = Record<string, unknown>>(opts: CallGatewayOptions): Promise<T> =>
@@ -151,6 +159,58 @@ describe("result presentation lifecycle", () => {
       expect(wake).not.toHaveBeenCalled();
     },
   );
+
+  it("gives up an unpresented success without suspending it into a requester wake", async () => {
+    // The commit kept failing until expiry; suspension would hand the findings to the bot.
+    const entry = resultRun("result");
+    const settled = createDeferred<void>();
+    const wake = vi.fn(async () => {
+      settled.resolve();
+      return false;
+    });
+    const { controller } = startRun(entry, "retryable", {
+      maybeWakeRequesterAfterAllChildrenSettled: wake,
+      // Terminal cleanup ends with the ended hook; awaiting it avoids polling.
+      shouldEmitEndedHookForRun: () => true,
+      emitSubagentEndedHookForRun: vi.fn(async () => settled.resolve()),
+    });
+    await controller.completeSubagentRun({
+      runId: entry.runId,
+      endedAt: 4_000,
+      outcome: { status: "ok" },
+      reason: SUBAGENT_ENDED_REASON_COMPLETE,
+      triggerCleanup: true,
+      terminalReply: { disposition: "visible", text: "Done." },
+    });
+    await settled.promise;
+
+    const settledRun = readLifecycleRun(entry);
+    expect(settledRun.delivery?.status).toBe("failed");
+    expect(settledRun.requesterSettleWake).toBeUndefined();
+    // The blocked-delivery system event is queued only by the suspension owner.
+    expect(completionDeliveryMocks.blockSubagentCompletionDelivery).not.toHaveBeenCalled();
+    expect(wake).not.toHaveBeenCalled();
+  });
+
+  it("refuses a pause notice so a waiting Claw cannot wake the requester", async () => {
+    const entry = resultRun("result");
+    const runs = new Map([[entry.runId, entry]]);
+    const claim = await claimSubagentYieldInRuns({
+      runId: entry.runId,
+      sessionKey: entry.childSessionKey,
+      agentId: "main",
+      waitForMessage: true,
+      acknowledgment: "Which repository should I read?",
+      hasPendingWork: () => false,
+      runs,
+      context: captureOpenClawStateWorkerContext(),
+      assertCurrent: () => {},
+    });
+
+    // Like a collector run, the Claw is told to finish; its final reply becomes the card.
+    expect(claim).toBe("nothing-pending");
+    expect(runs.get(entry.runId)?.requesterSettleWake).toBeUndefined();
+  });
 
   it("presents an empty success instead of closing it silently", async () => {
     const entry = resultRun("result");

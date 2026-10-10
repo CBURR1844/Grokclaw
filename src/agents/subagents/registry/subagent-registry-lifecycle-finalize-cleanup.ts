@@ -403,7 +403,8 @@ async function finishSubagentCleanup(
     entry,
     cleanup,
     completedAt: args.completedAt ?? Date.now(),
-    // Every arming path passes here; a result run must never start a requester turn.
+    // Every cleanup arming path passes here; a result run must never start a requester turn.
+    // Result runs also never suspend (shouldSuspendPendingFinalDelivery) or pause on a notice.
     skipRequesterSettleWake:
       args.skipRequesterSettleWake || entry.completionPresentation === "result",
     stateContext,

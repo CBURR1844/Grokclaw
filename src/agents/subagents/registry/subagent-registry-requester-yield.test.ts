@@ -713,6 +713,8 @@ describe("listUnsettledRequesterChildrenInRuns", () => {
       { requesterTurnRunId: "run-turn-2" },
       { execution: { status: "terminal", endedAt: NOW - 1 }, delivery: { status: "delivered" } },
       { collect: true },
+      // A result run's reply lands as a host card, never as a later turn here.
+      { completionPresentation: "result" },
       { expectsCompletionMessage: false },
       { killIntent: { requestedAt: NOW, reason: "stop" } },
       { requesterSessionKey: "agent:main:other" },

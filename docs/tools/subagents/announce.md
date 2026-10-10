@@ -102,7 +102,14 @@ an `automation-result` assistant row with `openclawAutomation.kind: "subagent"`.
 The requester's model is not asked to relay it, and no requester turn starts:
 
 - The run never arms the requester settle wake, so a batch of finished results
-  does not wake the bot.
+  does not wake the bot. A result that cannot be written by the delivery expiry
+  ends as failed; it is never suspended into a blocked-delivery notice.
+- The run never registers a pause notice. A `sessions_yield` with
+  `waitFor: "message"` from the run does not pause it, so it finishes with its
+  final reply.
+- The run is invisible to the bot's own helper waves: a running result run does
+  not hold up their wake, and the bot's `sessions_yield` does not list it as a
+  child whose completion will arrive as a later turn.
 - A requester turn never adopts the run, including through a later
   `sessions_send` follow-up from the bot.
 - A failed, timed-out, or stopped run writes a host line such as "Researcher

@@ -538,25 +538,26 @@ export function countActiveRunsForSessionFromRuns<T extends SubagentRunReadRecor
   return count;
 }
 
-function scopeRootDescendantsToRequesterAgent(
+/** Root children that belong to the requester's settle wave, with their descendants. */
+function scopeRequesterSettleDescendants(
   runs: Map<string, SubagentRunRecord>,
   rootSessionKey: string,
   requesterAgentId?: string,
   requesterStorePath?: string | null,
   rootRunIds?: ReadonlySet<string>,
 ): Map<string, SubagentRunRecord> {
-  return requesterAgentId || requesterStorePath !== undefined || rootRunIds
-    ? new Map(
-        [...runs].filter(
-          ([, entry]) =>
-            entry.requesterSessionKey !== rootSessionKey ||
-            ((!rootRunIds || rootRunIds.has(entry.runId)) &&
-              (!requesterAgentId || entry.requesterAgentId === requesterAgentId) &&
-              (requesterStorePath === undefined ||
-                (entry.requesterStorePath ?? null) === requesterStorePath)),
-        ),
-      )
-    : runs;
+  return new Map(
+    [...runs].filter(
+      ([, entry]) =>
+        entry.requesterSessionKey !== rootSessionKey ||
+        // The host presents a result run as a card; it never joins or holds a requester wave.
+        (entry.completionPresentation !== "result" &&
+          (!rootRunIds || rootRunIds.has(entry.runId)) &&
+          (!requesterAgentId || entry.requesterAgentId === requesterAgentId) &&
+          (requesterStorePath === undefined ||
+            (entry.requesterStorePath ?? null) === requesterStorePath)),
+    ),
+  );
 }
 
 export function countActiveDescendantRunsFromRuns(
@@ -567,7 +568,7 @@ export function countActiveDescendantRunsFromRuns(
   rootRunIds?: ReadonlySet<string>,
 ): number {
   return buildSubagentRunReadIndexFromRuns({
-    runs: scopeRootDescendantsToRequesterAgent(
+    runs: scopeRequesterSettleDescendants(
       runs,
       rootSessionKey,
       requesterAgentId,
@@ -601,7 +602,7 @@ export function hasDescendantRunAwaitingSettleFromRuns(
   rootRunIds?: ReadonlySet<string>,
 ): boolean {
   return buildSubagentRunReadIndexFromRuns({
-    runs: scopeRootDescendantsToRequesterAgent(
+    runs: scopeRequesterSettleDescendants(
       runs,
       rootSessionKey,
       requesterAgentId,
