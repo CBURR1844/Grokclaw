@@ -250,7 +250,11 @@ async function handleSessionsDelegate(options: DelegateOptions) {
   const work = (async (): Promise<GatewayInflightResult> => {
     try {
       const result = await delegate(options, access);
-      cacheGatewayDedupeResult({ context, dedupeKey, requestIdentity, result });
+      // Only a started run has a side effect to replay. A refusal can clear (a finished
+      // helper frees a slot, policy changes), so a same-key retry is evaluated again.
+      if (result.ok) {
+        cacheGatewayDedupeResult({ context, dedupeKey, requestIdentity, result });
+      }
       return result;
     } catch (cause) {
       // An interrupted start is uncertain, so a retry with the same key may try again.

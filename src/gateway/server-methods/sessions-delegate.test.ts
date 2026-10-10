@@ -4,6 +4,7 @@ import { ErrorCodes, errorShape } from "../../../packages/gateway-protocol/src/i
 import { createDeferred } from "../../../test/helpers/promise.js";
 import type { SessionEntry } from "../../config/sessions/types.js";
 import type { GatewaySessionAccessAuthority } from "../session-access-authority.js";
+import { SessionMutationAuthorizationChangedError } from "../session-mutation-authorization-error.js";
 import { sessionsDelegateHandlers } from "./sessions-delegate.js";
 import type { GatewayRequestContext, GatewayRequestHandlerOptions, RespondFn } from "./types.js";
 
@@ -52,20 +53,22 @@ vi.mock("../../skills/runtime/tool-dispatch.js", () => ({
     return mocks.resolveSkillDispatchTools(params);
   },
 }));
-// mock-isolation: The real authority binds process-wide Gateway state; the fake only records the call order.
+// mock-isolation: The real authority binds process-wide Gateway state; the fake only records the binding.
 vi.mock("../server-plugin-in-process-authority.js", () => ({
-  withOperatorToolGatewayAuthority: async (
-    authority: { assertCurrent: () => void },
-    run: () => Promise<unknown>,
-  ) => {
+  withOperatorToolGatewayAuthority: async (authority: unknown, run: () => Promise<unknown>) => {
     mocks.withOperatorToolGatewayAuthority(authority);
-    authority.assertCurrent();
     return await run();
   },
 }));
 
 const SESSION_KEY = "agent:main:main";
 const CHILD_KEY = "agent:claw:subagent:child";
+// The real access authority's revocation error, passed through unchanged.
+const ACCESS_CHANGED = errorShape(
+  ErrorCodes.FORBIDDEN,
+  "Session access changed; reopen the session before continuing.",
+  { details: { code: "SESSION_ACCESS_CHANGED" } },
+);
 
 function accepted(runId = "run-1") {
   return { details: { status: "accepted", runId, childSessionKey: CHILD_KEY } };
@@ -79,7 +82,7 @@ function fixture(overrides: { sandboxRequired?: boolean; placement?: "local" | "
     assertCurrent: () => {
       mocks.calls.push("assert-current");
       if (!current) {
-        throw new Error("Session access changed.");
+        throw new SessionMutationAuthorizationChangedError(ACCESS_CHANGED);
       }
     },
     retain: vi.fn(),
@@ -156,15 +159,15 @@ describe("sessions.delegate", () => {
         undefined,
       ],
     ]);
-    expect(mocks.calls).toEqual([
+    expect(mocks.calls.filter((call) => call !== "assert-current")).toEqual([
       "role-ceiling",
       "entry",
       "tools",
-      "assert-current",
-      "assert-current",
-      "assert-current",
       "execute",
     ]);
+    // Access is rechecked after tool resolution and right before the spawn side effect.
+    expect(mocks.calls.slice(3, -1)).toContain("assert-current");
+    expect(mocks.calls.at(-2)).toBe("assert-current");
     expect(mocks.authorizeGatewaySessionCreation).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: "claw" }),
     );
@@ -292,13 +295,32 @@ describe("sessions.delegate", () => {
       return [{ name: "sessions_spawn", execute: mocks.execute }];
     });
     const calls = await f.invoke();
-    expect(calls[0]?.[2]).toEqual(errorShape(ErrorCodes.UNAVAILABLE, "Session access changed."));
-    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(calls[0]?.[2]).toEqual(ACCESS_CHANGED);
+    expect(mocks.calls).not.toContain("execute");
 
     // An interrupted start is not cached, so the same key can try again.
     f.setCurrent(true);
     expect((await f.invoke())[0]?.[0]).toBe(true);
-    expect(mocks.execute).toHaveBeenCalledOnce();
+    expect(mocks.calls).toContain("execute");
+  });
+
+  it("evaluates a same-key retry again after a refusal", async () => {
+    const f = fixture();
+    const full = { status: "forbidden", error: "sessions_spawn has reached max active children" };
+    mocks.execute.mockResolvedValueOnce({ details: full });
+    expect((await f.invoke())[0]?.[2]).toEqual(errorShape(ErrorCodes.FORBIDDEN, full.error));
+
+    // A helper finished; the unchanged retry reaches spawn admission and starts the Claw.
+    const retried = await f.invoke();
+    expect(retried).toEqual([
+      [
+        true,
+        { status: "accepted", runId: "run-1", childSessionKey: CHILD_KEY },
+        undefined,
+        undefined,
+      ],
+    ]);
+    expect(mocks.execute).toHaveBeenCalledTimes(2);
   });
 
   it("joins a concurrent duplicate and replays the cached result", async () => {
