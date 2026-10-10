@@ -156,18 +156,18 @@ describe("my_computer tool", () => {
 });
 
 describe("bot computer setup", () => {
+  const AUTH = { mode: "token", token: "synthetic-token" };
   const setUp = (config: Runtime["config"], agentId = "main") =>
     setUpBotComputer({ agentId, machines, config, canListen: async () => true });
 
   it("binds the Gateway to Docker's network and gives the bot its computer and tools", async () => {
     const { state, config } = runtimeConfig({
-      gateway: { auth: { mode: "token", token: "synthetic-token" } },
+      gateway: { auth: AUTH },
       tools: { profile: "coding", alsoAllow: ["browser"] },
-      agents: { entries: { main: {}, helper: { tools: { allow: ["read"] } } } },
+      agents: { entries: { main: {} } },
     } as unknown as OpenClawConfig);
 
     const main = await setUp(config);
-    await setUp(config, "helper");
     const rerun = await setUp(config);
 
     expect(main).toEqual({
@@ -193,38 +193,67 @@ describe("bot computer setup", () => {
     expect(result.agents.entries.main?.tools).toEqual({
       alsoAllow: ["browser", "computer", "my_computer"],
     });
-    expect(result.agents.entries.helper?.tools).toEqual({
-      allow: ["read", "computer", "my_computer"],
-    });
+  });
+
+  it("grants through an agent's tools.allow only when its profile lets the tools through", async () => {
+    const withTools = (tools?: Record<string, unknown>) =>
+      runtimeConfig({
+        gateway: { auth: AUTH },
+        ...(tools ? { tools } : {}),
+        agents: { entries: { helper: { tools: { allow: ["read"] } } } },
+      } as unknown as OpenClawConfig);
+    const open = withTools();
+    const limited = withTools({ profile: "coding" });
+    const granted = withTools({ profile: "coding", alsoAllow: ["computer", "group:plugins"] });
+
+    await setUp(open.config, "helper");
+    await expect(setUp(limited.config, "helper")).rejects.toThrow(
+      "tools.profile keeps this bot from using computer and my_computer. Add both to tools.alsoAllow, or move agents.entries.helper.tools.allow to tools.alsoAllow, then set up the computer again.",
+    );
+    await setUp(granted.config, "helper");
+
+    for (const { state } of [open, granted]) {
+      expect(state.config.agents?.entries?.helper?.tools).toEqual({
+        allow: ["read", "computer", "my_computer"],
+      });
+    }
+    expect(limited.state.writes).toBe(0);
   });
 
   it("edits the bot's authored entry whatever the case of its key", async () => {
     const { state, config } = runtimeConfig({
-      gateway: { auth: { mode: "token", token: "synthetic-token" }, reload: { mode: "off" } },
+      gateway: { auth: AUTH },
       agents: { entries: { Ops: { name: "Ops" } } },
     } as unknown as OpenClawConfig);
 
     const setup = await setUp(config, "Ops");
 
-    expect(setup).toMatchObject({ profileId: "computer-ops", gatewayRestart: "manual" });
+    expect(setup).toMatchObject({ profileId: "computer-ops" });
     expect(state.config.agents?.entries).toEqual({
       Ops: { name: "Ops", tools: { alsoAllow: ["computer", "my_computer"] } },
     });
     expect(state.config.cloudWorkers?.profiles?.["computer-ops"]?.settings).toEqual({
       agentId: "ops",
     });
+    await expect(setUp(config, "!!!")).rejects.toThrow('There is no bot with id "!!!".');
   });
 
-  it("keeps an address the Gateway already advertises to workers", async () => {
+  it("keeps an address the Gateway already gives workers, and asks for a restart when reload is off", async () => {
     const { state, config } = runtimeConfig({
+      gateway: { reload: { mode: "off" } },
       plugins: {
         entries: { "device-pair": { config: { publicUrl: "https://pair.example.test" } } },
       },
     } as unknown as OpenClawConfig);
 
     const setup = await setUp(config);
+    const rerun = await setUp(config);
 
-    expect(setup).toMatchObject({ gatewayUrl: "wss://pair.example.test", gatewayRestart: "none" });
+    expect(setup).toMatchObject({
+      gatewayUrl: "wss://pair.example.test",
+      gatewayRestart: "manual",
+    });
+    expect(rerun.gatewayRestart).toBe("none");
     expect(state.config.gateway?.bind).toBeUndefined();
   });
 
@@ -233,15 +262,20 @@ describe("bot computer setup", () => {
       agents: { entries: { main: {} } },
       gateway: { auth: { mode: "none" } },
     } as unknown as OpenClawConfig);
+    const refuses = async (gateway: Record<string, unknown>, message: string) => {
+      state.config = { agents: { entries: { main: {} } }, gateway } as unknown as OpenClawConfig;
+      await expect(setUp(config)).rejects.toThrow(message);
+    };
 
     await expect(setUp(config, "helper")).rejects.toThrow('There is no bot with id "helper".');
     await expect(setUp(config)).rejects.toThrow("Bot computers need Gateway sign-in");
-    state.config = {
-      agents: { entries: { main: {} } },
-      gateway: { publicOrigin: "http://localhost:18789" },
-    } as unknown as OpenClawConfig;
-    await expect(setUp(config)).rejects.toThrow(
+    await refuses(
+      { publicOrigin: "http://localhost:18789" },
       "Bot computers would be sent to ws://localhost:18789 (from gateway.publicOrigin), which they cannot reach.",
+    );
+    await refuses(
+      { publicOrigin: "not a url" },
+      "Could not work out where bot computers can reach the Gateway: Configured gateway.publicOrigin is invalid.",
     );
     state.config = { agents: { entries: { main: {} } } } as unknown as OpenClawConfig;
     await expect(
@@ -250,30 +284,36 @@ describe("bot computer setup", () => {
     expect(state.writes).toBe(0);
   });
 
-  it("refuses the bind when only this run's generated token signs the Gateway in", async () => {
+  it("refuses the bind when only this run's generated secret signs the Gateway in", async () => {
     vi.stubEnv("OPENCLAW_GATEWAY_TOKEN", "");
     vi.stubEnv("OPENCLAW_GATEWAY_PASSWORD", "");
     const authored = { agents: { entries: { main: {} } } } as unknown as OpenClawConfig;
-    const { state, config } = runtimeConfig(authored, {
+    const token = runtimeConfig(authored, {
       ...authored,
       gateway: { auth: { mode: "token", token: "generated-at-startup" } },
     } as unknown as OpenClawConfig);
+    const password = runtimeConfig({
+      ...authored,
+      gateway: { auth: { mode: "password" } },
+    } as unknown as OpenClawConfig);
 
-    await expect(setUp(config)).rejects.toThrow("needs a saved Gateway token");
-    expect(state.writes).toBe(0);
+    await expect(setUp(token.config)).rejects.toThrow(
+      "needs a saved Gateway token. Run `openclaw config set gateway.auth.token <token>`",
+    );
+    await expect(setUp(password.config)).rejects.toThrow(
+      "needs a saved Gateway password. Run `openclaw config set gateway.auth.password <password>`",
+    );
+    expect(token.state.writes + password.state.writes).toBe(0);
     vi.unstubAllEnvs();
   });
 
   it("refuses when a tool list the bot's grant cannot widen excludes its computer tools", async () => {
-    const auth = { mode: "token", token: "synthetic-token" };
-    const global = runtimeConfig({
-      gateway: { auth },
-      tools: { allow: ["group:fs"] },
-    } as unknown as OpenClawConfig);
-    const agent = runtimeConfig({
-      gateway: { auth },
-      agents: { entries: { main: { tools: { deny: ["computer"] } } } },
-    } as unknown as OpenClawConfig);
+    const withTools = (config: Record<string, unknown>) =>
+      runtimeConfig({ gateway: { auth: AUTH }, ...config } as unknown as OpenClawConfig);
+    const global = withTools({ tools: { allow: ["group:fs"] } });
+    const agent = withTools({ agents: { entries: { main: { tools: { deny: ["computer"] } } } } });
+    const plugin = withTools({ tools: { deny: ["local-desktop"] } });
+    const pluginsAllowed = withTools({ tools: { allow: ["group:plugins", "computer"] } });
 
     await expect(setUp(global.config)).rejects.toThrow(
       "tools.allow or tools.deny keeps this bot from using computer and my_computer.",
@@ -281,6 +321,9 @@ describe("bot computer setup", () => {
     await expect(setUp(agent.config)).rejects.toThrow(
       "agents.entries.main.tools.deny keeps this bot from using computer and my_computer.",
     );
-    expect(global.state.writes + agent.state.writes).toBe(0);
+    // Plugin entries name this plugin's tool.
+    await expect(setUp(plugin.config)).rejects.toThrow("tools.allow or tools.deny keeps this bot");
+    await setUp(pluginsAllowed.config);
+    expect(global.state.writes + agent.state.writes + plugin.state.writes).toBe(0);
   });
 });

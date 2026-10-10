@@ -141,30 +141,49 @@ describe("local desktop provider", () => {
     expect(host.containers.size).toBe(0);
   });
 
-  it("stops the node install when core closes the enrollment", async () => {
-    const closed = new AbortController();
-    const installing = Promise.withResolvers<void>();
-    const host = fakeMachines({
-      exec: async (_leaseId, _argv, options) => {
-        installing.resolve();
-        const stopped = Promise.withResolvers<void>();
-        options.signal?.addEventListener("abort", () => stopped.resolve());
-        await stopped.promise;
-        throw new Error("docker exec stopped");
-      },
-    });
-    const provider = createLocalDesktopProvider(host.machines);
+  it("stops the node install on shutdown but keeps the computer, and removes it on Stop", async () => {
+    const installing = () => {
+      const started = Promise.withResolvers<void>();
+      const host = fakeMachines({
+        exec: async (_leaseId, _argv, options) => {
+          started.resolve();
+          const stopped = Promise.withResolvers<void>();
+          options.signal?.addEventListener("abort", () => stopped.resolve());
+          await stopped.promise;
+          throw new Error("docker exec stopped");
+        },
+      });
+      return { host, started: started.promise };
+    };
 
-    const result = provider
+    // Gateway shutdown closes the enrollment only; core replays the open after restart.
+    const shutdown = installing();
+    const closed = new AbortController();
+    const replay = createLocalDesktopProvider(shutdown.host.machines)
       .provision(PROFILE, "op-1", {
         beginNodeEnrollment: async () => enrollment({ signal: closed.signal }),
       })
       .catch((caught: unknown) => caught);
-    await installing.promise;
+    await shutdown.started;
     closed.abort(new Error("Gateway is shutting down"));
+    const kept = await replay;
+    expect(WorkerProviderError.isCleanupComplete(kept)).toBe(false);
+    expect(WorkerProviderError.isCleanupIndeterminate(kept)).toBe(false);
+    expect(shutdown.host.containers.size).toBe(1);
 
-    expect(WorkerProviderError.isCleanupComplete(await result)).toBe(true);
-    expect(host.containers.size).toBe(0);
+    // An explicit Stop ends the open and removes the computer.
+    const stop = installing();
+    const stopped = new AbortController();
+    const open = createLocalDesktopProvider(stop.host.machines)
+      .provision(PROFILE, "op-2", {
+        signal: stopped.signal,
+        beginNodeEnrollment: async () => enrollment({ signal: new AbortController().signal }),
+      })
+      .catch((caught: unknown) => caught);
+    await stop.started;
+    stopped.abort(new Error("Stopped"));
+    expect(WorkerProviderError.isCleanupComplete(await open)).toBe(true);
+    expect(stop.host.containers.size).toBe(0);
   });
 
   it("reports indeterminate cleanup when the failed container cannot be removed", async () => {

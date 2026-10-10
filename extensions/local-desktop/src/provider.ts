@@ -42,11 +42,19 @@ function leaseIdFor(operationId: string): string {
 export function createLocalDesktopProvider(machines: DesktopMachines): WorkerProvider {
   const perDisk = new KeyedAsyncQueue();
 
-  // After allocation every failure removes the container before core sees it.
-  const releaseOnFailure = async <T>(leaseId: string, work: () => Promise<T>): Promise<T> => {
+  // After allocation every failure removes the container before core sees it, unless `keep`
+  // says the lease outlives the failure.
+  const releaseOnFailure = async <T>(
+    leaseId: string,
+    work: () => Promise<T>,
+    keep: () => boolean = () => false,
+  ): Promise<T> => {
     try {
       return await work();
     } catch (error) {
+      if (keep()) {
+        throw error;
+      }
       try {
         await machines.remove(leaseId);
       } catch (cleanupError) {
@@ -95,32 +103,42 @@ export function createLocalDesktopProvider(machines: DesktopMachines): WorkerPro
         current();
         await releaseOnFailure(leaseId, () => machines.start({ leaseId, disk: agentId }, signal));
       });
-      return await releaseOnFailure(leaseId, async (): Promise<WorkerLease> => {
-        current();
-        // Enrollment checks its own owner. After it begins, the node's pairing writes its device
-        // id onto the record, so core's owner check would refuse the lease it is waiting for.
-        const enrollment = await beginNodeEnrollment();
-        // Stop ends the open; so does core closing the enrollment (shutdown or a newer open).
-        const live =
-          signal && enrollment.signal
-            ? AbortSignal.any([signal, enrollment.signal])
-            : (signal ?? enrollment.signal);
-        live?.throwIfAborted();
-        const exec: GuestExec = (argv, execOptions) => machines.exec(leaseId, argv, execOptions);
-        await launchGuestNode(exec, enrollment, live);
-        let deviceId: string;
-        try {
-          deviceId = await enrollment.waitForDeviceId();
-        } catch (error) {
-          const log = await readGuestNodeLog(exec);
-          throw new Error(
-            `The computer's OpenClaw node did not connect to the Gateway${log ? `. Node log:\n${log}` : "."}`,
-            { cause: error },
-          );
-        }
-        live?.throwIfAborted();
-        return { leaseId, node: { deviceId }, desktop: { ...DESKTOP } };
-      });
+      // Gateway shutdown closes the enrollment, not the lease: core replays or destroys it later.
+      let closure: AbortSignal | undefined;
+      const shutDown = () => Boolean(closure?.aborted) && !signal?.aborted;
+      return await releaseOnFailure(
+        leaseId,
+        async (): Promise<WorkerLease> => {
+          current();
+          // Enrollment checks its own owner. After it begins, the node's pairing writes its device
+          // id onto the record, so core's owner check would refuse the lease it is waiting for.
+          const enrollment = await beginNodeEnrollment();
+          closure = enrollment.signal;
+          const live =
+            signal && enrollment.signal
+              ? AbortSignal.any([signal, enrollment.signal])
+              : (signal ?? enrollment.signal);
+          live?.throwIfAborted();
+          const exec: GuestExec = (argv, execOptions) => machines.exec(leaseId, argv, execOptions);
+          await launchGuestNode(exec, enrollment, live);
+          let deviceId: string;
+          try {
+            deviceId = await enrollment.waitForDeviceId();
+          } catch (error) {
+            if (shutDown()) {
+              throw error;
+            }
+            const log = await readGuestNodeLog(exec, live);
+            throw new Error(
+              `The computer's OpenClaw node did not connect to the Gateway${log ? `. Node log:\n${log}` : "."}`,
+              { cause: error },
+            );
+          }
+          live?.throwIfAborted();
+          return { leaseId, node: { deviceId }, desktop: { ...DESKTOP } };
+        },
+        shutDown,
+      );
     },
 
     // `destroyed` lets core skip teardown, so it is reported only for a proven-absent container;

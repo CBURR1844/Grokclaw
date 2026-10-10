@@ -96,17 +96,12 @@ describe("desktop machines", () => {
 
   it("shares one build between opens, survives a stopped open, and rebuilds a pruned image", async () => {
     let built = false;
-    const builds: Array<{ started: PromiseWithResolvers<void>; done: PromiseWithResolvers<void> }> =
-      [];
-    const nextBuild = () => {
-      const build = { started: Promise.withResolvers<void>(), done: Promise.withResolvers<void>() };
-      builds.push(build);
-      return build;
-    };
-    let pending = nextBuild();
+    let tag = "";
+    let build = { started: Promise.withResolvers<void>(), done: Promise.withResolvers<void>() };
+    const OLD = "openclaw-local-desktop:0000000000000000";
     const docker = fakeDocker((args) => {
       if (args[0] === "image" && args[1] === "ls") {
-        return ok("openclaw-local-desktop:0000000000000000\nopenclaw-local-desktop:current\n");
+        return ok(`${OLD}\n${tag}\n`);
       }
       return args[0] === "image" && args[1] === "inspect" && !built
         ? failed("No such image")
@@ -116,7 +111,7 @@ describe("desktop machines", () => {
     });
     const run: CommandRunner = async (argv, options) => {
       if (argv[1] === "build") {
-        const build = pending;
+        tag = argv[argv.indexOf("--tag") + 1]!;
         build.started.resolve();
         await build.done.promise;
         built = true;
@@ -128,27 +123,29 @@ describe("desktop machines", () => {
 
     const first = machines.start({ leaseId: "ldk_1", disk: "one" }, stopped.signal);
     const second = machines.start({ leaseId: "ldk_2", disk: "two" });
-    await pending.started.promise;
+    await build.started.promise;
     stopped.abort(new Error("chat closed"));
     await expect(first).rejects.toThrow();
-    pending.done.resolve();
+    build.done.resolve();
     await second;
     // Docker pruned the image while no computer ran.
     built = false;
-    pending = nextBuild();
+    build = { started: Promise.withResolvers<void>(), done: Promise.withResolvers<void>() };
     const rebuilt = machines.start({ leaseId: "ldk_3", disk: "three" });
-    await pending.started.promise;
-    pending.done.resolve();
+    await build.started.promise;
+    build.done.resolve();
     await rebuilt;
 
     expect(docker.calls.filter((call) => call.argv[0] === "build")).toHaveLength(2);
-    expect(builds).toHaveLength(2);
-    const removed = docker.calls.filter(
-      (call) => call.argv[0] === "image" && call.argv[1] === "rm",
+    const listed = docker.calls.find((call) => call.argv[0] === "image" && call.argv[1] === "ls");
+    expect(listed?.argv).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^label=openclaw\.local-desktop\.instance=/)]),
     );
-    expect(removed.map((call) => call.argv[2])).toContain(
-      "openclaw-local-desktop:0000000000000000",
-    );
+    const removed = docker.calls
+      .filter((call) => call.argv[0] === "image" && call.argv[1] === "rm")
+      .map((call) => call.argv[2]);
+    expect(removed).toContain(OLD);
+    expect(removed).not.toContain(tag);
   });
 
   it("adopts a running container and restarts a stopped one without creating another", async () => {
@@ -223,6 +220,8 @@ describe("desktop machines", () => {
     expect(
       docker.calls.filter((call) => call.argv[0] === "rm").map((call) => call.argv.at(-1)),
     ).toEqual(["openclaw-desktop-ldk_off"]);
+    // An old image the removed computer still used can go now.
+    expect(docker.calls.at(-1)?.argv.slice(0, 2)).toEqual(["image", "ls"]);
   });
 
   it("turns engine failures into next steps instead of reporting a missing computer", async () => {

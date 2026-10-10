@@ -266,9 +266,14 @@ export async function launchGuestNode(
 }
 
 /** Last lines of the guest node's log, for a failed enrollment's error message. */
-export async function readGuestNodeLog(exec: GuestExec): Promise<string> {
+export async function readGuestNodeLog(exec: GuestExec, signal?: AbortSignal): Promise<string> {
   try {
-    return (await exec(["tail", "-c", "2000", NODE_LOG], { timeoutMs: 15_000 })).trim();
+    return (
+      await exec(["tail", "-c", "2000", NODE_LOG], {
+        timeoutMs: 15_000,
+        ...(signal ? { signal } : {}),
+      })
+    ).trim();
   } catch {
     return "";
   }

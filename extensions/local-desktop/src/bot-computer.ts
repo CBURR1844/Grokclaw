@@ -12,7 +12,7 @@ import type {
   OpenClawPluginToolContext,
 } from "openclaw/plugin-sdk/plugin-entry";
 import { runCommandWithTimeout } from "openclaw/plugin-sdk/process-runtime";
-import { normalizeAgentId } from "openclaw/plugin-sdk/routing";
+import { normalizeAgentId, normalizeAgentIdStrict } from "openclaw/plugin-sdk/routing";
 import { hasConfiguredSecretInput } from "openclaw/plugin-sdk/secret-input";
 import { jsonResult } from "openclaw/plugin-sdk/tool-results";
 import type { DesktopMachines } from "./docker.js";
@@ -155,7 +155,9 @@ UNREACHABLE.addAddress("0.0.0.0", "ipv4");
 UNREACHABLE.addAddress("::", "ipv6");
 
 /** The address core's node enrollment would hand a computer, resolved from the same inputs. */
-async function enrollmentAddress(config: OpenClawConfig) {
+async function enrollmentAddress(
+  config: OpenClawConfig,
+): Promise<{ url: string; source: string; reachable: boolean } | { error: string }> {
   const publicUrl = config.plugins?.entries?.["device-pair"]?.config?.publicUrl;
   const result = await resolvePairingGatewayUrl(config, {
     env: process.env,
@@ -167,7 +169,7 @@ async function enrollmentAddress(config: OpenClawConfig) {
       await runCommandWithTimeout(argv, { timeoutMs: options.timeoutMs }),
   });
   if (!result.url) {
-    return undefined;
+    return { error: result.error ?? "no address resolved." };
   }
   const host = new URL(result.url).hostname.replace(/^\[|\]$/g, "");
   const family = net.isIP(host);
@@ -183,29 +185,98 @@ async function enrollmentAddress(config: OpenClawConfig) {
 function assertGatewaySecret(draft: OpenClawConfig): void {
   const auth = resolveGatewayAuth({ authConfig: draft.gateway?.auth, env: process.env });
   const configured = (value: unknown) => hasConfiguredSecretInput(value, draft.secrets?.defaults);
-  const secret =
-    auth.mode === "trusted-proxy" ||
-    (auth.mode === "token" &&
-      (Boolean(auth.token?.trim()) || configured(draft.gateway?.auth?.token))) ||
-    (auth.mode === "password" &&
-      (Boolean(auth.password?.trim()) || configured(draft.gateway?.auth?.password)));
+  if (auth.mode === "trusted-proxy") {
+    return;
+  }
+  const password = auth.mode === "password";
+  const secret = password
+    ? Boolean(auth.password?.trim()) || configured(draft.gateway?.auth?.password)
+    : Boolean(auth.token?.trim()) || configured(draft.gateway?.auth?.token);
   if (!secret) {
+    const kind = password ? "password" : "token";
     throw new Error(
-      "Bot computers reach the Gateway over Docker's network, which needs a saved Gateway token. Run `openclaw config set gateway.auth.token <token>` (or set OPENCLAW_GATEWAY_TOKEN for the Gateway service), then set up the computer again.",
+      `Bot computers reach the Gateway over Docker's network, which needs a saved Gateway ${kind}. Run \`openclaw config set gateway.auth.${kind} <${kind}>\` (or set OPENCLAW_GATEWAY_${kind.toUpperCase()} for the Gateway service), then set up the computer again.`,
     );
   }
 }
 
 const GRANTED_TOOLS = ["computer", MY_COMPUTER_TOOL];
 type ToolLists = { allow?: string[]; alsoAllow?: string[]; deny?: string[] };
+type Matcher = (policy: { allow?: string[]; deny?: string[] }) => (name: string) => boolean;
+
+/**
+ * Grant the computer tools on the agent's authored entry, or say which list blocks them. Core
+ * filters tools through the profile, the global lists and the agent's lists in turn, and an
+ * agent grant widens only its own stage.
+ */
+function grantComputerTools(draft: OpenClawConfig, agentId: string, matcher: Matcher): void {
+  // Core's matcher expands core groups only; plugin entries name this plugin's tool.
+  const named = (list?: string[]) =>
+    list?.map((entry) =>
+      ["group:plugins", "local-desktop"].includes(entry.trim().toLowerCase())
+        ? MY_COMPUTER_TOOL
+        : entry,
+    );
+  const admits = (tools: ToolLists | undefined) => {
+    const extra = named(tools?.alsoAllow);
+    const allow = extra?.length
+      ? [...(named(tools?.allow) ?? ["*"]), ...extra]
+      : named(tools?.allow);
+    const deny = named(tools?.deny);
+    return GRANTED_TOOLS.every(
+      matcher({ ...(allow?.length ? { allow } : {}), ...(deny?.length ? { deny } : {}) }),
+    );
+  };
+  const refuse = (path: string, remedy: string) => {
+    throw new Error(
+      `${path} keeps this bot from using computer and my_computer. ${remedy}, then set up the computer again.`,
+    );
+  };
+  const entryKey =
+    Object.keys(draft.agents?.entries ?? {}).find((key) => normalizeAgentId(key) === agentId) ??
+    agentId;
+  const entry = draft.agents?.entries?.[entryKey] ?? {};
+  const tools = entry.tools ?? {};
+  let granted: typeof tools;
+  if (tools.allow?.length) {
+    granted = { ...tools, allow: [...new Set([...tools.allow, ...GRANTED_TOOLS])] };
+    // The profile stage still applies, and an agent with allow cannot have its own alsoAllow.
+    const profile = tools.profile ?? draft.tools?.profile;
+    const inherited = named(draft.tools?.alsoAllow);
+    if (profile && profile !== "full" && !(inherited?.length && admits({ allow: inherited }))) {
+      refuse(
+        tools.profile ? `agents.entries.${entryKey}.tools.profile` : "tools.profile",
+        `Add both to tools.alsoAllow, or move agents.entries.${entryKey}.tools.allow to tools.alsoAllow`,
+      );
+    }
+  } else {
+    // An agent list replaces the inherited one, so a new alsoAllow starts from the global grants.
+    granted = {
+      ...tools,
+      alsoAllow: [
+        ...new Set([...(tools.alsoAllow ?? draft.tools?.alsoAllow ?? []), ...GRANTED_TOOLS]),
+      ],
+    };
+  }
+  if (!admits(draft.tools)) {
+    refuse("tools.allow or tools.deny", "Allow both there");
+  }
+  if (!admits(granted)) {
+    refuse(`agents.entries.${entryKey}.tools.deny`, "Remove both from it");
+  }
+  draft.agents = {
+    ...draft.agents,
+    entries: { ...draft.agents?.entries, [entryKey]: { ...entry, tools: granted } },
+  };
+}
 
 export type BotComputerSetup = {
   profileId: string;
   /** Where the computer's OpenClaw node will reach the Gateway. */
   gatewayUrl: string;
   /**
-   * none: the Gateway already listens where computers reach it. automatic: it restarts itself to
-   * listen on Docker's bridge. manual: config reload is off, so restart the Gateway to finish.
+   * automatic: the Gateway restarts itself to listen on Docker's bridge. manual: config reload is
+   * off, so restart the Gateway to apply setup. none: no restart is needed.
    */
   gatewayRestart: "none" | "automatic" | "manual";
 };
@@ -221,11 +292,12 @@ export async function setUpBotComputer(params: {
   config: OpenClawPluginApi["runtime"]["config"];
   canListen?: (host: string) => Promise<boolean>;
 }): Promise<BotComputerSetup> {
-  const agentId = normalizeAgentId(params.agentId);
   const current = params.config.current() as OpenClawConfig;
-  if (!listAgentIds(current).includes(agentId)) {
+  const normalized = normalizeAgentIdStrict(params.agentId);
+  if (!normalized.ok || !listAgentIds(current).includes(normalized.value)) {
     throw new Error(`There is no bot with id "${params.agentId}".`);
   }
+  const agentId = normalized.value;
   if (current.gateway?.auth?.mode === "none") {
     throw new Error("Bot computers need Gateway sign-in. Set a Gateway token or password first.");
   }
@@ -240,32 +312,27 @@ export async function setUpBotComputer(params: {
     gateway: { ...config.gateway, bind: "custom", customBindHost: bridge },
   });
   const existing = await enrollmentAddress(current);
-  const address = existing?.reachable ? existing : await enrollmentAddress(bound(current));
-  if (!address?.reachable) {
+  const address =
+    "url" in existing && existing.reachable ? existing : await enrollmentAddress(bound(current));
+  if (!("url" in address)) {
     throw new Error(
-      address
-        ? `Bot computers would be sent to ${address.url} (from ${address.source}), which they cannot reach. Set gateway.publicOrigin (or plugins.entries.device-pair.config.publicUrl) to an address they can reach, or remove it.`
-        : "Could not work out where bot computers can reach the Gateway. Set gateway.publicOrigin to an address they can reach.",
+      `Could not work out where bot computers can reach the Gateway: ${address.error} Set gateway.publicOrigin to an address they can reach.`,
+    );
+  }
+  if (!address.reachable) {
+    throw new Error(
+      `Bot computers would be sent to ${address.url} (from ${address.source}), which they cannot reach. Set gateway.publicOrigin (or plugins.entries.device-pair.config.publicUrl) to an address they can reach, or remove it.`,
     );
   }
   const rebind = address !== existing;
   // Loaded only here: setup is rare, and the matcher lives in a large SDK module.
   const { toolPolicy } = await import("openclaw/plugin-sdk/agent-harness-runtime");
-  const refusedBy = (tools: ToolLists | undefined, path: string) => {
-    const extra = tools?.alsoAllow?.length ? tools.alsoAllow : undefined;
-    const allow = extra
-      ? [...(tools?.allow?.length ? tools.allow : ["*"]), ...extra]
-      : tools?.allow;
-    const matches = toolPolicy.createToolPolicyMatcher({
-      ...(allow?.length ? { allow } : {}),
-      ...(tools?.deny?.length ? { deny: tools.deny } : {}),
-    });
-    return GRANTED_TOOLS.every(matches) ? undefined : path;
-  };
   const profileId = findComputerProfile(current, agentId) ?? `computer-${agentId}`;
+  let gatewayRestart: BotComputerSetup["gatewayRestart"] = "none";
   await params.config.mutateConfigFile({
     afterWrite: { mode: "auto" },
     mutate: (draft) => {
+      const before = JSON.stringify(draft);
       if (rebind) {
         assertGatewaySecret(draft);
       }
@@ -290,43 +357,17 @@ export async function setUpBotComputer(params: {
           },
         },
       };
-      // Edit the authored entry, whatever its key's case.
-      const entryKey =
-        Object.keys(draft.agents?.entries ?? {}).find((key) => normalizeAgentId(key) === agentId) ??
-        agentId;
-      const entry = draft.agents?.entries?.[entryKey] ?? {};
-      const tools = entry.tools ?? {};
-      // An agent list replaces the inherited one, so a new alsoAllow starts from the global grants.
-      const granted: typeof tools = tools.allow?.length
-        ? { ...tools, allow: [...new Set([...tools.allow, ...GRANTED_TOOLS])] }
-        : {
-            ...tools,
-            alsoAllow: [
-              ...new Set([...(tools.alsoAllow ?? draft.tools?.alsoAllow ?? []), ...GRANTED_TOOLS]),
-            ],
-          };
-      // Global and agent allow/deny lists are their own filters; an agent grant cannot widen them.
-      const refusal =
-        refusedBy(draft.tools, "tools.allow or tools.deny") ??
-        refusedBy(granted, `agents.entries.${entryKey}.tools.deny`);
-      if (refusal) {
-        throw new Error(
-          `${refusal} keeps this bot from using computer and my_computer. Allow both there, then set up the computer again.`,
-        );
-      }
-      draft.agents = {
-        ...draft.agents,
-        entries: { ...draft.agents?.entries, [entryKey]: { ...entry, tools: granted } },
-      };
+      grantComputerTools(draft, agentId, toolPolicy.createToolPolicyMatcher);
+      // With reload off nothing applies until a restart; otherwise only the bind needs one.
+      gatewayRestart =
+        JSON.stringify(draft) === before
+          ? "none"
+          : draft.gateway?.reload?.mode === "off"
+            ? "manual"
+            : rebind
+              ? "automatic"
+              : "none";
     },
   });
-  return {
-    profileId,
-    gatewayUrl: address.url,
-    gatewayRestart: !rebind
-      ? "none"
-      : current.gateway?.reload?.mode === "off"
-        ? "manual"
-        : "automatic",
-  };
+  return { profileId, gatewayUrl: address.url, gatewayRestart };
 }

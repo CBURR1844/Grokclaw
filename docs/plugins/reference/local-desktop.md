@@ -29,7 +29,7 @@ Gives each bot its own Linux desktop in a Docker container on this machine.
 openclaw gateway call localDesktop.setup --params '{"agentId":"main"}'
 ```
 
-The call needs `operator.admin`. It returns the profile it created, the address the computer will use to reach the Gateway, and `gatewayRestart`: `automatic` when the Gateway restarts itself to listen there, `manual` when you must run `openclaw gateway restart`, or `none`. See [Local desktop profile](/gateway/config-cloud-workers#local-desktop-profile) for what it changes and its limits.
+The call needs `operator.admin`. It returns the profile it created, the address the computer will use to reach the Gateway, and `gatewayRestart`: `automatic` when the Gateway restarts itself to listen there, `manual` when config reload is off and you must run `openclaw gateway restart`, or `none` when no restart is needed. See [Local desktop profile](/gateway/config-cloud-workers#local-desktop-profile) for what it changes and its limits.
 
 The agent then calls `my_computer` with `action: "open"` (add `show: true` to open the chat's Desktop panel), uses `computer` with the returned `environmentId`, and calls `my_computer` with `action: "close"` when done. With the profile setup writes, an idle computer closes after 30 minutes; its disk stays.
 

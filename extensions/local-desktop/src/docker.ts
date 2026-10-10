@@ -184,8 +184,26 @@ export function createDesktopMachines(params: {
     return { context, tag: `${IMAGE_REPOSITORY}:${hash.digest("hex").slice(0, 16)}` };
   };
 
+  // Images this install built earlier; Docker refuses to remove one a computer still runs, so
+  // the sweep runs again whenever a computer is removed.
+  const removeOldImages = async (current: string) => {
+    const listed = await docker("list desktop images", [
+      "image",
+      "ls",
+      "--filter",
+      `label=${LABEL}.image=1`,
+      "--filter",
+      `label=${LABEL}.instance=${instance}`,
+      "--format",
+      "{{.Repository}}:{{.Tag}}",
+    ]);
+    for (const old of listed.stdout.split("\n").filter((name) => name && name !== current)) {
+      await docker("remove an old desktop image", ["image", "rm", old]);
+    }
+  };
+
   // One build serves every waiting open and is not tied to any one of them, so a stopped open
-  // never fails the others. Earlier builds are removed once no computer uses them.
+  // never fails the others.
   const build = async ({ context, tag }: ImageSource) => {
     const dir = await fs.mkdtemp(path.join(resolvePreferredOpenClawTmpDir(), "desktop-image-"));
     try {
@@ -194,33 +212,34 @@ export function createDesktopMachines(params: {
       }
       await checked(
         "build the desktop image",
-        ["build", "--quiet", "--label", `${LABEL}.image=1`, "--tag", tag, dir],
+        [
+          "build",
+          "--quiet",
+          "--label",
+          `${LABEL}.image=1`,
+          "--label",
+          `${LABEL}.instance=${instance}`,
+          "--tag",
+          tag,
+          dir,
+        ],
         { timeoutMs: IMAGE_BUILD_TIMEOUT_MS },
       );
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }
-    const listed = await docker("list desktop images", [
-      "image",
-      "ls",
-      "--filter",
-      `label=${LABEL}.image=1`,
-      "--format",
-      "{{.Repository}}:{{.Tag}}",
-    ]);
-    for (const stale of listed.stdout.split("\n").filter((name) => name && name !== tag)) {
-      // Refused while a computer still runs it; the next build tries again.
-      await docker("remove an old desktop image", ["image", "rm", stale]);
-    }
+    await removeOldImages(tag);
   };
+
+  const currentImage = () =>
+    (imageSource ??= imageContext().catch((error: unknown) => {
+      imageSource = undefined;
+      throw error;
+    }));
 
   // Docker can prune the image while no computer runs, so every start checks it again.
   const ensureImage = async (signal?: AbortSignal): Promise<string> => {
-    imageSource ??= imageContext().catch((error: unknown) => {
-      imageSource = undefined;
-      throw error;
-    });
-    const source = await imageSource;
+    const source = await currentImage();
     const present = await docker("inspect the desktop image", ["image", "inspect", source.tag], {
       signal,
     });
@@ -377,6 +396,8 @@ export function createDesktopMachines(params: {
       if (result.code !== 0 && !isMissing(result)) {
         throw engineError("remove the computer", result);
       }
+      // Best effort: the computer is gone whether or not an old image can go too.
+      await removeOldImages((await currentImage()).tag).catch(() => {});
     },
 
     async holders(disk) {
